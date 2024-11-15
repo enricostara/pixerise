@@ -1,0 +1,19 @@
+[project]
+name = "pixerise"
+version = "0.1.0"
+description = "Fast rasterizer in Python"
+authors = [
+    {name = "Enrico Stara", email = "enrico.stara@gmail.com"},
+]
+dependencies = []
+requires-python = ">=3.12"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true
