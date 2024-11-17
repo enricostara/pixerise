@@ -18,4 +18,4 @@ Anyone who wants:
 
 #### Who is this NOT for?
 - Anyone who wants to do 3D rendering that takes advantage of GPU acceleration
-- Anyone who needs a 3D engine with a full suite of tools to create video games
+- Anyone who needs a 3D engine with a complete set of tools to create 3D applications or games
