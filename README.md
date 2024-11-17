@@ -11,8 +11,8 @@ An easy to use 3D renderer in Python.
 
 #### Who is this for?
 Anyone who wants:
-- to do 3D rendering on any microcontroller or device without a GPU
-- to extend it to create other 3D applications or libraries that does not require a GPU
+- to do 3D rendering on any device or controller without requiring a GPU
+- to extend it to create other 3D applications or libraries that don't require a GPU to run
 - an agnostic 3D renderer that can be used with any media library
 - to learn 3D rendering from scratch by reading the source code in pure Python
 
