@@ -13,7 +13,7 @@ An easy to use 3D renderer in Python.
 Anyone who wants:
 - an agnostic 3D renderer that can be integrated with any system or media library in Python
 - to do 3D rendering on any device or controller without requiring a GPU
-- to extend it to create other 3D applications or libraries that don't require a GPU to run
+- to extend it to create other 3D libraries or engines that don't require a GPU to run
 - to learn 3D rendering from scratch by reading the source code in pure Python
 
 #### Who is this NOT for?
