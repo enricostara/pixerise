@@ -36,7 +36,7 @@ if __name__ == '__main__':
             }
         ]
     }
-    view_port = ViewPort((1, 1), 1, canvas)
+    view_port = ViewPort((1.6, .9), 1, canvas)
     ray_tracer = RayTracer(canvas, view_port, scene)
     ray_tracer.render((0, 0, 0))
     display(canvas)
