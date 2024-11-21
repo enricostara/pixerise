@@ -40,9 +40,25 @@ if __name__ == '__main__':
                 'color': (0, 255, 0)
             },
             {
-                'center': (0, -100.75, 0),
-                'radius': 100,
+                'center': (0, -10000.85, 0),
+                'radius': 10000,
                 'color': (255, 255, 0)
+            }
+        ],
+        'lights': [
+            {
+                'type': 'ambient',
+                'intensity': 0.2
+            },
+            {
+                'type': 'point',
+                'position': (2, 1, 0),
+                'intensity': 0.2
+            },
+            {
+                'type': 'directional',
+                'direction': (1, 4, 4),
+                'intensity': 0.2
             }
         ]
     }

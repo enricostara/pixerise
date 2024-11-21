@@ -39,7 +39,35 @@ class RayTracer:
         if closest_sphere is None:
             return self._background_color
         
-        return np.array(closest_sphere['color'], dtype=int)
+        # Compute intersection point and normal
+        point = origin + closest_t * direction
+        normal = point - np.array(closest_sphere['center'], dtype=float)
+        normal = normal / np.linalg.norm(normal)  # Normalize
+        
+        # Apply lighting
+        intensity = self._compute_lighting(point, normal)
+        color = np.array(closest_sphere['color'], dtype=float) * intensity
+        return np.clip(color, 0, 255).astype(int)
+
+    def _compute_lighting(self, point: np.ndarray, normal: np.ndarray) -> float:
+        intensity = 0.0
+        
+        for light in self._scene.get('lights', []):
+            if light['type'] == 'ambient':
+                intensity += light['intensity']
+            else:
+                if light['type'] == 'point':
+                    light_dir = np.array(light['position'], dtype=float) - point
+                else:  # directional light
+                    light_dir = np.array(light['direction'], dtype=float)
+                    
+                light_dir = light_dir / np.linalg.norm(light_dir)  # Normalize
+                # Compute diffuse lighting (Lambert's law)
+                n_dot_l = np.dot(normal, light_dir)
+                if n_dot_l > 0:
+                    intensity += light['intensity'] * n_dot_l
+        
+        return intensity
 
     def _intersect_ray_sphere(self, origin: np.ndarray, direction: np.ndarray, 
                              sphere: dict) -> (float, float):
