@@ -6,17 +6,17 @@ import math
 
 class RayTracer:
 
-    def __init__(self, canvas: Canvas, viewport: ViewPort, scene: dict):
+    def __init__(self, canvas: Canvas, viewport: ViewPort, scene: dict, background_color=(32, 32, 32)):
         self._canvas = canvas
         self._viewport = viewport
         self._scene = scene
-        self._background_color = np.array((32, 32, 32), dtype=int)
+        self._background_color = np.array(background_color, dtype=int)
 
     def render(self, origin: (float, float, float)):
         origin = np.array(origin, dtype=float)
         # Trace a ray through each pixel
-        for x in range(-self._canvas.width // 2, self._canvas.width // 2):
-            for y in range(-self._canvas.height // 2, self._canvas.height // 2):
+        for x in range(-self._canvas.half_width, self._canvas.half_width):
+            for y in range(-self._canvas.half_height + 1, self._canvas.half_height + 1):
                 direction = np.array(self._viewport.canvas_to_viewport_direction(x, y), dtype=float)
                 color = self._trace_ray(origin, direction, 1, float('inf'))
                 self._canvas.draw_unchecked_point(x, y, tuple(color))
