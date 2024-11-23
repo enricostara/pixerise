@@ -21,9 +21,8 @@ class RayTracer:
                 color = self._trace_ray(origin, direction, 1, float('inf'))
                 self._canvas.draw_unchecked_point(x, y, tuple(color))
 
-    def _trace_ray(self, origin: np.ndarray, direction: np.ndarray, 
-                   min_t: float, max_t: float) -> np.ndarray:
-        # Find nearest intersection
+    def _closest_intersection(self, origin: np.ndarray, direction: np.ndarray, 
+                            min_t: float, max_t: float) -> tuple[float, dict | None]:
         closest_t = float('inf')
         closest_sphere = None
         
@@ -35,6 +34,13 @@ class RayTracer:
             if min_t <= t2 < max_t and t2 < closest_t:
                 closest_t = t2
                 closest_sphere = sphere
+        
+        return closest_t, closest_sphere
+
+    def _trace_ray(self, origin: np.ndarray, direction: np.ndarray, 
+                   min_t: float, max_t: float) -> np.ndarray:
+        # Find nearest intersection
+        closest_t, closest_sphere = self._closest_intersection(origin, direction, min_t, max_t)
         
         if closest_sphere is None:
             return self._background_color
