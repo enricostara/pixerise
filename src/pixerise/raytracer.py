@@ -44,13 +44,14 @@ class RayTracer:
         normal = point - np.array(closest_sphere['center'], dtype=float)
         normal = normal / np.linalg.norm(normal)  # Normalize
         
-        # Apply lighting
-        intensity = self._compute_lighting(point, normal)
+        # Apply lighting with specular component
+        intensity = self._compute_lighting(point, normal, -direction, closest_sphere.get('specular', 50))
         color = np.array(closest_sphere['color'], dtype=float) * intensity
         return np.clip(color, 0, 255).astype(int)
 
-    def _compute_lighting(self, point: np.ndarray, normal: np.ndarray) -> float:
+    def _compute_lighting(self, point: np.ndarray, normal: np.ndarray, view_dir: np.ndarray, specular: float) -> float:
         intensity = 0.0
+        specular = max(0, specular)  # Ensure non-positive values are treated as 0
         
         for light in self._scene.get('lights', []):
             if light['type'] == 'ambient':
@@ -62,10 +63,22 @@ class RayTracer:
                     light_dir = np.array(light['direction'], dtype=float)
                     
                 light_dir = light_dir / np.linalg.norm(light_dir)  # Normalize
+                
                 # Compute diffuse lighting (Lambert's law)
                 n_dot_l = np.dot(normal, light_dir)
                 if n_dot_l > 0:
                     intensity += light['intensity'] * n_dot_l
+                    
+                    # Compute specular lighting only if specular > 0
+                    if specular > 0:
+                        # Calculate reflection vector: R = 2(N·L)N - L
+                        reflect_dir = 2 * n_dot_l * normal - light_dir
+                        reflect_dir = reflect_dir / np.linalg.norm(reflect_dir)  # Normalize
+                        
+                        # Calculate specular component using Phong model
+                        r_dot_v = np.dot(reflect_dir, view_dir)
+                        if r_dot_v > 0:
+                            intensity += light['intensity'] * (r_dot_v ** specular)
         
         return intensity
 

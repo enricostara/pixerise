@@ -27,22 +27,26 @@ if __name__ == '__main__':
             {
                 'center': (0, -1, 3),
                 'radius': 1,
-                'color': (255, 0, 0),
+                'color': (255, 0, 0),  # red
+                'specular': 100
             },
             {
                 'center': (2, 0, 4),
                 'radius': 1,
-                'color': (0, 0, 255)
+                'color': (0, 0, 255),  # blue
+                'specular': -1
             },
             {
                 'center': (-2, 0, 4),
                 'radius': 1,
-                'color': (0, 255, 0)
+                'color': (0, 255, 0),  # green
+                'specular': 10
             },
             {
                 'center': (0, -10000.85, 0),
                 'radius': 10000,
-                'color': (255, 255, 0)
+                'color': (255, 255, 0),  # yellow
+                'specular': 100
             }
         ],
         'lights': [
