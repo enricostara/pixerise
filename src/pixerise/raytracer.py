@@ -6,6 +6,9 @@ import math
 
 class RayTracer:
 
+    # Minimum distance to avoid self-intersection artifacts in shadow rays
+    SHADOW_BIAS = 0.001
+
     def __init__(self, canvas: Canvas, viewport: ViewPort, scene: dict, background_color=(32, 32, 32)):
         self._canvas = canvas
         self._viewport = viewport
@@ -74,9 +77,9 @@ class RayTracer:
                 
                 # Check for shadows by casting a ray from the point to the light
                 shadow_t, shadow_sphere = self._closest_intersection(
-                    point + normal * 1e-5,  # Offset point slightly to avoid self-intersection
+                    point,
                     light_dir,
-                    0.001,  # Minimum distance to avoid self-intersection
+                    self.SHADOW_BIAS,  # Minimum distance to avoid self-intersection
                     light_distance  # Maximum distance is the distance to the light
                 )
                 
