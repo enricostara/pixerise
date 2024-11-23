@@ -28,13 +28,13 @@ if __name__ == '__main__':
                 'center': (0, -1, 3),
                 'radius': 1,
                 'color': (255, 0, 0),  # red
-                'specular': 100
+                'specular': 50
             },
             {
                 'center': (2, 0, 4),
                 'radius': 1,
                 'color': (0, 0, 255),  # blue
-                'specular': -1
+                'specular': 10
             },
             {
                 'center': (-2, 0, 4),
@@ -46,7 +46,7 @@ if __name__ == '__main__':
                 'center': (0, -10000.85, 0),
                 'radius': 10000,
                 'color': (255, 255, 0),  # yellow
-                'specular': 100
+                'specular': 10
             }
         ],
         'lights': [
@@ -56,12 +56,12 @@ if __name__ == '__main__':
             },
             {
                 'type': 'point',
-                'position': (2, 1, 0),
+                'position': (2, 1, -1),
                 'intensity': 0.2
             },
             {
                 'type': 'directional',
-                'direction': (1, 4, 4),
+                'direction': (1, 5, 4),
                 'intensity': 0.2
             }
         ]
