@@ -65,10 +65,24 @@ class RayTracer:
             else:
                 if light['type'] == 'point':
                     light_dir = np.array(light['position'], dtype=float) - point
+                    light_distance = np.linalg.norm(light_dir)
+                    light_dir = light_dir / light_distance  # Normalize
                 else:  # directional light
                     light_dir = np.array(light['direction'], dtype=float)
-                    
-                light_dir = light_dir / np.linalg.norm(light_dir)  # Normalize
+                    light_dir = light_dir / np.linalg.norm(light_dir)  # Normalize
+                    light_distance = float('inf')
+                
+                # Check for shadows by casting a ray from the point to the light
+                shadow_t, shadow_sphere = self._closest_intersection(
+                    point + normal * 1e-5,  # Offset point slightly to avoid self-intersection
+                    light_dir,
+                    0.001,  # Minimum distance to avoid self-intersection
+                    light_distance  # Maximum distance is the distance to the light
+                )
+                
+                # Skip this light if there's an object blocking it
+                if shadow_sphere is not None:
+                    continue
                 
                 # Compute diffuse lighting (Lambert's law)
                 n_dot_l = np.dot(normal, light_dir)
