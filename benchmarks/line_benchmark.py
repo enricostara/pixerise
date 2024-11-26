@@ -12,30 +12,34 @@ class LineBenchmark:
         self.scene = {}
         self.rasterizer = Rasterizer(self.canvas, self.viewport, self.scene)
 
-    def benchmark_line(self, start, end, color=(255, 255, 255), iterations=1000):
-        """Benchmark drawing a single line multiple times and return average time"""
-        total_time = 0
-        
-        for _ in range(iterations):
+    def benchmark_line(self, start, end, color=(255, 255, 255)):
+        """Run 10 loops of 1000 line draws and return the average total time for 1000 calls"""
+        NUM_LOOPS = 10
+        CALLS_PER_LOOP = 1000
+        total_times = []
+
+        for _ in range(NUM_LOOPS):
             start_time = time.perf_counter()
-            self.rasterizer.draw_line(start, end, color)
+            for _ in range(CALLS_PER_LOOP):
+                self.rasterizer.draw_line(start, end, color)
             end_time = time.perf_counter()
-            total_time += (end_time - start_time) * 1000  # Convert to milliseconds
+            total_times.append((end_time - start_time) * 1000)  # Convert to milliseconds
             
-        return total_time / iterations  # Return average time per line
+        return np.mean(total_times)  # Return average time for 1000 calls
 
 
 def run_benchmark(benchmark, start, end, name):
     """Run benchmark for line drawing"""
-    time_bresenham = benchmark.benchmark_line(start, end)
+    avg_time = benchmark.benchmark_line(start, end)
     
     print(f"\n{name}")
-    print(f"Average time: {time_bresenham:.3f}ms")
+    print(f"Average time for 1000 calls: {avg_time:.3f}ms")
 
 
 def main():
     print("Running Line Drawing Benchmarks...")
-    print(f"Each test draws the line 1000 times and reports the average time")
+    print("Each test runs 10 loops of 1000 line draws")
+    print("Results show the average time taken for 1000 draws")
     benchmark = LineBenchmark()
     
     # Test horizontal line

@@ -21,8 +21,10 @@ def _draw_line(x0: int, y0: int, x1: int, y1: int,
     err = dx - dy
     
     while True:
-        # Draw point if within bounds
-        if 0 <= x0 < canvas_width and 0 <= y0 < canvas_height:
+        # Draw point if within bounds (check transformed coordinates)
+        px = center_x + x0
+        py = center_y - y0  # Flip y coordinate
+        if 0 <= px < canvas_width and 0 <= py < canvas_height:
             _draw_pixel(canvas_grid, x0, y0, center_x, center_y,
                        color_r, color_g, color_b, canvas_width, canvas_height)
         
@@ -38,6 +40,7 @@ def _draw_line(x0: int, y0: int, x1: int, y1: int,
         if e2 < dx:
             err += dx
             y0 += sy
+
 
 class Rasterizer:
     def __init__(self, canvas: Canvas, viewport: ViewPort, scene: dict, background_color=(32, 32, 32)):
