@@ -18,7 +18,7 @@ class TestRasterizer:
         """Helper method to verify pixel color at given coordinates"""
         # Account for canvas center offset and convert color to numpy array
         center_x, center_y = canvas._center
-        actual_color = canvas.grid[center_y - y, center_x + x]  # Note: y is flipped in _draw_pixel
+        actual_color = canvas.grid[center_x + x, center_y - y]  # Column-major order for pygame compatibility
         np.testing.assert_array_equal(actual_color, np.array(expected_color, dtype=np.uint8))
 
     def test_horizontal_line(self, setup):
@@ -63,7 +63,7 @@ class TestRasterizer:
         # Verify adjacent pixels are not drawn
         center_x, center_y = canvas._center
         assert not np.array_equal(
-            canvas.grid[center_y - 2, center_x + 2],
+            canvas.grid[center_x + 2, center_y - 2],  # Column-major order
             np.array(color, dtype=np.uint8)
         )
 
@@ -111,6 +111,6 @@ class TestRasterizer:
         center_x, center_y = canvas._center
         for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
             assert not np.array_equal(
-                canvas.grid[center_y - dy, center_x + dx],  # Note: y is flipped
+                canvas.grid[center_x + dx, center_y - dy],  # Column-major order
                 np.array(color, dtype=np.uint8)
             )
