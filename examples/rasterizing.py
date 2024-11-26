@@ -60,7 +60,7 @@ def main():
         else: color = (255, 0, x)
         
         # Draw line from center to point
-        rasterizer.draw_line((center_x, center_y), (screen_x, screen_y), color)
+        rasterizer.draw_line_bresenham((center_x, center_y), (screen_x, screen_y), color)
     
     # Display the result
     display(canvas)

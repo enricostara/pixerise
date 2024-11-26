@@ -22,7 +22,7 @@ class RayTracer:
             for y in range(-self._canvas.half_height + 1, self._canvas.half_height + 1):
                 direction = np.array(self._viewport.canvas_to_viewport_direction(x, y), dtype=float)
                 color = self._trace_ray(origin, direction, 1, float('inf'))
-                self._canvas.draw_unchecked_point(x, y, tuple(color))
+                self._canvas.draw_point(x, y, tuple(color))
 
     def _closest_intersection(self, origin: np.ndarray, direction: np.ndarray, 
                             min_t: float, max_t: float) -> tuple[float, dict | None]:
