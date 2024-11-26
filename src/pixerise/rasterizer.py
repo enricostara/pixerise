@@ -4,11 +4,11 @@ from pixerise.canvas import Canvas, _draw_pixel
 from pixerise.viewport import ViewPort
 
 @jit(nopython=True)
-def _bresenham_draw(x0: int, y0: int, x1: int, y1: int, 
-                    canvas_grid: np.ndarray, center_x: int, center_y: int,
-                    color_r: int, color_g: int, color_b: int,
-                    canvas_width: int, canvas_height: int) -> None:
-    """JIT-compiled Bresenham line drawing algorithm."""
+def _draw_line(x0: int, y0: int, x1: int, y1: int, 
+               canvas_grid: np.ndarray, center_x: int, center_y: int,
+               color_r: int, color_g: int, color_b: int,
+               canvas_width: int, canvas_height: int) -> None:
+    """JIT-compiled line drawing algorithm using Bresenham's algorithm."""
     # Calculate absolute differences and direction of movement
     dx = abs(x1 - x0)
     dy = abs(y1 - y0)
@@ -47,24 +47,8 @@ class Rasterizer:
         self._background_color = np.array(background_color, dtype=int)
 
     def draw_line(self, start: (float, float), end: (float, float), color: (int, int, int)):
-        """Draw a line using interpolation method."""
-        start = np.array(start, dtype=float)
-        end = np.array(end, dtype=float)
-        direction = end - start
-        length = np.linalg.norm(direction)
-        if length == 0:
-            return
-        direction = direction / length  # Normalize
-        for t in np.linspace(0, length, int(length) + 1):
-            point = start + t * direction
-            x, y = int(point[0]), int(point[1])
-            # Check boundaries
-            if 0 <= x < self._canvas.size[0] and 0 <= y < self._canvas.size[1]:
-                self._canvas.draw_point(x, y, color)
-
-    def draw_line_bresenham(self, start: (float, float), end: (float, float), color: (int, int, int)):
         """Draw a line using Bresenham's algorithm for better performance."""
-        _bresenham_draw(
+        _draw_line(
             int(start[0]), int(start[1]),
             int(end[0]), int(end[1]),
             self._canvas.grid, 
