@@ -13,7 +13,7 @@ class TestTriangleDrawing(unittest.TestCase):
         self.canvas = Canvas((self.width, self.height))
         self.viewport = ViewPort((self.width, self.height), 1, self.canvas)
         self.scene = {}
-        self.rasterizer = Rasterizer(self.canvas, self.viewport, self.scene)
+        self.rasterizer = Rasterizer(self.canvas, self.viewport, self.scene, background_color=(0, 0, 0))
         self.color = (255, 0, 0)  # Red color for visibility
 
     def tearDown(self):
@@ -60,6 +60,11 @@ class TestTriangleDrawing(unittest.TestCase):
 
     def test_fully_outside_canvas(self):
         """Test triangle that is completely outside the canvas bounds."""
+        # Create a fresh canvas with black background
+        self.canvas = Canvas((self.width, self.height))
+        self.canvas.grid.fill(0)  # Set background to black
+        self.rasterizer = Rasterizer(self.canvas, self.viewport, self.scene, background_color=(0, 0, 0))
+        
         self.rasterizer.draw_triangle(
             (self.width + 10, 0),
             (self.width + 20, 0),
@@ -123,16 +128,17 @@ class TestTriangleDrawing(unittest.TestCase):
         )
         self.assertTrue(np.any(self.canvas.grid == 255))
 
-        # Clear canvas
+        # Clear canvas with black background
         self.canvas = Canvas((self.width, self.height))
-        self.rasterizer = Rasterizer(self.canvas, self.viewport, self.scene)
+        self.canvas.grid.fill(0)  # Set background to black
+        self.rasterizer = Rasterizer(self.canvas, self.viewport, self.scene, background_color=(0, 0, 0))
 
         # Test with minimum color values
         self.rasterizer.draw_triangle(
             (0, 10), (-10, -10), (10, -10),
             (0, 0, 0)
         )
-        # Should not change canvas from default
+        # Should not change canvas from black background
         self.assertTrue(np.all(self.canvas.grid == 0))
 
 

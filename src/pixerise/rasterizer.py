@@ -48,6 +48,25 @@ def _draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
                   color_r: int, color_g: int, color_b: int,
                   canvas_width: int, canvas_height: int) -> None:
     """JIT-compiled triangle filling algorithm using scanline approach."""
+    # Early exit if color is black (0,0,0)
+    if color_r == 0 and color_g == 0 and color_b == 0:
+        return
+
+    # Convert to screen coordinates for bounds checking
+    sx0, sy0 = center_x + x0, center_y - y0
+    sx1, sy1 = center_x + x1, center_y - y1
+    sx2, sy2 = center_x + x2, center_y - y2
+
+    # Early exit if triangle is completely outside the canvas
+    min_x = min(sx0, sx1, sx2)
+    max_x = max(sx0, sx1, sx2)
+    min_y = min(sy0, sy1, sy2)
+    max_y = max(sy0, sy1, sy2)
+    
+    if (max_x < 0 or min_x >= canvas_width or
+        max_y < 0 or min_y >= canvas_height):
+        return
+
     # Sort vertices by y-coordinate
     if y1 < y0:
         x0, x1 = x1, x0
