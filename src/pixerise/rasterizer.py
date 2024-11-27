@@ -42,6 +42,66 @@ def _draw_line(x0: int, y0: int, x1: int, y1: int,
             y0 += sy
 
 
+@jit(nopython=True)
+def _draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
+                  canvas_grid: np.ndarray, center_x: int, center_y: int,
+                  color_r: int, color_g: int, color_b: int,
+                  canvas_width: int, canvas_height: int) -> None:
+    """JIT-compiled triangle filling algorithm using scanline approach."""
+    # Sort vertices by y-coordinate
+    if y1 < y0:
+        x0, x1 = x1, x0
+        y0, y1 = y1, y0
+    if y2 < y0:
+        x0, x2 = x2, x0
+        y0, y2 = y2, y0
+    if y2 < y1:
+        x1, x2 = x2, x1
+        y1, y2 = y2, y1
+
+    # Calculate slopes
+    if y1 - y0 != 0:
+        slope1 = (x1 - x0) / (y1 - y0)
+    else:
+        slope1 = 0
+
+    if y2 - y0 != 0:
+        slope2 = (x2 - x0) / (y2 - y0)
+    else:
+        slope2 = 0
+
+    if y2 - y1 != 0:
+        slope3 = (x2 - x1) / (y2 - y1)
+    else:
+        slope3 = 0
+
+    # Fill the upper triangle
+    if y1 - y0 > 0:
+        for y in range(y0, y1):
+            x_start = int(x0 + (y - y0) * slope1)
+            x_end = int(x0 + (y - y0) * slope2)
+            
+            if x_start > x_end:
+                x_start, x_end = x_end, x_start
+                
+            for x in range(x_start, x_end + 1):
+                _draw_pixel(canvas_grid, x, y, center_x, center_y,
+                          color_r, color_g, color_b, canvas_width, canvas_height)
+
+    # Fill the lower triangle
+    if y2 - y1 > 0:
+        for y in range(y1, y2 + 1):
+            x_start = int(x1 + (y - y1) * slope3)
+            x_end = int(x0 + (y - y0) * slope2)
+            
+            if x_start > x_end:
+                x_start, x_end = x_end, x_start
+                
+            for x in range(x_start, x_end + 1):
+                _draw_pixel(canvas_grid, x, y, center_x, center_y,
+                          color_r, color_g, color_b, canvas_width, canvas_height)
+
+
 class Rasterizer:
     def __init__(self, canvas: Canvas, viewport: ViewPort, scene: dict, background_color=(32, 32, 32)):
         self._canvas = canvas
@@ -55,6 +115,18 @@ class Rasterizer:
             int(start[0]), int(start[1]),
             int(end[0]), int(end[1]),
             self._canvas.grid, 
+            self._canvas._center[0], self._canvas._center[1],
+            color[0], color[1], color[2],
+            self._canvas.width, self._canvas.height
+        )
+
+    def draw_triangle(self, p1: (float, float), p2: (float, float), p3: (float, float), color: (int, int, int)):
+        """Draw a filled triangle defined by three points."""
+        _draw_triangle(
+            int(p1[0]), int(p1[1]),
+            int(p2[0]), int(p2[1]),
+            int(p3[0]), int(p3[1]),
+            self._canvas.grid,
             self._canvas._center[0], self._canvas._center[1],
             color[0], color[1], color[2],
             self._canvas.width, self._canvas.height
