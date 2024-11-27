@@ -47,7 +47,7 @@ def _draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
                   canvas_grid: np.ndarray, center_x: int, center_y: int,
                   color_r: int, color_g: int, color_b: int,
                   canvas_width: int, canvas_height: int) -> None:
-    """JIT-compiled triangle filling algorithm using scanline approach."""
+    """JIT-compiled triangle filling algorithm using fixed-point arithmetic."""
     # Early exit if color is black (0,0,0)
     if color_r == 0 and color_g == 0 and color_b == 0:
         return
@@ -78,47 +78,56 @@ def _draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
         x1, x2 = x2, x1
         y1, y2 = y2, y1
 
-    # Calculate slopes
-    if y1 - y0 != 0:
-        slope1 = (x1 - x0) / (y1 - y0)
-    else:
-        slope1 = 0
+    # Initialize edge traversal variables for the first two edges
+    # Edge 1: y0 to y1
+    dx1 = x1 - x0
+    dy1 = y1 - y0
+    x_left = x0 << 16  # Fixed-point x-coordinate (16.16)
+    step_left = (dx1 << 16) // dy1 if dy1 != 0 else 0
 
-    if y2 - y0 != 0:
-        slope2 = (x2 - x0) / (y2 - y0)
-    else:
-        slope2 = 0
-
-    if y2 - y1 != 0:
-        slope3 = (x2 - x1) / (y2 - y1)
-    else:
-        slope3 = 0
+    # Edge 2: y0 to y2
+    dx2 = x2 - x0
+    dy2 = y2 - y0
+    x_right = x0 << 16  # Fixed-point x-coordinate (16.16)
+    step_right = (dx2 << 16) // dy2 if dy2 != 0 else 0
 
     # Fill the upper triangle
     if y1 - y0 > 0:
         for y in range(y0, y1):
-            x_start = int(x0 + (y - y0) * slope1)
-            x_end = int(x0 + (y - y0) * slope2)
+            start_x = x_left >> 16
+            end_x = x_right >> 16
             
-            if x_start > x_end:
-                x_start, x_end = x_end, x_start
+            if start_x > end_x:
+                start_x, end_x = end_x, start_x
                 
-            for x in range(x_start, x_end + 1):
+            for x in range(start_x, end_x + 1):
                 _draw_pixel(canvas_grid, x, y, center_x, center_y,
                           color_r, color_g, color_b, canvas_width, canvas_height)
+            
+            x_left += step_left
+            x_right += step_right
+
+    # Edge 3: y1 to y2
+    dx3 = x2 - x1
+    dy3 = y2 - y1
+    x_left = x1 << 16
+    step_left = (dx3 << 16) // dy3 if dy3 != 0 else 0
 
     # Fill the lower triangle
     if y2 - y1 > 0:
         for y in range(y1, y2 + 1):
-            x_start = int(x1 + (y - y1) * slope3)
-            x_end = int(x0 + (y - y0) * slope2)
+            start_x = x_left >> 16
+            end_x = x_right >> 16
             
-            if x_start > x_end:
-                x_start, x_end = x_end, x_start
+            if start_x > end_x:
+                start_x, end_x = end_x, start_x
                 
-            for x in range(x_start, x_end + 1):
+            for x in range(start_x, end_x + 1):
                 _draw_pixel(canvas_grid, x, y, center_x, center_y,
                           color_r, color_g, color_b, canvas_width, canvas_height)
+            
+            x_left += step_left
+            x_right += step_right
 
 
 class Rasterizer:
