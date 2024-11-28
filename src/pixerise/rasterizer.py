@@ -170,69 +170,46 @@ def _draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
         y1, y2 = y2, y1
         i1, i2 = i2, i1
 
-    # Handle degenerate cases
-    if y0 == y1 == y2:  # Horizontal line or point
-        if x0 == x1 == x2:  # Point
-            if i0 > 0.001:
-                r = int(color_r * i0)
-                g = int(color_g * i0)
-                b = int(color_b * i0)
-                _draw_pixel(canvas_grid, x0, y0, center_x, center_y, r, g, b, canvas_width, canvas_height)
-            return
-        else:  # Horizontal line
-            x_min = min(x0, x1, x2)
-            x_max = max(x0, x1, x2)
-            for x in range(x_min, x_max + 1):
-                t = (x - x_min) / (x_max - x_min)
-                i = i0 + (i2 - i0) * t
-                if i > 0.001:
-                    r = int(color_r * i)
-                    g = int(color_g * i)
-                    b = int(color_b * i)
-                    _draw_pixel(canvas_grid, x, y0, center_x, center_y, r, g, b, canvas_width, canvas_height)
-            return
-
     # Initialize edge traversal variables for the first two edges
     # Edge 1: y0 to y1
     dx1 = x1 - x0
     dy1 = y1 - y0
     x_left = x0 << 16  # Fixed-point x-coordinate (16.16)
-    step_left = (dx1 << 16) // dy1 if dy1 != 0 else 0
+    step_left = (dx1 << 16) // max(1, dy1)  # Ensure non-zero denominator
     i_left = i0  # Start with intensity at top vertex
-    i_step_left = (i1 - i0) / dy1 if dy1 != 0 else 0
+    i_step_left = (i1 - i0) / max(1, dy1)  # Ensure non-zero denominator
 
     # Edge 2: y0 to y2
     dx2 = x2 - x0
     dy2 = y2 - y0
     x_right = x0 << 16
-    step_right = (dx2 << 16) // dy2 if dy2 != 0 else 0
+    step_right = (dx2 << 16) // max(1, dy2)  # Ensure non-zero denominator
     i_right = i0
-    i_step_right = (i2 - i0) / dy2 if dy2 != 0 else 0
+    i_step_right = (i2 - i0) / max(1, dy2)  # Ensure non-zero denominator
 
-    # Fill the upper triangle
-    if y1 - y0 > 0:
-        for y in range(y0, y1):
-            start_x = x_left >> 16
-            end_x = x_right >> 16
-            
-            # Ensure left is actually on the left
-            if start_x > end_x:
-                start_x, end_x = end_x, start_x
-                i_curr, i_end = i_right, i_left
-            else:
-                i_curr, i_end = i_left, i_right
-            
-            # Draw the scanline with interpolated intensities
-            if end_x != start_x:
-                i_step = (i_end - i_curr) / (end_x - start_x)
-                for x in range(start_x, end_x + 1):
-                    if i_curr > 0.001:
-                        r = int(color_r * i_curr)
-                        g = int(color_g * i_curr)
-                        b = int(color_b * i_curr)
-                        _draw_pixel(canvas_grid, x, y, center_x, center_y, r, g, b, canvas_width, canvas_height)
-                    i_curr += i_step
-            
+    # Fill the upper triangle (including zero-height case)
+    for y in range(y0, max(y0 + 1, y1)):  # Always draw at least one scanline
+        start_x = x_left >> 16
+        end_x = x_right >> 16
+        
+        # Ensure left is actually on the left
+        if start_x > end_x:
+            start_x, end_x = end_x, start_x
+            i_curr, i_end = i_right, i_left
+        else:
+            i_curr, i_end = i_left, i_right
+        
+        # Draw the scanline with interpolated intensities
+        i_step = (i_end - i_curr) / max(1, end_x - start_x + 1)  # Include start point
+        for x in range(start_x, end_x + 1):
+            if i_curr > 0.001:
+                r = int(color_r * i_curr)
+                g = int(color_g * i_curr)
+                b = int(color_b * i_curr)
+                _draw_pixel(canvas_grid, x, y, center_x, center_y, r, g, b, canvas_width, canvas_height)
+            i_curr += i_step
+        
+        if y1 > y0:  # Only update edges if actually moving
             x_left += step_left
             x_right += step_right
             i_left += i_step_left
@@ -242,34 +219,33 @@ def _draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
     dx3 = x2 - x1
     dy3 = y2 - y1
     x_left = x1 << 16
-    step_left = (dx3 << 16) // dy3 if dy3 != 0 else 0
+    step_left = (dx3 << 16) // max(1, dy3)  # Ensure non-zero denominator
     i_left = i1
-    i_step_left = (i2 - i1) / dy3 if dy3 != 0 else 0
+    i_step_left = (i2 - i1) / max(1, dy3)  # Ensure non-zero denominator
 
-    # Fill the lower triangle
-    if y2 - y1 > 0:
-        for y in range(y1, y2 + 1):
-            start_x = x_left >> 16
-            end_x = x_right >> 16
-            
-            # Ensure left is actually on the left
-            if start_x > end_x:
-                start_x, end_x = end_x, start_x
-                i_curr, i_end = i_right, i_left
-            else:
-                i_curr, i_end = i_left, i_right
-            
-            # Draw the scanline with interpolated intensities
-            if end_x != start_x:
-                i_step = (i_end - i_curr) / (end_x - start_x)
-                for x in range(start_x, end_x + 1):
-                    if i_curr > 0.001:
-                        r = int(color_r * i_curr)
-                        g = int(color_g * i_curr)
-                        b = int(color_b * i_curr)
-                        _draw_pixel(canvas_grid, x, y, center_x, center_y, r, g, b, canvas_width, canvas_height)
-                    i_curr += i_step
-            
+    # Fill the lower triangle (including zero-height case)
+    for y in range(y1, max(y1 + 1, y2 + 1)):  # Always draw at least one scanline
+        start_x = x_left >> 16
+        end_x = x_right >> 16
+        
+        # Ensure left is actually on the left
+        if start_x > end_x:
+            start_x, end_x = end_x, start_x
+            i_curr, i_end = i_right, i_left
+        else:
+            i_curr, i_end = i_left, i_right
+        
+        # Draw the scanline with interpolated intensities
+        i_step = (i_end - i_curr) / max(1, end_x - start_x + 1)  # Include start point
+        for x in range(start_x, end_x + 1):
+            if i_curr > 0.001:
+                r = int(color_r * i_curr)
+                g = int(color_g * i_curr)
+                b = int(color_b * i_curr)
+                _draw_pixel(canvas_grid, x, y, center_x, center_y, r, g, b, canvas_width, canvas_height)
+            i_curr += i_step
+        
+        if y2 > y1:  # Only update edges if actually moving
             x_left += step_left
             x_right += step_right
             i_left += i_step_left
