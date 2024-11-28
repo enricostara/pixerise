@@ -90,14 +90,27 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         """Test triangle completely outside the canvas bounds."""
         self.canvas.grid.fill(0)
         self.rasterizer.draw_shaded_triangle(
-            (self.width + 10, 0),
-            (self.width + 20, 0),
-            (self.width + 15, 10),
+            (self.width + 10, 10), (self.width + 20, 20), (self.width + 30, 30),
             self.color,
-            1.0, 1.0, 1.0
+            1.0, 0.5, 0.0
         )
         # Should not modify any pixels
         self.assertTrue(np.all(self.canvas.grid == 0))
+
+    def test_partially_outside_canvas(self):
+        """Test shaded triangle that is partially outside the canvas bounds."""
+        self.canvas.grid.fill(0)  # Set background to black
+        self.rasterizer.draw_shaded_triangle(
+            (0, 0), (self.width + 10, 10), (10, self.height + 10),
+            self.color,
+            1.0, 0.5, 0.0
+        )
+        # Should draw the visible portion
+        self.assertTrue(np.any(self.canvas.grid != 0))
+        # Check that some pixels have varying intensities
+        red_channel = self.canvas.grid[..., 0]
+        nonzero_pixels = red_channel[red_channel != 0]
+        self.assertTrue(len(np.unique(nonzero_pixels)) > 1)
 
     def test_intensity_interpolation(self):
         """Test proper intensity interpolation across the triangle."""
