@@ -130,6 +130,152 @@ def _draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
             x_right += step_right
 
 
+@jit(nopython=True)
+def _draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
+                         canvas_grid: np.ndarray, center_x: int, center_y: int,
+                         color_r: int, color_g: int, color_b: int,
+                         i0: float, i1: float, i2: float,
+                         canvas_width: int, canvas_height: int) -> None:
+    """Draw a shaded triangle using scan-line algorithm with linear interpolation for intensities."""
+    # Early exit if all intensities are zero or color is black
+    if max(i0, i1, i2) <= 0.001 or (color_r == 0 and color_g == 0 and color_b == 0):
+        return
+
+    # Convert to screen coordinates for bounds checking
+    sx0, sy0 = center_x + x0, center_y - y0
+    sx1, sy1 = center_x + x1, center_y - y1
+    sx2, sy2 = center_x + x2, center_y - y2
+
+    # Early exit if triangle is completely outside the canvas
+    min_x = min(sx0, sx1, sx2)
+    max_x = max(sx0, sx1, sx2)
+    min_y = min(sy0, sy1, sy2)
+    max_y = max(sy0, sy1, sy2)
+    
+    if (max_x < 0 or min_x >= canvas_width or
+        max_y < 0 or min_y >= canvas_height):
+        return
+
+    # Sort vertices by y-coordinate, keeping intensities matched with vertices
+    if y1 < y0:
+        x0, x1 = x1, x0
+        y0, y1 = y1, y0
+        i0, i1 = i1, i0
+    if y2 < y0:
+        x0, x2 = x2, x0
+        y0, y2 = y2, y0
+        i0, i2 = i2, i0
+    if y2 < y1:
+        x1, x2 = x2, x1
+        y1, y2 = y2, y1
+        i1, i2 = i2, i1
+
+    # Handle degenerate cases
+    if y0 == y1 == y2:  # Horizontal line or point
+        if x0 == x1 == x2:  # Point
+            if i0 > 0.001:
+                r = int(color_r * i0)
+                g = int(color_g * i0)
+                b = int(color_b * i0)
+                _draw_pixel(canvas_grid, x0, y0, center_x, center_y, r, g, b, canvas_width, canvas_height)
+            return
+        else:  # Horizontal line
+            x_min = min(x0, x1, x2)
+            x_max = max(x0, x1, x2)
+            for x in range(x_min, x_max + 1):
+                t = (x - x_min) / (x_max - x_min)
+                i = i0 + (i2 - i0) * t
+                if i > 0.001:
+                    r = int(color_r * i)
+                    g = int(color_g * i)
+                    b = int(color_b * i)
+                    _draw_pixel(canvas_grid, x, y0, center_x, center_y, r, g, b, canvas_width, canvas_height)
+            return
+
+    # Initialize edge traversal variables for the first two edges
+    # Edge 1: y0 to y1
+    dx1 = x1 - x0
+    dy1 = y1 - y0
+    x_left = x0 << 16  # Fixed-point x-coordinate (16.16)
+    step_left = (dx1 << 16) // dy1 if dy1 != 0 else 0
+    i_left = i0  # Start with intensity at top vertex
+    i_step_left = (i1 - i0) / dy1 if dy1 != 0 else 0
+
+    # Edge 2: y0 to y2
+    dx2 = x2 - x0
+    dy2 = y2 - y0
+    x_right = x0 << 16
+    step_right = (dx2 << 16) // dy2 if dy2 != 0 else 0
+    i_right = i0
+    i_step_right = (i2 - i0) / dy2 if dy2 != 0 else 0
+
+    # Fill the upper triangle
+    if y1 - y0 > 0:
+        for y in range(y0, y1):
+            start_x = x_left >> 16
+            end_x = x_right >> 16
+            
+            # Ensure left is actually on the left
+            if start_x > end_x:
+                start_x, end_x = end_x, start_x
+                i_curr, i_end = i_right, i_left
+            else:
+                i_curr, i_end = i_left, i_right
+            
+            # Draw the scanline with interpolated intensities
+            if end_x != start_x:
+                i_step = (i_end - i_curr) / (end_x - start_x)
+                for x in range(start_x, end_x + 1):
+                    if i_curr > 0.001:
+                        r = int(color_r * i_curr)
+                        g = int(color_g * i_curr)
+                        b = int(color_b * i_curr)
+                        _draw_pixel(canvas_grid, x, y, center_x, center_y, r, g, b, canvas_width, canvas_height)
+                    i_curr += i_step
+            
+            x_left += step_left
+            x_right += step_right
+            i_left += i_step_left
+            i_right += i_step_right
+
+    # Edge 3: y1 to y2
+    dx3 = x2 - x1
+    dy3 = y2 - y1
+    x_left = x1 << 16
+    step_left = (dx3 << 16) // dy3 if dy3 != 0 else 0
+    i_left = i1
+    i_step_left = (i2 - i1) / dy3 if dy3 != 0 else 0
+
+    # Fill the lower triangle
+    if y2 - y1 > 0:
+        for y in range(y1, y2 + 1):
+            start_x = x_left >> 16
+            end_x = x_right >> 16
+            
+            # Ensure left is actually on the left
+            if start_x > end_x:
+                start_x, end_x = end_x, start_x
+                i_curr, i_end = i_right, i_left
+            else:
+                i_curr, i_end = i_left, i_right
+            
+            # Draw the scanline with interpolated intensities
+            if end_x != start_x:
+                i_step = (i_end - i_curr) / (end_x - start_x)
+                for x in range(start_x, end_x + 1):
+                    if i_curr > 0.001:
+                        r = int(color_r * i_curr)
+                        g = int(color_g * i_curr)
+                        b = int(color_b * i_curr)
+                        _draw_pixel(canvas_grid, x, y, center_x, center_y, r, g, b, canvas_width, canvas_height)
+                    i_curr += i_step
+            
+            x_left += step_left
+            x_right += step_right
+            i_left += i_step_left
+            i_right += i_step_right
+
+
 class Rasterizer:
     def __init__(self, canvas: Canvas, viewport: ViewPort, scene: dict, background_color=(32, 32, 32)):
         self._canvas = canvas
@@ -140,8 +286,8 @@ class Rasterizer:
     def draw_line(self, start: (float, float), end: (float, float), color: (int, int, int)):
         """Draw a line using Bresenham's algorithm for better performance."""
         _draw_line(
-            int(start[0]), int(start[1]),
-            int(end[0]), int(end[1]),
+            int(start[0]), int(start[1]), 
+            int(end[0]), int(end[1]), 
             self._canvas.grid, 
             self._canvas._center[0], self._canvas._center[1],
             color[0], color[1], color[2],
@@ -151,11 +297,37 @@ class Rasterizer:
     def draw_triangle(self, p1: (float, float), p2: (float, float), p3: (float, float), color: (int, int, int)):
         """Draw a filled triangle defined by three points."""
         _draw_triangle(
-            int(p1[0]), int(p1[1]),
-            int(p2[0]), int(p2[1]),
-            int(p3[0]), int(p3[1]),
+            int(p1[0]), int(p1[1]), 
+            int(p2[0]), int(p2[1]), 
+            int(p3[0]), int(p3[1]), 
             self._canvas.grid,
             self._canvas._center[0], self._canvas._center[1],
             color[0], color[1], color[2],
+            self._canvas.width, self._canvas.height
+        )
+
+    def draw_shaded_triangle(self, p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float],
+                           color: tuple[int, int, int],
+                           intensity1: float, intensity2: float, intensity3: float) -> None:
+        """
+        Draw a triangle with interpolated intensities for a single color.
+        
+        Args:
+            p1, p2, p3: Vertex positions as (x, y) tuples
+            color: RGB color as (r, g, b) tuple
+            intensity1, intensity2, intensity3: Intensity values (0.0 to 1.0) for each vertex
+        """
+        # Clamp intensities to valid range
+        i1 = max(0.0, min(1.0, intensity1))
+        i2 = max(0.0, min(1.0, intensity2))
+        i3 = max(0.0, min(1.0, intensity3))
+        
+        _draw_shaded_triangle(
+            int(p1[0]), int(p1[1]),
+            int(p2[0]), int(p2[1]),
+            int(p3[0]), int(p3[1]),
+            self._canvas.grid, self._canvas._center[0], self._canvas._center[1],
+            color[0], color[1], color[2],
+            i1, i2, i3,
             self._canvas.width, self._canvas.height
         )
