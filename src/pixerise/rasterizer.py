@@ -299,11 +299,39 @@ class Rasterizer:
         i3 = max(0.0, min(1.0, intensity3))
         
         _draw_shaded_triangle(
-            int(p1[0]), int(p1[1]),
-            int(p2[0]), int(p2[1]),
-            int(p3[0]), int(p3[1]),
+            int(p1[0]), int(p1[1]), 
+            int(p2[0]), int(p2[1]), 
+            int(p3[0]), int(p3[1]), 
             self._canvas.grid, self._canvas._center[0], self._canvas._center[1],
             color[0], color[1], color[2],
             i1, i2, i3,
             self._canvas.width, self._canvas.height
         )
+
+    def project_vertex(self, vertex, position=None):
+        # Apply translation if position is provided
+        if position is not None:
+            vertex = vertex + position
+            
+        x, y, z = vertex
+        d = self._viewport._plane_distance / z
+        return self._viewport.viewport_to_canvas(x * d, y * d)
+
+    def render_scene(self, scene: dict):
+        vertices = scene['vertices']
+        triangles = scene['triangles']
+        position = scene.get('position')  # Get position if present
+        
+        # Project all vertices to 2D canvas coordinates
+        projected_vertices = [self.project_vertex(vertex, position) for vertex in vertices]
+        
+        # Draw each triangle
+        for triangle in triangles:
+            v1, v2, v3 = triangle
+            self.draw_shaded_triangle(
+                projected_vertices[v1],
+                projected_vertices[v2],
+                projected_vertices[v3],
+                (255, 255, 255),  # White color for now
+                1.0, 1.0, 1.0
+            )
