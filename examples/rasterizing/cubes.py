@@ -64,7 +64,7 @@ def main():
     
     # Create rasterizer
     rasterizer = Rasterizer(canvas, viewport, scene)
-    rasterizer.render_scene(scene)
+    rasterizer.render(scene)
     
     
     # Display the result

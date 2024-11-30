@@ -270,17 +270,24 @@ class Rasterizer:
             self._canvas.width, self._canvas.height
         )
 
-    def draw_triangle(self, p1: (float, float), p2: (float, float), p3: (float, float), color: (int, int, int)):
-        """Draw a filled triangle defined by three points."""
-        _draw_triangle(
-            int(p1[0]), int(p1[1]), 
-            int(p2[0]), int(p2[1]), 
-            int(p3[0]), int(p3[1]), 
-            self._canvas.grid,
-            self._canvas._center[0], self._canvas._center[1],
-            color[0], color[1], color[2],
-            self._canvas.width, self._canvas.height
-        )
+    def draw_triangle(self, p1: (float, float), p2: (float, float), p3: (float, float), color: (int, int, int), fill: bool = True):
+        """Draw a triangle defined by three points. If fill is True, the triangle will be filled,
+        otherwise only the outline will be drawn."""
+        if fill:
+            _draw_triangle(
+                int(p1[0]), int(p1[1]), 
+                int(p2[0]), int(p2[1]), 
+                int(p3[0]), int(p3[1]), 
+                self._canvas.grid,
+                self._canvas._center[0], self._canvas._center[1],
+                color[0], color[1], color[2],
+                self._canvas.width, self._canvas.height
+            )
+        else:
+            # Draw the three edges of the triangle
+            self.draw_line(p1, p2, color)
+            self.draw_line(p2, p3, color)
+            self.draw_line(p3, p1, color)
 
     def draw_shaded_triangle(self, p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float],
                            color: tuple[int, int, int],
@@ -317,7 +324,7 @@ class Rasterizer:
         d = self._viewport._plane_distance / z
         return self._viewport.viewport_to_canvas(x * d, y * d)
 
-    def render_scene(self, scene: dict):
+    def render(self, scene: dict):
         vertices = scene['vertices']
         triangles = scene['triangles']
         position = scene.get('position')  # Get position if present
@@ -328,10 +335,9 @@ class Rasterizer:
         # Draw each triangle
         for triangle in triangles:
             v1, v2, v3 = triangle
-            self.draw_shaded_triangle(
+            self.draw_triangle(
                 projected_vertices[v1],
                 projected_vertices[v2],
                 projected_vertices[v3],
                 (255, 255, 255),  # White color for now
-                1.0, 1.0, 1.0
-            )
+                fill=False)
