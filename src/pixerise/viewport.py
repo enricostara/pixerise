@@ -9,5 +9,5 @@ class ViewPort:
         self._plane_distance = plane_distance
         self._canvas = canvas
 
-    def canvas_to_viewport_direction(self, x, y) -> (float, float, float):
-        return x * self._width / self._canvas.width, y * self._height / self._canvas.height, self._plane_distance
+    def viewport_to_canvas(self, x, y) -> (float, float):
+        return x *  self._canvas.width / self._width, y *  self._canvas.height / self._height
