@@ -60,11 +60,19 @@ def main():
         'instances': [
             {
                 'model': 'cube',
-                'position': np.array([-2, 0, 7], dtype=float)  # 2 units left, 7 units forward
+                'transform': {
+                    'translation': np.array([-2, 0, 7], dtype=float),  # 2 units left, 7 units forward
+                    'rotation': np.array([0, 0, 0], dtype=float),      # rotation angles in radians (x, y, z)
+                    'scale': np.array([1, 1, 1], dtype=float)         # uniform scale
+                }
             },
             {
                 'model': 'cube',
-                'position': np.array([2, 1, 8], dtype=float)   # 2 units right, 1 unit up, 8 units forward
+                'transform': {
+                    'translation': np.array([2, 1, 8], dtype=float),   # 2 units right, 1 up, 8 forward
+                    'rotation': np.array([0, np.pi/4, 0], dtype=float), # rotated 45 degrees around Y axis
+                    'scale': np.array([0.5, 0.5, 0.5], dtype=float)    # half the size
+                }
             }
         ]
     }
