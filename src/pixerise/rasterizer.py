@@ -259,6 +259,66 @@ class Rasterizer:
         self._scene = scene
         self._background_color = np.array(background_color, dtype=int)
 
+    def _create_rotation_matrix(self, angles: np.ndarray) -> np.ndarray:
+        """Create a 3D rotation matrix from euler angles (x, y, z) in radians."""
+        # Extract angles
+        rx, ry, rz = angles
+        
+        # X rotation
+        cx, sx = np.cos(rx), np.sin(rx)
+        Rx = np.array([
+            [1, 0, 0],
+            [0, cx, -sx],
+            [0, sx, cx]
+        ])
+        
+        # Y rotation
+        cy, sy = np.cos(ry), np.sin(ry)
+        Ry = np.array([
+            [cy, 0, sy],
+            [0, 1, 0],
+            [-sy, 0, cy]
+        ])
+        
+        # Z rotation
+        cz, sz = np.cos(rz), np.sin(rz)
+        Rz = np.array([
+            [cz, -sz, 0],
+            [sz, cz, 0],
+            [0, 0, 1]
+        ])
+        
+        # Combined rotation matrix (order: Y * X * Z)
+        return Ry @ Rx @ Rz
+
+    def _create_scale_matrix(self, scale: np.ndarray) -> np.ndarray:
+        """Create a 3D scale matrix."""
+        return np.diag(scale)
+
+    def _transform_vertex(self, vertex: np.ndarray, transform: dict) -> np.ndarray:
+        """Apply transformation to a vertex."""
+        # Get transform components
+        translation = transform.get('translation', np.zeros(3))
+        rotation = transform.get('rotation', np.zeros(3))
+        scale = transform.get('scale', np.ones(3))
+        
+        # Create transformation matrices
+        R = self._create_rotation_matrix(rotation)
+        S = self._create_scale_matrix(scale)
+        
+        # Apply transformations: translation * rotation * scale * vertex
+        transformed = R @ (S @ vertex) + translation
+        return transformed
+
+    def _project_vertex(self, vertex, position=None):
+        # Apply translation if position is provided
+        if position is not None:
+            vertex = vertex + position
+            
+        x, y, z = vertex
+        d = self._viewport._plane_distance / z
+        return self._viewport.viewport_to_canvas(x * d, y * d)
+
     def draw_line(self, start: (float, float), end: (float, float), color: (int, int, int)):
         """Draw a line using Bresenham's algorithm for better performance."""
         _draw_line(
@@ -315,15 +375,6 @@ class Rasterizer:
             self._canvas.width, self._canvas.height
         )
 
-    def project_vertex(self, vertex, position=None):
-        # Apply translation if position is provided
-        if position is not None:
-            vertex = vertex + position
-            
-        x, y, z = vertex
-        d = self._viewport._plane_distance / z
-        return self._viewport.viewport_to_canvas(x * d, y * d)
-
     def render(self, scene: dict):
         """Render a scene containing models and their instances."""
         models = scene['models']
@@ -331,15 +382,20 @@ class Rasterizer:
         # Render each instance
         for instance in scene['instances']:
             model_name = instance['model']
-            position = instance.get('position', np.array([0, 0, 0], dtype=float))
+            transform = instance.get('transform', {
+                'translation': np.zeros(3),
+                'rotation': np.zeros(3),
+                'scale': np.ones(3)
+            })
             
             # Get the model data
             model = models[model_name]
             vertices = model['vertices']
             triangles = model['triangles']
             
-            # Project vertices with instance position
-            projected_vertices = [self.project_vertex(vertex, position) for vertex in vertices]
+            # Transform and project vertices
+            transformed_vertices = [self._transform_vertex(np.array(v), transform) for v in vertices]
+            projected_vertices = [self._project_vertex(v) for v in transformed_vertices]
             
             # Draw each triangle
             for triangle in triangles:
