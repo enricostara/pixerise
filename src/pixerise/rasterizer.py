@@ -325,19 +325,28 @@ class Rasterizer:
         return self._viewport.viewport_to_canvas(x * d, y * d)
 
     def render(self, scene: dict):
-        vertices = scene['vertices']
-        triangles = scene['triangles']
-        position = scene.get('position')  # Get position if present
+        """Render a scene containing models and their instances."""
+        models = scene['models']
         
-        # Project all vertices to 2D canvas coordinates
-        projected_vertices = [self.project_vertex(vertex, position) for vertex in vertices]
-        
-        # Draw each triangle
-        for triangle in triangles:
-            v1, v2, v3 = triangle
-            self.draw_triangle(
-                projected_vertices[v1],
-                projected_vertices[v2],
-                projected_vertices[v3],
-                (255, 255, 255),  # White color for now
-                fill=False)
+        # Render each instance
+        for instance in scene['instances']:
+            model_name = instance['model']
+            position = instance.get('position', np.array([0, 0, 0], dtype=float))
+            
+            # Get the model data
+            model = models[model_name]
+            vertices = model['vertices']
+            triangles = model['triangles']
+            
+            # Project vertices with instance position
+            projected_vertices = [self.project_vertex(vertex, position) for vertex in vertices]
+            
+            # Draw each triangle
+            for triangle in triangles:
+                v1, v2, v3 = triangle
+                self.draw_triangle(
+                    projected_vertices[v1],
+                    projected_vertices[v2],
+                    projected_vertices[v3],
+                    (255, 255, 255),  # White color for now
+                    fill=False)

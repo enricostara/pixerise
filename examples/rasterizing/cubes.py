@@ -27,45 +27,51 @@ def main():
     canvas = Canvas((width, height))
     viewport = ViewPort((1.6, 1.2), 1, canvas)
 
-    # Define cube vertices (a cube centered at origin with side length 2)
-    vertices = [
-        (-1, -1, -1),  # 0: front bottom left
-        (1, -1, -1),   # 1: front bottom right
-        (1, 1, -1),    # 2: front top right
-        (-1, 1, -1),   # 3: front top left
-        (-1, -1, 1),   # 4: back bottom left
-        (1, -1, 1),    # 5: back bottom right
-        (1, 1, 1),     # 6: back top right
-        (-1, 1, 1),    # 7: back top left
-    ]
-
-    # Define triangles (each face of the cube is made of 2 triangles)
-    triangles = [
-        # Front face
-        (0, 1, 2), (0, 2, 3),
-        # Back face
-        (4, 6, 5), (4, 7, 6),
-        # Right face
-        (1, 5, 6), (1, 6, 2),
-        # Left face
-        (4, 0, 3), (4, 3, 7),
-        # Top face
-        (3, 2, 6), (3, 6, 7),
-        # Bottom face
-        (4, 5, 1), (4, 1, 0)
-    ]
-
-    # Create scene with vertices and triangles
+    # Define scene with models and instances
     scene = {
-        'vertices': np.array(vertices, dtype=float),
-        'triangles': np.array(triangles, dtype=int),
-        'position': np.array([-2, 0, 7], dtype=float)  # 2 units left, 7 units forward
+        'models': {
+            'cube': {
+                'vertices': np.array([
+                    (-1, -1, -1),  # 0: front bottom left
+                    (1, -1, -1),   # 1: front bottom right
+                    (1, 1, -1),    # 2: front top right
+                    (-1, 1, -1),   # 3: front top left
+                    (-1, -1, 1),   # 4: back bottom left
+                    (1, -1, 1),    # 5: back bottom right
+                    (1, 1, 1),     # 6: back top right
+                    (-1, 1, 1),    # 7: back top left
+                ], dtype=float),
+                'triangles': np.array([
+                    # Front face
+                    (0, 1, 2), (0, 2, 3),
+                    # Back face
+                    (4, 6, 5), (4, 7, 6),
+                    # Right face
+                    (1, 5, 6), (1, 6, 2),
+                    # Left face
+                    (4, 0, 3), (4, 3, 7),
+                    # Top face
+                    (3, 2, 6), (3, 6, 7),
+                    # Bottom face
+                    (4, 5, 1), (4, 1, 0)
+                ], dtype=int)
+            }
+        },
+        'instances': [
+            {
+                'model': 'cube',
+                'position': np.array([-2, 0, 7], dtype=float)  # 2 units left, 7 units forward
+            },
+            {
+                'model': 'cube',
+                'position': np.array([2, 1, 8], dtype=float)   # 2 units right, 1 unit up, 8 units forward
+            }
+        ]
     }
     
     # Create rasterizer
     rasterizer = Rasterizer(canvas, viewport, scene)
     rasterizer.render(scene)
-    
     
     # Display the result
     display(canvas)
