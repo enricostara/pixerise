@@ -260,55 +260,81 @@ class Rasterizer:
         self._background_color = np.array(background_color, dtype=int)
 
     def _create_rotation_matrix(self, angles: np.ndarray) -> np.ndarray:
-        """Create a 3D rotation matrix from euler angles (x, y, z) in radians."""
+        """Create a homogeneous 4x4 rotation matrix from euler angles (x, y, z) in radians."""
         # Extract angles
         rx, ry, rz = angles
         
         # X rotation
         cx, sx = np.cos(rx), np.sin(rx)
         Rx = np.array([
-            [1, 0, 0],
-            [0, cx, -sx],
-            [0, sx, cx]
+            [1, 0, 0, 0],
+            [0, cx, -sx, 0],
+            [0, sx, cx, 0],
+            [0, 0, 0, 1]
         ])
         
         # Y rotation
         cy, sy = np.cos(ry), np.sin(ry)
         Ry = np.array([
-            [cy, 0, sy],
-            [0, 1, 0],
-            [-sy, 0, cy]
+            [cy, 0, sy, 0],
+            [0, 1, 0, 0],
+            [-sy, 0, cy, 0],
+            [0, 0, 0, 1]
         ])
         
         # Z rotation
         cz, sz = np.cos(rz), np.sin(rz)
         Rz = np.array([
-            [cz, -sz, 0],
-            [sz, cz, 0],
-            [0, 0, 1]
+            [cz, -sz, 0, 0],
+            [sz, cz, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]
         ])
         
         # Combined rotation matrix (order: Y * X * Z)
         return Ry @ Rx @ Rz
 
     def _create_scale_matrix(self, scale: np.ndarray) -> np.ndarray:
-        """Create a 3D scale matrix."""
-        return np.diag(scale)
+        """Create a homogeneous 4x4 scale matrix."""
+        return np.array([
+            [scale[0], 0, 0, 0],
+            [0, scale[1], 0, 0],
+            [0, 0, scale[2], 0],
+            [0, 0, 0, 1]
+        ])
+
+    def _create_translation_matrix(self, translation: np.ndarray) -> np.ndarray:
+        """Create a homogeneous 4x4 translation matrix."""
+        return np.array([
+            [1, 0, 0, translation[0]],
+            [0, 1, 0, translation[1]],
+            [0, 0, 1, translation[2]],
+            [0, 0, 0, 1]
+        ])
 
     def _transform_vertex(self, vertex: np.ndarray, transform: dict) -> np.ndarray:
-        """Apply transformation to a vertex."""
+        """Apply transformation to a vertex using homogeneous coordinates."""
         # Get transform components
         translation = transform.get('translation', np.zeros(3))
         rotation = transform.get('rotation', np.zeros(3))
         scale = transform.get('scale', np.ones(3))
         
         # Create transformation matrices
+        T = self._create_translation_matrix(translation)
         R = self._create_rotation_matrix(rotation)
         S = self._create_scale_matrix(scale)
         
-        # Apply transformations: translation * rotation * scale * vertex
-        transformed = R @ (S @ vertex) + translation
-        return transformed
+        # Create model matrix (order: T * R * S)
+        M = T @ R @ S
+        
+        # Convert vertex to homogeneous coordinates
+        v_homogeneous = np.append(vertex, 1)
+        
+        # Apply transformation
+        transformed = M @ v_homogeneous
+        
+        # Convert back to 3D coordinates
+        return transformed[:3]
 
     def _project_vertex(self, vertex, position=None):
         # Apply translation if position is provided
