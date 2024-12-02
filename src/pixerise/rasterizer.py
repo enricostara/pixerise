@@ -312,6 +312,28 @@ class Rasterizer:
             [0, 0, 0, 1]
         ])
 
+    def _create_camera_matrix(self, transform: dict) -> np.ndarray:
+        """Create a homogeneous 4x4 camera matrix from position and orientation.
+        The camera matrix transforms vertices from world space to camera space.
+        It's the inverse of the camera's model matrix (position and orientation in world space).
+        """
+        # Get camera transform components
+        translation = transform.get('translation', np.zeros(3))
+        rotation = transform.get('rotation', np.zeros(3))
+        
+        # Create rotation matrix for camera orientation
+        R = self._create_rotation_matrix(rotation)
+        
+        # Create translation matrix for camera position
+        T = self._create_translation_matrix(-translation)  # Negative translation for camera space
+        
+        # Camera matrix is the inverse of view transform: R^T * T
+        # R^T is the transpose of R, which is the inverse for orthogonal rotation matrices
+        R_transpose = R.T
+        
+        # Camera matrix combines rotation and translation: R^T * T
+        return R_transpose @ T
+
     def _transform_vertex(self, vertex: np.ndarray, transform: dict) -> np.ndarray:
         """Apply transformation to a vertex using homogeneous coordinates."""
         # Get transform components
@@ -326,6 +348,12 @@ class Rasterizer:
         
         # Create model matrix (order: T * R * S)
         M = T @ R @ S
+        
+        # Get camera matrix if camera transform exists in scene
+        if 'camera' in self._scene and 'transform' in self._scene['camera']:
+            C = self._create_camera_matrix(self._scene['camera']['transform'])
+            # Apply camera transform after model transform
+            M = C @ M
         
         # Convert vertex to homogeneous coordinates
         v_homogeneous = np.append(vertex, 1)

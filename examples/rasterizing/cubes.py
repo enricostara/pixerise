@@ -29,6 +29,12 @@ def main():
 
     # Define scene with models and instances
     scene = {
+        'camera': {
+            'transform': {
+                'translation': np.array([0, 5, 1], dtype=float),  # Moved higher (y from 1 to 2.5)
+                'rotation': np.array([np.pi/4, 0, 0], dtype=float)  # More downward tilt (from pi/12 to pi/4)
+            }
+        },
         'models': {
             'cube': {
                 'vertices': np.array([
