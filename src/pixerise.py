@@ -219,15 +219,12 @@ class Rasterizer:
 
     def render(self, scene: dict):
         """Render a scene containing models and their instances."""
-        # Update scene
-        self._scene = scene
-        
-        # Clear canvas with background color
+        # Clear canvas
         self._canvas.grid[:] = self._background_color
-        
+
         # Get camera transform if present
-        has_camera = 'camera' in scene
-        
+        camera_transform = scene.get('camera', {}).get('transform', {})
+
         # Render each model instance
         for model_name, model in scene.get('models', {}).items():
             # Get model data
@@ -235,7 +232,10 @@ class Rasterizer:
             triangles = model.get('triangles', [])
             
             # Render each instance of the model
-            for instance in scene.get('instances', {}).get(model_name, []):
+            for instance in scene.get('instances', []):
+                if instance.get('model') != model_name:
+                    continue
+                    
                 # Get instance transform and color
                 transform = instance.get('transform', {})
                 color = instance.get('color', (255, 255, 255))
@@ -265,4 +265,4 @@ class Rasterizer:
                         continue
                     
                     # Draw triangle
-                    self.draw_triangle(v1, v2, v3, color, fill=True)
+                    self.draw_triangle(v1, v2, v3, color, fill=False)
