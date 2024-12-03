@@ -1,8 +1,6 @@
 import time
 import numpy as np
-from pixerise.canvas import Canvas
-from pixerise.viewport import ViewPort
-from pixerise.rasterizer import Rasterizer
+from pixerise import Canvas, ViewPort, Rasterizer
 
 
 class TransformVertexBenchmark:

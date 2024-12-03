@@ -1,9 +1,6 @@
 import unittest
 import numpy as np
-
-from pixerise.canvas import Canvas
-from pixerise.rasterizer import Rasterizer
-from pixerise.viewport import ViewPort
+from pixerise import Canvas, ViewPort, Rasterizer
 
 
 class TestTriangleDrawing(unittest.TestCase):

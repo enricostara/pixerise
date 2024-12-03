@@ -1,9 +1,7 @@
 import pygame
 import numpy as np
 
-from pixerise.canvas import Canvas
-from pixerise.rasterizer import Rasterizer
-from pixerise.viewport import ViewPort
+from pixerise import Canvas, ViewPort, Rasterizer
 
 
 def display(image: Canvas):

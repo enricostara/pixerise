@@ -267,7 +267,7 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
 
 
 @jit(nopython=True)
-def transform_vertex_jit(vertex: np.ndarray, 
+def transform_vertex(vertex: np.ndarray, 
                         translation: np.ndarray, rotation: np.ndarray, scale: np.ndarray,
                         camera_translation: np.ndarray, camera_rotation: np.ndarray,
                         has_camera: bool) -> np.ndarray:
