@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from pixerise import Canvas, ViewPort, Rasterizer
+from pixerise import Canvas, ViewPort, Renderer
 
 
 class TestTriangleDrawing(unittest.TestCase):
@@ -10,18 +10,18 @@ class TestTriangleDrawing(unittest.TestCase):
         self.canvas = Canvas((self.width, self.height))
         self.viewport = ViewPort((self.width, self.height), 1, self.canvas)
         self.scene = {}
-        self.rasterizer = Rasterizer(self.canvas, self.viewport, self.scene, background_color=(0, 0, 0))
+        self.renderer = Renderer(self.canvas, self.viewport, self.scene)
         self.color = (255, 0, 0)  # Red color for visibility
 
     def tearDown(self):
         self.canvas = None
         self.viewport = None
-        self.rasterizer = None
+        self.renderer = None
 
     def test_basic_triangle(self):
         """Test drawing a simple triangle in the center of the canvas."""
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             (0, 20), (-20, -20), (20, -20),
             self.color
         )
@@ -31,7 +31,7 @@ class TestTriangleDrawing(unittest.TestCase):
     def test_degenerate_line(self):
         """Test triangle that collapses to a line (all points collinear)."""
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             (0, 0), (10, 10), (20, 20),
             self.color
         )
@@ -41,7 +41,7 @@ class TestTriangleDrawing(unittest.TestCase):
     def test_degenerate_point(self):
         """Test triangle where all points are the same (collapses to a point)."""
         point = (0, 0)
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             point, point, point,
             self.color
         )
@@ -51,7 +51,7 @@ class TestTriangleDrawing(unittest.TestCase):
     def test_partially_outside_canvas(self):
         """Test triangle that is partially outside the canvas bounds."""
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             (0, 0), (self.width + 10, 10), (10, self.height + 10),
             self.color
         )
@@ -61,7 +61,7 @@ class TestTriangleDrawing(unittest.TestCase):
     def test_fully_outside_canvas(self):
         """Test triangle that is completely outside the canvas bounds."""
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             (self.width + 10, 0),
             (self.width + 20, 0),
             (self.width + 15, 10),
@@ -73,7 +73,7 @@ class TestTriangleDrawing(unittest.TestCase):
     def test_flat_top_triangle(self):
         """Test triangle with a flat top edge."""
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             (-20, 20), (20, 20), (0, -20),
             self.color
         )
@@ -83,7 +83,7 @@ class TestTriangleDrawing(unittest.TestCase):
     def test_flat_bottom_triangle(self):
         """Test triangle with a flat bottom edge."""
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             (0, 20), (-20, -20), (20, -20),
             self.color
         )
@@ -93,7 +93,7 @@ class TestTriangleDrawing(unittest.TestCase):
     def test_flat_side_triangle(self):
         """Test triangle with a vertical edge."""
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             (0, 20), (0, -20), (20, 0),
             self.color
         )
@@ -103,7 +103,7 @@ class TestTriangleDrawing(unittest.TestCase):
     def test_very_thin_triangle(self):
         """Test very thin triangle (nearly degenerate)."""
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             (0, 20), (1, -20), (2, 20),
             self.color
         )
@@ -113,7 +113,7 @@ class TestTriangleDrawing(unittest.TestCase):
     def test_very_small_triangle(self):
         """Test very small triangle (few pixels)."""
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             (0, 0), (1, 1), (0, 1),
             self.color
         )
@@ -124,7 +124,7 @@ class TestTriangleDrawing(unittest.TestCase):
         """Test different color values including edge cases."""
         # Test with maximum color values
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             (0, 10), (-10, -10), (10, -10),
             (255, 255, 255)
         )
@@ -134,7 +134,7 @@ class TestTriangleDrawing(unittest.TestCase):
         self.canvas.grid.fill(0)  # Set background to black
 
         # Test with minimum color values
-        self.rasterizer.draw_triangle(
+        self.renderer.draw_triangle(
             (0, 10), (-10, -10), (10, -10),
             (0, 0, 0)
         )

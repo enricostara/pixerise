@@ -1,6 +1,6 @@
 """
 Core components of the Pixerise rendering engine.
-This module contains the main classes for rendering: Canvas, ViewPort, and Rasterizer.
+This module contains the main classes for rendering: Canvas, ViewPort, and Renderer.
 """
 
 import numpy as np
@@ -40,8 +40,8 @@ class ViewPort:
         return x * self._canvas.width / self._width, y * self._canvas.height / self._height
 
 
-class Rasterizer:
-    """Main rasterizer class that handles rendering of 3D scenes."""
+class Renderer:
+    """Main renderer class that handles rendering of 3D scenes."""
     
     def __init__(self, canvas: Canvas, viewport: ViewPort, scene: dict, background_color=(32, 32, 32)):
         self._canvas = canvas

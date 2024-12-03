@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from pixerise import Canvas, ViewPort, Rasterizer
+from pixerise import Canvas, ViewPort, Renderer
 
 
 class TransformVertexBenchmark:
@@ -8,7 +8,7 @@ class TransformVertexBenchmark:
         self.canvas = Canvas((width, height))
         self.viewport = ViewPort((width, height), 1, self.canvas)
         self.scene = {}
-        self.rasterizer = Rasterizer(self.canvas, self.viewport, self.scene)
+        self.renderer = Renderer(self.canvas, self.viewport, self.scene)
 
     def benchmark_transform(self, vertex, transform):
         """Run 10 loops of 1000 vertex transforms and return the average total time for 1000 calls"""
@@ -19,7 +19,7 @@ class TransformVertexBenchmark:
         for _ in range(NUM_LOOPS):
             start_time = time.perf_counter()
             for _ in range(CALLS_PER_LOOP):
-                self.rasterizer._transform_vertex(vertex, transform)
+                self.renderer._transform_vertex(vertex, transform)
             end_time = time.perf_counter()
             total_times.append((end_time - start_time) * 1000)  # Convert to milliseconds
             

@@ -1,7 +1,7 @@
 import pygame
 import numpy as np
 
-from pixerise import Canvas, ViewPort, Rasterizer
+from pixerise import Canvas, ViewPort, Renderer
 
 
 def display(image: Canvas):
@@ -81,9 +81,9 @@ def main():
         ]
     }
     
-    # Create rasterizer
-    rasterizer = Rasterizer(canvas, viewport, scene)
-    rasterizer.render(scene)
+    # Create renderer
+    renderer = Renderer(canvas, viewport, scene)
+    renderer.render(scene)
     
     # Display the result
     display(canvas)

@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from pixerise import Canvas, ViewPort, Rasterizer
+from pixerise import Canvas, ViewPort, Renderer
 
 
 class TestShadedTriangleDrawing(unittest.TestCase):
@@ -10,18 +10,18 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         self.canvas = Canvas((self.width, self.height))
         self.viewport = ViewPort((self.width, self.height), 1, self.canvas)
         self.scene = {}
-        self.rasterizer = Rasterizer(self.canvas, self.viewport, self.scene, background_color=(0, 0, 0))
+        self.renderer = Renderer(self.canvas, self.viewport, self.scene)
         self.color = (255, 0, 0)  # Red color for visibility
 
     def tearDown(self):
         self.canvas = None
         self.viewport = None
-        self.rasterizer = None
+        self.renderer = None
 
     def test_basic_shaded_triangle(self):
         """Test drawing a simple shaded triangle in the center of the canvas."""
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_shaded_triangle(
+        self.renderer.draw_shaded_triangle(
             (0, 20), (-20, -20), (20, -20),
             self.color,
             1.0, 0.5, 0.0  # Varying intensities
@@ -36,7 +36,7 @@ class TestShadedTriangleDrawing(unittest.TestCase):
     def test_uniform_intensity(self):
         """Test triangle with uniform intensity across all vertices."""
         self.canvas.grid.fill(0)
-        self.rasterizer.draw_shaded_triangle(
+        self.renderer.draw_shaded_triangle(
             (0, 20), (-20, -20), (20, -20),
             self.color,
             0.5, 0.5, 0.5  # Uniform intensity
@@ -50,7 +50,7 @@ class TestShadedTriangleDrawing(unittest.TestCase):
     def test_zero_intensity(self):
         """Test triangle with zero intensity at all vertices."""
         self.canvas.grid.fill(0)
-        self.rasterizer.draw_shaded_triangle(
+        self.renderer.draw_shaded_triangle(
             (0, 20), (-20, -20), (20, -20),
             self.color,
             0.0, 0.0, 0.0
@@ -61,7 +61,7 @@ class TestShadedTriangleDrawing(unittest.TestCase):
     def test_degenerate_line(self):
         """Test shaded triangle that collapses to a line."""
         self.canvas.grid.fill(0)
-        self.rasterizer.draw_shaded_triangle(
+        self.renderer.draw_shaded_triangle(
             (0, 0), (10, 10), (20, 20),
             self.color,
             1.0, 0.5, 0.0
@@ -74,7 +74,7 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         self.canvas.grid.fill(0)
         point = (0, 0)
         intensity = 0.5
-        self.rasterizer.draw_shaded_triangle(
+        self.renderer.draw_shaded_triangle(
             point, point, point,
             self.color,
             intensity, intensity, intensity
@@ -86,7 +86,7 @@ class TestShadedTriangleDrawing(unittest.TestCase):
     def test_fully_outside_canvas(self):
         """Test triangle completely outside the canvas bounds."""
         self.canvas.grid.fill(0)
-        self.rasterizer.draw_shaded_triangle(
+        self.renderer.draw_shaded_triangle(
             (self.width + 10, 10), (self.width + 20, 20), (self.width + 30, 30),
             self.color,
             1.0, 0.5, 0.0
@@ -97,7 +97,7 @@ class TestShadedTriangleDrawing(unittest.TestCase):
     def test_partially_outside_canvas(self):
         """Test shaded triangle that is partially outside the canvas bounds."""
         self.canvas.grid.fill(0)  # Set background to black
-        self.rasterizer.draw_shaded_triangle(
+        self.renderer.draw_shaded_triangle(
             (0, 0), (self.width + 10, 10), (10, self.height + 10),
             self.color,
             1.0, 0.5, 0.0
@@ -113,7 +113,7 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         """Test proper intensity interpolation across the triangle."""
         self.canvas.grid.fill(0)
         # Draw triangle with intensity gradient from top to bottom
-        self.rasterizer.draw_shaded_triangle(
+        self.renderer.draw_shaded_triangle(
             (0, 20), (-20, -20), (20, -20),
             self.color,
             1.0, 0.0, 0.0  # Full intensity at top, zero at bottom corners

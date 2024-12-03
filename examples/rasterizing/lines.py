@@ -1,7 +1,7 @@
 import pygame
 import numpy as np
 
-from pixerise import Canvas, ViewPort, Rasterizer
+from pixerise import Canvas, ViewPort, Renderer
 
 
 def display(image: Canvas):
@@ -26,8 +26,8 @@ def main():
     viewport = ViewPort((width, height), 1, canvas)
     scene = {}  # Empty scene for now
     
-    # Create rasterizer
-    rasterizer = Rasterizer(canvas, viewport, scene)
+    # Create renderer
+    renderer = Renderer(canvas, viewport, scene)
     
     # Draw some example lines
     # Draw a colorful star pattern
@@ -58,7 +58,7 @@ def main():
         else: color = (255, 0, x)
         
         # Draw line from center to point
-        rasterizer.draw_line((center_x, center_y), (screen_x, screen_y), color)
+        renderer.draw_line((center_x, center_y), (screen_x, screen_y), color)
     
     # Display the result
     display(canvas)

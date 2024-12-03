@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from pixerise import Canvas, ViewPort, Rasterizer
+from pixerise import Canvas, ViewPort, Renderer
 
 
 class ShadedTriangleBenchmark:
@@ -8,7 +8,7 @@ class ShadedTriangleBenchmark:
         self.canvas = Canvas((width, height))
         self.viewport = ViewPort((width, height), 1, self.canvas)
         self.scene = {}
-        self.rasterizer = Rasterizer(self.canvas, self.viewport, self.scene)
+        self.renderer = Renderer(self.canvas, self.viewport, self.scene)
 
     def benchmark_shaded_triangle(self, p1, p2, p3, color=(255, 255, 255), i1=1.0, i2=1.0, i3=1.0):
         """Run 10 loops of 1000 shaded triangle draws and return the average total time for 1000 calls"""
@@ -19,7 +19,7 @@ class ShadedTriangleBenchmark:
         for _ in range(NUM_LOOPS):
             start_time = time.perf_counter()
             for _ in range(CALLS_PER_LOOP):
-                self.rasterizer.draw_shaded_triangle(p1, p2, p3, color, i1, i2, i3)
+                self.renderer.draw_shaded_triangle(p1, p2, p3, color, i1, i2, i3)
             end_time = time.perf_counter()
             total_times.append((end_time - start_time) * 1000)  # Convert to milliseconds
             

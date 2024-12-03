@@ -1,7 +1,7 @@
 import pygame
 import numpy as np
 
-from pixerise import Canvas, ViewPort, Rasterizer
+from pixerise import Canvas, ViewPort, Renderer
 
 
 def display(image: Canvas):
@@ -26,8 +26,8 @@ def main():
     viewport = ViewPort((width, height), 1, canvas)
     scene = {}
     
-    # Create rasterizer
-    rasterizer = Rasterizer(canvas, viewport, scene)
+    # Create renderer
+    renderer = Renderer(canvas, viewport, scene)
     
     # Draw a colorful triangle pattern
     center_x, center_y = (0, 0)
@@ -74,7 +74,7 @@ def main():
             r, g, b = c, 0, x
             
         # Draw the triangle
-        rasterizer.draw_triangle(
+        renderer.draw_triangle(
             (x1, y1),
             (x2, y2),
             (x3, y3),
