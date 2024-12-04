@@ -10,6 +10,12 @@ class LineBenchmark:
         self.scene = {}
         self.renderer = Renderer(self.canvas, self.viewport, self.scene)
 
+        # Warm up JIT compilation with a simple case
+        print("\nWarming up JIT compilation...")
+        for _ in range(100):
+            self.renderer.draw_line((0, 0), (50, 50), (255, 255, 255))
+        print("Warm-up complete.\n")
+
     def benchmark_line(self, start, end, color=(255, 255, 255)):
         """Run 10 loops of 1000 line draws and return the average total time for 1000 calls"""
         NUM_LOOPS = 10
