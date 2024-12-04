@@ -102,7 +102,33 @@ class Renderer:
             [0, 0, 0, 1]
         ])
 
-    def _create_camera_matrix(self, transform: dict) -> np.ndarray:
+    def create_model_matrix(self, transform: dict) -> np.ndarray:
+        """Create a homogeneous 4x4 model matrix from translation, rotation, and scale.
+        
+        The model matrix transforms vertices from model space to world space.
+        Transformations are applied in the order: Scale -> Rotation -> Translation
+        
+        Args:
+            transform: Dictionary containing 'translation', 'rotation', and 'scale' keys
+                      Each value should be a numpy array of 3 components
+                      
+        Returns:
+            4x4 homogeneous transformation matrix
+        """
+        # Get transform components with defaults
+        translation = transform.get('translation', np.zeros(3))
+        rotation = transform.get('rotation', np.zeros(3))
+        scale = transform.get('scale', np.ones(3))
+        
+        # Create individual transformation matrices
+        S = self._create_scale_matrix(scale)
+        R = self._create_rotation_matrix(rotation)
+        T = self._create_translation_matrix(translation)
+        
+        # Combine matrices in order: T * R * S
+        return T @ R @ S
+
+    def create_camera_matrix(self, transform: dict) -> np.ndarray:
         """Create a homogeneous 4x4 camera matrix from position and orientation.
         The camera matrix transforms vertices from world space to camera space.
         It's the inverse of the camera's model matrix (position and orientation in world space).
@@ -121,6 +147,38 @@ class Renderer:
         # R^T is the transpose of R, which is the inverse for orthogonal rotation matrices
         return R.T @ T
 
+    def _transform_vertex_with_matrices(self, vertex: np.ndarray, transform: dict,
+                                    model_matrix: np.ndarray = None,
+                                    camera_matrix: np.ndarray = None) -> np.ndarray:
+        """Transform a vertex using pre-computed or on-demand matrices.
+        
+        Args:
+            vertex: 3D vertex position as numpy array [x, y, z]
+            transform: Dictionary containing transform components (used if model_matrix not provided)
+            model_matrix: Optional pre-computed model matrix. If None, computed from transform
+            camera_matrix: Optional pre-computed camera matrix. If None, computed from scene camera
+            
+        Returns:
+            Transformed vertex position as numpy array [x, y, z]
+        """
+        # Convert vertex to homogeneous coordinates
+        v = np.append(vertex, 1.0)  # [x, y, z, 1]
+        
+        # Apply model transform
+        if model_matrix is None:
+            model_matrix = self.create_model_matrix(transform)
+        v = model_matrix @ v
+        
+        # Apply camera transform if present
+        if 'camera' in self._scene:
+            if camera_matrix is None:
+                camera_transform = self._scene['camera'].get('transform', {})
+                camera_matrix = self.create_camera_matrix(camera_transform)
+            v = camera_matrix @ v
+            
+        # Convert back to 3D coordinates
+        return v[:3] / v[3]  # Perspective divide
+
     def _transform_vertex(self, vertex: np.ndarray, transform: dict) -> np.ndarray:
         """Apply transformation to a vertex using homogeneous coordinates."""
         # Get transform components
@@ -138,7 +196,6 @@ class Renderer:
             camera_translation = np.zeros(3)
             camera_rotation = np.zeros(3)
         
-        # Call JIT-compiled function
         return transform_vertex(
             vertex, translation, rotation, scale,
             camera_translation, camera_rotation, has_camera
