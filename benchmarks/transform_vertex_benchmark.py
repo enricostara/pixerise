@@ -10,6 +10,18 @@ class TransformVertexBenchmark:
         self.scene = {}
         self.renderer = Renderer(self.canvas, self.viewport, self.scene)
 
+        # Warm up JIT compilation with a simple case
+        print("\nWarming up JIT compilation...")
+        warm_up_vertex = np.array([1.0, 1.0, 1.0])
+        warm_up_transform = {
+            'translation': np.zeros(3),
+            'rotation': np.zeros(3),
+            'scale': np.ones(3)
+        }
+        for _ in range(100):
+            self.renderer._transform_vertex(warm_up_vertex, warm_up_transform)
+        print("Warm-up complete.\n")
+
     def benchmark_transform(self, vertex, transform):
         """Run 10 loops of 1000 vertex transforms and return the average total time for 1000 calls"""
         NUM_LOOPS = 10
