@@ -10,6 +10,14 @@ class TriangleBenchmark:
         self.scene = {}
         self.renderer = Renderer(self.canvas, self.viewport, self.scene)
 
+        # Warm up JIT compilation with a simple case
+        print("\nWarming up JIT compilation...")
+        p1, p2, p3 = (0, 0), (50, 0), (25, 50)
+        color = (255, 255, 255)
+        for _ in range(100):
+            self.renderer.draw_triangle(p1, p2, p3, color)
+        print("Warm-up complete.\n")
+
     def benchmark_triangle(self, p1, p2, p3, color=(255, 255, 255)):
         """Run 10 loops of 1000 triangle draws and return the average total time for 1000 calls"""
         NUM_LOOPS = 10
