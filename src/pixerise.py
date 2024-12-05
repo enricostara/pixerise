@@ -6,8 +6,8 @@ This module contains the main classes for rendering: Canvas, ViewPort, and Rende
 import numpy as np
 from numba import jit
 import pygame
-from kernel import (draw_pixel, draw_line, draw_triangle, 
-                           draw_shaded_triangle, transform_vertex)
+from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
+from kernel.transforming_mod import transform_vertex
 
 
 class Canvas:
@@ -21,10 +21,6 @@ class Canvas:
         self.half_width = self.width // 2
         self.half_height = self.height // 2
         self._center = (self.half_width, self.half_height)
-
-    def draw_point(self, x, y, color) -> None:
-        draw_pixel(self.grid, x, y, self._center[0], self._center[1], 
-                   color[0], color[1], color[2], self.width, self.height)
 
 
 class ViewPort:
@@ -48,78 +44,6 @@ class Renderer:
         self._viewport = viewport
         self._scene = scene
         self._background_color = np.array(background_color, dtype=int)
-
-    def _create_rotation_matrix(self, angles: np.ndarray) -> np.ndarray:
-        """Create a homogeneous 4x4 rotation matrix from euler angles (x, y, z) in radians."""
-        # Extract angles
-        rx, ry, rz = angles
-        
-        # X rotation
-        cx, sx = np.cos(rx), np.sin(rx)
-        Rx = np.array([
-            [1, 0, 0, 0],
-            [0, cx, -sx, 0],
-            [0, sx, cx, 0],
-            [0, 0, 0, 1]
-        ])
-        
-        # Y rotation
-        cy, sy = np.cos(ry), np.sin(ry)
-        Ry = np.array([
-            [cy, 0, sy, 0],
-            [0, 1, 0, 0],
-            [-sy, 0, cy, 0],
-            [0, 0, 0, 1]
-        ])
-        
-        # Z rotation
-        cz, sz = np.cos(rz), np.sin(rz)
-        Rz = np.array([
-            [cz, -sz, 0, 0],
-            [sz, cz, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]
-        ])
-        
-        # Combined rotation matrix (order: Y * X * Z)
-        return Ry @ Rx @ Rz
-
-    def _create_scale_matrix(self, scale: np.ndarray) -> np.ndarray:
-        """Create a homogeneous 4x4 scale matrix."""
-        return np.array([
-            [scale[0], 0, 0, 0],
-            [0, scale[1], 0, 0],
-            [0, 0, scale[2], 0],
-            [0, 0, 0, 1]
-        ])
-
-    def _create_translation_matrix(self, translation: np.ndarray) -> np.ndarray:
-        """Create a homogeneous 4x4 translation matrix."""
-        return np.array([
-            [1, 0, 0, translation[0]],
-            [0, 1, 0, translation[1]],
-            [0, 0, 1, translation[2]],
-            [0, 0, 0, 1]
-        ])
-
-    def _create_camera_matrix(self, transform: dict) -> np.ndarray:
-        """Create a homogeneous 4x4 camera matrix from position and orientation.
-        The camera matrix transforms vertices from world space to camera space.
-        It's the inverse of the camera's model matrix (position and orientation in world space).
-        """
-        # Get camera transform components
-        translation = transform.get('translation', np.zeros(3))
-        rotation = transform.get('rotation', np.zeros(3))
-        
-        # Create rotation matrix for camera orientation
-        R = self._create_rotation_matrix(rotation)
-        
-        # Create translation matrix for camera position
-        T = self._create_translation_matrix(-translation)  # Negative translation for camera space
-        
-        # Camera matrix is the inverse of view transform: R^T * T
-        # R^T is the transpose of R, which is the inverse for orthogonal rotation matrices
-        return R.T @ T
 
     def _transform_vertex(self, vertex: np.ndarray, transform: dict) -> np.ndarray:
         """Apply transformation to a vertex using homogeneous coordinates."""

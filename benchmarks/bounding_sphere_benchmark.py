@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from kernel import calculate_bounding_sphere
+from kernel.clipping_mod import calculate_bounding_sphere
 
 
 class BoundingSphereBenchmark:
