@@ -78,3 +78,42 @@ def calculate_signed_distance(plane_normal: np.ndarray, vertex: np.ndarray) -> f
     
     # The signed distance is the dot product of this vector with the normal
     return np.dot(vertex, plane_normal)
+
+
+@jit(nopython=True)
+def calculate_segment_plane_intersection(plane_normal: np.ndarray, start: np.ndarray, end: np.ndarray) -> tuple:
+    """
+    Calculate the intersection point between a line segment and a plane passing through the origin.
+    
+    Args:
+        plane_normal: Numpy array of shape (3,) representing the plane normal vector (should be normalized)
+        start: Numpy array of shape (3,) representing the start point of the line segment
+        end: Numpy array of shape (3,) representing the end point of the line segment
+        
+    Returns:
+        tuple: (intersection_point, t) where:
+               - intersection_point is a numpy array of shape (3,) representing the intersection point
+               - t is a float between 0 and 1 indicating where along the segment the intersection occurs
+               Returns (None, None) if the segment is parallel to the plane or doesn't intersect
+    """
+    # Calculate direction vector of the line segment
+    direction = end - start
+    
+    # Calculate denominator for intersection check
+    denom = np.dot(direction, plane_normal)
+    
+    # Check if line is parallel to plane (or very close to parallel)
+    if abs(denom) < 1e-6:
+        return None, None
+        
+    # Calculate the parameter t where the intersection occurs
+    t = -np.dot(start, plane_normal) / denom
+    
+    # Check if intersection occurs within the segment bounds
+    if t < 0.0 or t > 1.0:
+        return None, None
+        
+    # Calculate the intersection point
+    intersection = start + t * direction
+    
+    return intersection, t
