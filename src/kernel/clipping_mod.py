@@ -117,3 +117,157 @@ def calculate_segment_plane_intersection(plane_normal: np.ndarray, start: np.nda
     intersection = start + t * direction
     
     return intersection, t
+
+
+@jit(nopython=True)
+def clip_triangle(plane_normal: np.ndarray, vertices: np.ndarray) -> tuple:
+    """
+    Clip a triangle against a plane passing through the origin.
+    
+    Args:
+        plane_normal: Numpy array of shape (3,) representing the plane normal vector (should be normalized)
+        vertices: Numpy array of shape (3, 3) containing the triangle vertices
+        
+    Returns:
+        tuple: (triangles, num_triangles) where:
+               - triangles is a numpy array of shape (2, 3, 3) containing up to 2 triangles
+               - num_triangles is the number of triangles after clipping (0, 1, or 2)
+    """
+    # Calculate signed distances
+    d0 = calculate_signed_distance(plane_normal, vertices[0])
+    d1 = calculate_signed_distance(plane_normal, vertices[1])
+    d2 = calculate_signed_distance(plane_normal, vertices[2])
+    
+    # Prepare result array
+    triangles = np.empty((2, 3, 3), dtype=np.float64)
+    
+    # All vertices on positive side - keep triangle unchanged
+    if d0 >= 0 and d1 >= 0 and d2 >= 0:
+        triangles[0] = vertices
+        return triangles, 1
+        
+    # All vertices on negative side - triangle is clipped away
+    if d0 < 0 and d1 < 0 and d2 < 0:
+        return triangles, 0
+        
+    # Special cases: vertex exactly on plane
+    if abs(d0) < 1e-6:  # v0 on plane
+        if d1 >= 0 and d2 < 0:  # v1 above, v2 below
+            t = d1 / (d1 - d2)
+            i = vertices[1] + t * (vertices[2] - vertices[1])
+            triangles[0, 0] = vertices[0]
+            triangles[0, 1] = vertices[1]
+            triangles[0, 2] = i
+            return triangles, 1
+        if d1 < 0 and d2 >= 0:  # v1 below, v2 above
+            t = d2 / (d2 - d1)
+            i = vertices[2] + t * (vertices[1] - vertices[2])
+            triangles[0, 0] = vertices[0]
+            triangles[0, 1] = vertices[2]
+            triangles[0, 2] = i
+            return triangles, 1
+            
+    if abs(d1) < 1e-6:  # v1 on plane
+        if d0 >= 0 and d2 < 0:  # v0 above, v2 below
+            t = d0 / (d0 - d2)
+            i = vertices[0] + t * (vertices[2] - vertices[0])
+            triangles[0, 0] = vertices[1]
+            triangles[0, 1] = vertices[0]
+            triangles[0, 2] = i
+            return triangles, 1
+        if d0 < 0 and d2 >= 0:  # v0 below, v2 above
+            t = d2 / (d2 - d0)
+            i = vertices[2] + t * (vertices[0] - vertices[2])
+            triangles[0, 0] = vertices[1]
+            triangles[0, 1] = vertices[2]
+            triangles[0, 2] = i
+            return triangles, 1
+            
+    if abs(d2) < 1e-6:  # v2 on plane
+        if d0 >= 0 and d1 < 0:  # v0 above, v1 below
+            t = d0 / (d0 - d1)
+            i = vertices[0] + t * (vertices[1] - vertices[0])
+            triangles[0, 0] = vertices[2]
+            triangles[0, 1] = vertices[0]
+            triangles[0, 2] = i
+            return triangles, 1
+        if d0 < 0 and d1 >= 0:  # v0 below, v1 above
+            t = d1 / (d1 - d0)
+            i = vertices[1] + t * (vertices[0] - vertices[1])
+            triangles[0, 0] = vertices[2]
+            triangles[0, 1] = vertices[1]
+            triangles[0, 2] = i
+            return triangles, 1
+        
+    # One vertex above plane - return one triangle
+    if d0 >= 0 and d1 < 0 and d2 < 0:
+        t1 = d0 / (d0 - d1)
+        t2 = d0 / (d0 - d2)
+        i1 = vertices[0] + t1 * (vertices[1] - vertices[0])
+        i2 = vertices[0] + t2 * (vertices[2] - vertices[0])
+        triangles[0, 0] = vertices[0]
+        triangles[0, 1] = i1
+        triangles[0, 2] = i2
+        return triangles, 1
+    
+    if d1 >= 0 and d0 < 0 and d2 < 0:
+        t1 = d1 / (d1 - d0)
+        t2 = d1 / (d1 - d2)
+        i1 = vertices[1] + t1 * (vertices[0] - vertices[1])
+        i2 = vertices[1] + t2 * (vertices[2] - vertices[1])
+        triangles[0, 0] = vertices[1]
+        triangles[0, 1] = i1
+        triangles[0, 2] = i2
+        return triangles, 1
+        
+    if d2 >= 0 and d0 < 0 and d1 < 0:
+        t1 = d2 / (d2 - d0)
+        t2 = d2 / (d2 - d1)
+        i1 = vertices[2] + t1 * (vertices[0] - vertices[2])
+        i2 = vertices[2] + t2 * (vertices[1] - vertices[2])
+        triangles[0, 0] = vertices[2]
+        triangles[0, 1] = i1
+        triangles[0, 2] = i2
+        return triangles, 1
+        
+    # One vertex below plane - return two triangles
+    if d0 < 0 and d1 >= 0 and d2 >= 0:
+        t1 = d1 / (d1 - d0)
+        t2 = d2 / (d2 - d0)
+        i1 = vertices[1] + t1 * (vertices[0] - vertices[1])
+        i2 = vertices[2] + t2 * (vertices[0] - vertices[2])
+        triangles[0, 0] = vertices[1]
+        triangles[0, 1] = vertices[2]
+        triangles[0, 2] = i1
+        triangles[1, 0] = vertices[2]
+        triangles[1, 1] = i2
+        triangles[1, 2] = i1
+        return triangles, 2
+        
+    if d1 < 0 and d0 >= 0 and d2 >= 0:
+        t1 = d0 / (d0 - d1)
+        t2 = d2 / (d2 - d1)
+        i1 = vertices[0] + t1 * (vertices[1] - vertices[0])
+        i2 = vertices[2] + t2 * (vertices[1] - vertices[2])
+        triangles[0, 0] = vertices[0]
+        triangles[0, 1] = vertices[2]
+        triangles[0, 2] = i1
+        triangles[1, 0] = vertices[2]
+        triangles[1, 1] = i2
+        triangles[1, 2] = i1
+        return triangles, 2
+        
+    if d2 < 0 and d0 >= 0 and d1 >= 0:
+        t1 = d0 / (d0 - d2)
+        t2 = d1 / (d1 - d2)
+        i1 = vertices[0] + t1 * (vertices[2] - vertices[0])
+        i2 = vertices[1] + t2 * (vertices[2] - vertices[1])
+        triangles[0, 0] = vertices[0]
+        triangles[0, 1] = vertices[1]
+        triangles[0, 2] = i1
+        triangles[1, 0] = vertices[1]
+        triangles[1, 1] = i2
+        triangles[1, 2] = i1
+        return triangles, 2
+    
+    return triangles, 1  # Should never reach here
