@@ -59,3 +59,22 @@ def calculate_bounding_sphere(vertices: np.ndarray) -> tuple:
             radius = distance
     
     return center, radius
+
+
+@jit(nopython=True)
+def calculate_signed_distance(plane_normal: np.ndarray, vertex: np.ndarray) -> float:
+    """
+    Calculate the signed distance between a plane passing through the origin and a vertex.
+    
+    Args:
+        plane_normal: Numpy array of shape (3,) representing the plane normal vector (should be normalized)
+        vertex: Numpy array of shape (3,) representing the vertex to calculate distance from
+        
+    Returns:
+        float: The signed distance from the plane to the vertex. 
+              Positive if vertex is on the same side as the normal,
+              negative if on the opposite side, zero if on the plane.
+    """
+    
+    # The signed distance is the dot product of this vector with the normal
+    return np.dot(vertex, plane_normal)
