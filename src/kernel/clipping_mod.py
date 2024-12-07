@@ -81,48 +81,16 @@ def calculate_signed_distance(plane_normal: np.ndarray, vertex: np.ndarray) -> f
 
 
 @jit(nopython=True)
-def calculate_segment_plane_intersection(plane_normal: np.ndarray, start: np.ndarray, end: np.ndarray) -> tuple:
-    """
-    Calculate the intersection point between a line segment and a plane passing through the origin.
-    
-    Args:
-        plane_normal: Numpy array of shape (3,) representing the plane normal vector (should be normalized)
-        start: Numpy array of shape (3,) representing the start point of the line segment
-        end: Numpy array of shape (3,) representing the end point of the line segment
-        
-    Returns:
-        tuple: (intersection_point, t) where:
-               - intersection_point is a numpy array of shape (3,) representing the intersection point
-               - t is a float between 0 and 1 indicating where along the segment the intersection occurs
-               Returns (None, None) if the segment is parallel to the plane or doesn't intersect
-    """
-    # Calculate direction vector of the line segment
-    direction = end - start
-    
-    # Calculate denominator for intersection check
-    denom = np.dot(direction, plane_normal)
-    
-    # Check if line is parallel to plane (or very close to parallel)
-    if abs(denom) < 1e-6:
-        return None, None
-        
-    # Calculate the parameter t where the intersection occurs
-    t = -np.dot(start, plane_normal) / denom
-    
-    # Check if intersection occurs within the segment bounds
-    if t < 0.0 or t > 1.0:
-        return None, None
-        
-    # Calculate the intersection point
-    intersection = start + t * direction
-    
-    return intersection, t
-
-
-@jit(nopython=True)
 def clip_triangle(plane_normal: np.ndarray, vertices: np.ndarray) -> tuple:
     """
-    Clip a triangle against a plane passing through the origin.
+    Clip a triangle against a plane passing through the origin using the Sutherland-Hodgman algorithm.
+    
+    This function implements triangle clipping against a plane, handling various cases:
+    1. Triangle completely above plane (preserved)
+    2. Triangle completely below plane (removed)
+    3. Vertex exactly on plane (special cases)
+    4. One vertex above plane, two below (creates one triangle)
+    5. Two vertices above plane, one below (creates two triangles)
     
     Args:
         plane_normal: Numpy array of shape (3,) representing the plane normal vector (should be normalized)
@@ -132,29 +100,44 @@ def clip_triangle(plane_normal: np.ndarray, vertices: np.ndarray) -> tuple:
         tuple: (triangles, num_triangles) where:
                - triangles is a numpy array of shape (2, 3, 3) containing up to 2 triangles
                - num_triangles is the number of triangles after clipping (0, 1, or 2)
+               
+    Note:
+        The function uses signed distances to determine vertex positions relative to the plane:
+        - Positive distance: vertex is above/in front of the plane
+        - Negative distance: vertex is below/behind the plane
+        - Zero distance: vertex lies exactly on the plane
     """
-    # Calculate signed distances
+    # Calculate signed distances from each vertex to the plane
+    # These distances determine which side of the plane each vertex lies on
     d0 = calculate_signed_distance(plane_normal, vertices[0])
     d1 = calculate_signed_distance(plane_normal, vertices[1])
     d2 = calculate_signed_distance(plane_normal, vertices[2])
     
-    # Prepare result array
+    # Initialize result array to store up to 2 triangles
     triangles = np.empty((2, 3, 3), dtype=np.float64)
     
-    # All vertices on positive side - keep triangle unchanged
+    # Case 1: All vertices on or above the plane
+    # No clipping needed, return original triangle
     if d0 >= 0 and d1 >= 0 and d2 >= 0:
         triangles[0] = vertices
         return triangles, 1
         
-    # All vertices on negative side - triangle is clipped away
+    # Case 2: All vertices below the plane
+    # Triangle is completely clipped away
     if d0 < 0 and d1 < 0 and d2 < 0:
         return triangles, 0
         
-    # Special cases: vertex exactly on plane
-    if abs(d0) < 1e-6:  # v0 on plane
+    # Special cases: Handle vertices exactly on the plane
+    # These cases require special handling to avoid division by zero
+    # For each vertex on the plane, we check the positions of other vertices
+    # and create appropriate triangles based on their positions
+    
+    # Case 3a: Vertex 0 exactly on plane
+    if abs(d0) < 1e-6:  # Using small epsilon for floating-point comparison
         if d1 >= 0 and d2 < 0:  # v1 above, v2 below
-            t = d1 / (d1 - d2)
-            i = vertices[1] + t * (vertices[2] - vertices[1])
+            # Calculate intersection point using linear interpolation
+            t = d1 / (d1 - d2)  # Interpolation factor
+            i = vertices[1] + t * (vertices[2] - vertices[1])  # Intersection point
             triangles[0, 0] = vertices[0]
             triangles[0, 1] = vertices[1]
             triangles[0, 2] = i
@@ -199,17 +182,20 @@ def clip_triangle(plane_normal: np.ndarray, vertices: np.ndarray) -> tuple:
             triangles[0, 2] = i
             return triangles, 1
         
-    # One vertex above plane - return one triangle
+    # Case 4: One vertex above plane, two below
+    # Results in one triangle formed by the above vertex and two intersection points
     if d0 >= 0 and d1 < 0 and d2 < 0:
-        t1 = d0 / (d0 - d1)
-        t2 = d0 / (d0 - d2)
-        i1 = vertices[0] + t1 * (vertices[1] - vertices[0])
-        i2 = vertices[0] + t2 * (vertices[2] - vertices[0])
+        # Calculate intersection points using linear interpolation
+        t1 = d0 / (d0 - d1)  # Interpolation factor for edge v0-v1
+        t2 = d0 / (d0 - d2)  # Interpolation factor for edge v0-v2
+        i1 = vertices[0] + t1 * (vertices[1] - vertices[0])  # First intersection point
+        i2 = vertices[0] + t2 * (vertices[2] - vertices[0])  # Second intersection point
+        # Form new triangle using the above vertex and intersection points
         triangles[0, 0] = vertices[0]
         triangles[0, 1] = i1
         triangles[0, 2] = i2
         return triangles, 1
-    
+        
     if d1 >= 0 and d0 < 0 and d2 < 0:
         t1 = d1 / (d1 - d0)
         t2 = d1 / (d1 - d2)
@@ -230,16 +216,19 @@ def clip_triangle(plane_normal: np.ndarray, vertices: np.ndarray) -> tuple:
         triangles[0, 2] = i2
         return triangles, 1
         
-    # One vertex below plane - return two triangles
+    # Case 5: One vertex below plane, two above
+    # Results in two triangles that form a quad
     if d0 < 0 and d1 >= 0 and d2 >= 0:
-        t1 = d1 / (d1 - d0)
-        t2 = d2 / (d2 - d0)
-        i1 = vertices[1] + t1 * (vertices[0] - vertices[1])
-        i2 = vertices[2] + t2 * (vertices[0] - vertices[2])
-        triangles[0, 0] = vertices[1]
+        # Calculate intersection points using linear interpolation
+        t1 = d1 / (d1 - d0)  # Interpolation factor for edge v1-v0
+        t2 = d2 / (d2 - d0)  # Interpolation factor for edge v2-v0
+        i1 = vertices[1] + t1 * (vertices[0] - vertices[1])  # First intersection point
+        i2 = vertices[2] + t2 * (vertices[0] - vertices[2])  # Second intersection point
+        # Form two triangles to represent the clipped quad
+        triangles[0, 0] = vertices[1]  # First triangle
         triangles[0, 1] = vertices[2]
         triangles[0, 2] = i1
-        triangles[1, 0] = vertices[2]
+        triangles[1, 0] = vertices[2]  # Second triangle
         triangles[1, 1] = i2
         triangles[1, 2] = i1
         return triangles, 2
@@ -249,10 +238,10 @@ def clip_triangle(plane_normal: np.ndarray, vertices: np.ndarray) -> tuple:
         t2 = d2 / (d2 - d1)
         i1 = vertices[0] + t1 * (vertices[1] - vertices[0])
         i2 = vertices[2] + t2 * (vertices[1] - vertices[2])
-        triangles[0, 0] = vertices[0]
+        triangles[0, 0] = vertices[0]  # First triangle
         triangles[0, 1] = vertices[2]
         triangles[0, 2] = i1
-        triangles[1, 0] = vertices[2]
+        triangles[1, 0] = vertices[2]  # Second triangle
         triangles[1, 1] = i2
         triangles[1, 2] = i1
         return triangles, 2
@@ -262,10 +251,10 @@ def clip_triangle(plane_normal: np.ndarray, vertices: np.ndarray) -> tuple:
         t2 = d1 / (d1 - d2)
         i1 = vertices[0] + t1 * (vertices[2] - vertices[0])
         i2 = vertices[1] + t2 * (vertices[2] - vertices[1])
-        triangles[0, 0] = vertices[0]
+        triangles[0, 0] = vertices[0]  # First triangle
         triangles[0, 1] = vertices[1]
         triangles[0, 2] = i1
-        triangles[1, 0] = vertices[1]
+        triangles[1, 0] = vertices[1]  # Second triangle
         triangles[1, 1] = i2
         triangles[1, 2] = i1
         return triangles, 2
