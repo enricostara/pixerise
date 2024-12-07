@@ -12,65 +12,118 @@ def transform_vertex(vertex: np.ndarray,
                         translation: np.ndarray, rotation: np.ndarray, scale: np.ndarray,
                         camera_translation: np.ndarray, camera_rotation: np.ndarray,
                         has_camera: bool) -> np.ndarray:
-    """JIT-compiled vertex transformation using homogeneous coordinates."""
-    # Create transformation matrices inline to avoid matrix creation overhead
+    """
+    Transform a vertex in 3D space using scale, rotation, translation, and optional camera transformations.
+    This function is optimized using Numba's JIT compilation and avoids matrix creation overhead
+    by performing transformations inline.
+    
+    The transformations are applied in the following order:
+    1. Scale
+    2. Model Rotation (Y * X * Z order)
+    3. Translation
+    4. Camera Transform (if has_camera is True):
+       - Camera Translation (inverse)
+       - Camera Rotation (inverse, Z * X * Y order)
+    
+    Args:
+        vertex: Numpy array of shape (3,) representing the vertex position (x, y, z)
+        translation: Numpy array of shape (3,) representing the translation vector (tx, ty, tz)
+        rotation: Numpy array of shape (3,) containing rotation angles in radians (rx, ry, rz)
+                 around X, Y, and Z axes respectively
+        scale: Numpy array of shape (3,) containing scale factors (sx, sy, sz)
+        camera_translation: Numpy array of shape (3,) representing camera position (cx, cy, cz)
+        camera_rotation: Numpy array of shape (3,) containing camera rotation angles in radians
+                        (crx, cry, crz) around X, Y, and Z axes respectively
+        has_camera: Boolean flag indicating whether to apply camera transformation
+    
+    Returns:
+        Numpy array of shape (3,) containing the transformed vertex position
+    
+    Note:
+        - Rotations use right-hand rule: positive angles rotate counterclockwise when looking
+          along the positive axis towards the origin
+        - Camera transformations are applied as inverse operations to transform vertices into
+          camera space
+        - The implementation avoids matrix multiplication by directly computing the transformed
+          coordinates, which is more efficient for single vertex transformations
+    """
+    # Extract vertex components for direct manipulation
+    # This avoids repeated array indexing operations
     x, y, z = vertex
     
-    # Apply scale
-    x *= scale[0]
-    y *= scale[1]
-    z *= scale[2]
+    # Step 1: Apply non-uniform scale
+    # Scale each component independently to support different scale factors per axis
+    x *= scale[0]  # Scale X component
+    y *= scale[1]  # Scale Y component
+    z *= scale[2]  # Scale Z component
     
-    # Apply rotation (Y * X * Z order)
-    # Z rotation
+    # Step 2: Apply model rotations in Y * X * Z order
+    # This order minimizes gimbal lock for most common use cases
+    
+    # 2a: Z-axis rotation (around Z-axis)
+    # [cos(z)  -sin(z)  0]   [x]
+    # [sin(z)   cos(z)  0] * [y]
+    # [  0       0      1]   [z]
     rx, ry, rz = rotation
     cz, sz = np.cos(rz), np.sin(rz)
-    x_new = x * cz - y * sz
-    y_new = x * sz + y * cz
-    x, y = x_new, y_new
+    x_new = x * cz - y * sz  # x' = x*cos(z) - y*sin(z)
+    y_new = x * sz + y * cz  # y' = x*sin(z) + y*cos(z)
+    x, y = x_new, y_new      # z remains unchanged
     
-    # X rotation
+    # 2b: X-axis rotation (around X-axis)
+    # [1     0        0  ]   [x]
+    # [0   cos(x)  -sin(x)] * [y]
+    # [0   sin(x)   cos(x)]   [z]
     cx, sx = np.cos(rx), np.sin(rx)
-    y_new = y * cx - z * sx
-    z_new = y * sx + z * cx
-    y, z = y_new, z_new
+    y_new = y * cx - z * sx  # y' = y*cos(x) - z*sin(x)
+    z_new = y * sx + z * cx  # z' = y*sin(x) + z*cos(x)
+    y, z = y_new, z_new      # x remains unchanged
     
-    # Y rotation
+    # 2c: Y-axis rotation (around Y-axis)
+    # [ cos(y)  0  sin(y)]   [x]
+    # [   0     1    0   ] * [y]
+    # [-sin(y)  0  cos(y)]   [z]
     cy, sy = np.cos(ry), np.sin(ry)
-    x_new = x * cy + z * sy
-    z_new = -x * sy + z * cy
-    x, z = x_new, z_new
+    x_new = x * cy + z * sy   # x' = x*cos(y) + z*sin(y)
+    z_new = -x * sy + z * cy  # z' = -x*sin(y) + z*cos(y)
+    x, z = x_new, z_new       # y remains unchanged
     
-    # Apply translation
-    x += translation[0]
-    y += translation[1]
-    z += translation[2]
+    # Step 3: Apply translation
+    # Simple addition of translation vector components
+    x += translation[0]  # Translate along X
+    y += translation[1]  # Translate along Y
+    z += translation[2]  # Translate along Z
     
-    # Apply camera transform if present
+    # Step 4: Apply camera transformation if enabled
     if has_camera:
-        # First translate to camera space
+        # 4a: Transform to camera space by subtracting camera position
+        # This effectively moves the world relative to the camera
         x -= camera_translation[0]
         y -= camera_translation[1]
         z -= camera_translation[2]
         
-        # Apply camera rotation (inverse of normal rotation)
-        # Y rotation
+        # 4b: Apply inverse camera rotations in Z * X * Y order
+        # This is the inverse of model rotation, applied in reverse order
+        
+        # Y-axis camera rotation (inverse)
         crx, cry, crz = camera_rotation
         ccy, csy = np.cos(cry), np.sin(cry)
-        x_new = x * ccy - z * csy
+        x_new = x * ccy - z * csy   # Inverse of Y rotation matrix
         z_new = x * csy + z * ccy
         x, z = x_new, z_new
         
-        # X rotation
+        # X-axis camera rotation (inverse)
         ccx, csx = np.cos(crx), np.sin(crx)
-        y_new = y * ccx + z * csx
+        y_new = y * ccx + z * csx   # Inverse of X rotation matrix
         z_new = -y * csx + z * ccx
         y, z = y_new, z_new
         
-        # Z rotation
+        # Z-axis camera rotation (inverse)
         ccz, csz = np.cos(crz), np.sin(crz)
-        x_new = x * ccz + y * csz
+        x_new = x * ccz + y * csz   # Inverse of Z rotation matrix
         y_new = -x * csz + y * ccz
         x, y = x_new, y_new
     
+    # Return the transformed vertex as a new array
+    # This ensures the original vertex array is not modified
     return np.array([x, y, z])
