@@ -61,17 +61,39 @@ def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
                   canvas_grid: np.ndarray, center_x: int, center_y: int,
                   color_r: int, color_g: int, color_b: int,
                   canvas_width: int, canvas_height: int) -> None:
-    """JIT-compiled triangle filling algorithm using fixed-point arithmetic."""
-    # Early exit if color is black (0,0,0)
-    if color_r == 0 and color_g == 0 and color_b == 0:
-        return
-
-    # Convert to screen coordinates for bounds checking
+    """
+    Draw a solid-colored triangle using a scanline rasterization algorithm.
+    This is a low-level, JIT-compiled implementation optimized for performance.
+    
+    The algorithm works by:
+    1. Converting to screen coordinates and checking canvas bounds
+    2. Sorting vertices by y-coordinate for consistent edge traversal
+    3. Rasterizing the triangle in two parts (upper and lower) using a scanline approach
+    4. Using fixed-point arithmetic for sub-pixel precision
+    
+    Args:
+        x0, y0, x1, y1, x2, y2: Triangle vertex coordinates in screen space
+        canvas_grid: Target numpy array for drawing (shape: [height, width, 3] for RGB)
+        center_x, center_y: Canvas center coordinates for coordinate system transformation
+        color_r, color_g, color_b: RGB color components (0-255)
+        canvas_width, canvas_height: Dimensions of the canvas
+        
+    Implementation Notes:
+        - Uses 16.16 fixed-point arithmetic for edge traversal to avoid floating-point errors
+        - Handles edge cases like zero-height triangles
+        - Clips triangles to canvas bounds for efficiency
+        - Automatically sorts vertices for consistent edge traversal
+    """
+    # Transform from world space to screen space coordinates:
+    # - Add center_x to shift from [-width/2, width/2] to [0, width]
+    # - Subtract from center_y to flip Y axis (screen Y grows downward)
     sx0, sy0 = center_x + x0, center_y - y0
     sx1, sy1 = center_x + x1, center_y - y1
     sx2, sy2 = center_x + x2, center_y - y2
 
-    # Early exit if triangle is completely outside the canvas
+    # Compute triangle bounds for canvas clipping:
+    # - If triangle is completely outside canvas bounds, we can skip it entirely
+    # - This is a conservative test (bounding box may be larger than actual triangle)
     min_x = min(sx0, sx1, sx2)
     max_x = max(sx0, sx1, sx2)
     min_y = min(sy0, sy1, sy2)
@@ -81,7 +103,8 @@ def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
         max_y < 0 or min_y >= canvas_height):
         return
 
-    # Sort vertices by y-coordinate
+    # Sort vertices by Y coordinate to split triangle into upper and lower parts:
+    # - This creates a consistent traversal order regardless of input vertex order
     if y1 < y0:
         x0, x1 = x1, x0
         y0, y1 = y1, y0
@@ -92,54 +115,63 @@ def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
         x1, x2 = x2, x1
         y1, y2 = y2, y1
 
-    # Initialize edge traversal variables for the first two edges
-    # Edge 1: y0 to y1
+    # Initialize edge traversal for the first two edges (from top vertex)
+    # Edge 1: y0 to y1 (left or right edge of upper triangle)
     dx1 = x1 - x0
     dy1 = y1 - y0
-    x_left = x0 << 16  # Fixed-point x-coordinate (16.16)
-    step_left = (dx1 << 16) // dy1 if dy1 != 0 else 0
+    # Convert x-coordinate to 16.16 fixed-point for sub-pixel precision
+    x_left = x0 << 16  
+    # Calculate x-step in fixed-point, ensuring non-zero denominator
+    step_left = (dx1 << 16) // max(1, dy1)  
 
-    # Edge 2: y0 to y2
+    # Edge 2: y0 to y2 (spans full height of triangle)
     dx2 = x2 - x0
     dy2 = y2 - y0
-    x_right = x0 << 16  # Fixed-point x-coordinate (16.16)
-    step_right = (dx2 << 16) // dy2 if dy2 != 0 else 0
+    x_right = x0 << 16
+    step_right = (dx2 << 16) // max(1, dy2)
 
-    # Fill the upper triangle
-    if y1 - y0 > 0:
-        for y in range(y0, y1):
-            start_x = x_left >> 16
-            end_x = x_right >> 16
-            
-            if start_x > end_x:
-                start_x, end_x = end_x, start_x
-                
-            for x in range(start_x, end_x + 1):
-                draw_pixel(canvas_grid, x, y, center_x, center_y,
-                          color_r, color_g, color_b, canvas_width, canvas_height)
-            
+    # Fill the upper triangle section (from y0 to y1):
+    # - Always draw at least one scanline even for zero-height sections
+    # - This handles degenerate cases where vertices have same y-coordinate
+    for y in range(y0, max(y0 + 1, y1)):
+        # Convert fixed-point x-coordinates back to integers for this scanline
+        start_x = x_left >> 16
+        end_x = x_right >> 16
+        
+        # Ensure correct left-to-right drawing order
+        if start_x > end_x:
+            start_x, end_x = end_x, start_x
+        
+        # Draw the scanline with solid color
+        for x in range(start_x, end_x + 1):
+            draw_pixel(canvas_grid, x, y, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
+        
+        # Update edge coordinates only if actually moving in y-direction
+        if y1 > y0:
             x_left += step_left
             x_right += step_right
 
-    # Edge 3: y1 to y2
+    # Initialize edge traversal for the third edge (y1 to y2):
+    # - This replaces the shorter edge (y0 to y1) for lower triangle section
     dx3 = x2 - x1
     dy3 = y2 - y1
     x_left = x1 << 16
-    step_left = (dx3 << 16) // dy3 if dy3 != 0 else 0
+    step_left = (dx3 << 16) // max(1, dy3)
 
-    # Fill the lower triangle
-    if y2 - y1 > 0:
-        for y in range(y1, y2 + 1):
-            start_x = x_left >> 16
-            end_x = x_right >> 16
-            
-            if start_x > end_x:
-                start_x, end_x = end_x, start_x
-                
-            for x in range(start_x, end_x + 1):
-                draw_pixel(canvas_grid, x, y, center_x, center_y,
-                          color_r, color_g, color_b, canvas_width, canvas_height)
-            
+    # Fill the lower triangle section (from y1 to y2):
+    # - Implementation mirrors the upper triangle section
+    # - Always draw at least one scanline for zero-height sections
+    for y in range(y1, max(y1 + 1, y2 + 1)):
+        start_x = x_left >> 16
+        end_x = x_right >> 16
+        
+        if start_x > end_x:
+            start_x, end_x = end_x, start_x
+        
+        for x in range(start_x, end_x + 1):
+            draw_pixel(canvas_grid, x, y, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
+        
+        if y2 > y1:
             x_left += step_left
             x_right += step_right
 
@@ -314,5 +346,3 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
         if y2 > y1:
             x_left += step_left
             x_right += step_right
-            i_left += i_step_left
-            i_right += i_step_right
