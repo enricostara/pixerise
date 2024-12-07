@@ -22,39 +22,78 @@ def draw_line(x0: int, y0: int, x1: int, y1: int,
                canvas_grid: np.ndarray, center_x: int, center_y: int,
                color_r: int, color_g: int, color_b: int,
                canvas_width: int, canvas_height: int) -> None:
-    """JIT-compiled line drawing algorithm using Bresenham's algorithm."""
-    # Calculate absolute differences and direction of movement
+    """
+    Draw a line using Bresenham's line algorithm with integer arithmetic.
+    This is a low-level, JIT-compiled implementation optimized for performance.
+    
+    The algorithm works by:
+    1. Determining the primary direction (x or y) based on line slope
+    2. Using integer arithmetic to track the error term for the secondary axis
+    3. Drawing pixels with minimal floating-point operations
+    4. Handling all octants with a single implementation
+    
+    Args:
+        x0, y0: Starting point coordinates in screen space
+        x1, y1: Ending point coordinates in screen space
+        canvas_grid: Target numpy array for drawing (shape: [height, width, 3] for RGB)
+        center_x, center_y: Canvas center coordinates for coordinate system transformation
+        color_r, color_g, color_b: RGB color components (0-255)
+        canvas_width, canvas_height: Dimensions of the canvas
+        
+    Implementation Notes:
+        - Uses Bresenham's algorithm to avoid floating-point arithmetic
+        - Handles all octants without special cases by swapping axes when needed
+        - Clips lines to canvas bounds for efficiency
+        - Optimized for JIT compilation with numba
+    """
+    # Calculate absolute differences and determine primary direction
     dx = abs(x1 - x0)
     dy = abs(y1 - y0)
     
-    # Determine direction to step in x and y
-    sx = 1 if x0 < x1 else -1
-    sy = 1 if y0 < y1 else -1
+    # Determine if x or y is the driving axis:
+    # - If dx > dy: x is primary, increment x by 1, accumulate error in y
+    # - If dy > dx: y is primary, increment y by 1, accumulate error in x
+    steep = dy > dx
     
-    # Initial error term
-    err = dx - dy
+    # If y is the driving axis, swap x and y coordinates
+    # This allows us to always increment along the primary axis
+    if steep:
+        x0, y0 = y0, x0
+        x1, y1 = y1, x1
+        dx, dy = dy, dx  # Update deltas after swap
     
-    while True:
-        # Draw point if within bounds (check transformed coordinates)
-        px = center_x + x0
-        py = center_y - y0  # Flip y coordinate
-        if 0 <= px < canvas_width and 0 <= py < canvas_height:
-            draw_pixel(canvas_grid, x0, y0, center_x, center_y,
-                       color_r, color_g, color_b, canvas_width, canvas_height)
+    # Ensure we always draw from left to right
+    # This simplifies the main drawing loop
+    if x0 > x1:
+        x0, x1 = x1, x0
+        y0, y1 = y1, y0
+    
+    # Calculate step direction for the secondary axis
+    y_step = 1 if y0 < y1 else -1
+    
+    # Initialize Bresenham's error term:
+    # - Error represents deviation from the ideal line
+    # - When error >= dx, we need to move in the secondary axis
+    error = dx // 2  # Start at half the primary delta for symmetric error distribution
+    y = y0
+    
+    # Main line drawing loop:
+    # - Always increment x (primary axis)
+    # - Accumulate error and step y when needed
+    for x in range(x0, x1 + 1):
+        # If steep (y is primary), swap back coordinates for pixel drawing
+        if steep:
+            draw_pixel(canvas_grid, y, x, center_x, center_y,
+                      color_r, color_g, color_b, canvas_width, canvas_height)
+        else:
+            draw_pixel(canvas_grid, x, y, center_x, center_y,
+                      color_r, color_g, color_b, canvas_width, canvas_height)
         
-        # Check if we've reached the end point
-        if x0 == x1 and y0 == y1:
-            break
-            
-        # Update error term and coordinates
-        e2 = 2 * err
-        if e2 > -dy:
-            err -= dy
-            x0 += sx
-        if e2 < dx:
-            err += dx
-            y0 += sy
-
+        # Update error term and step in y when necessary
+        error -= dy
+        if error < 0:
+            y += y_step
+            error += dx  # Reset error term for next pixel
 
 @jit(nopython=True)
 def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
