@@ -346,3 +346,5 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
         if y2 > y1:
             x_left += step_left
             x_right += step_right
+            i_left += i_step_left
+            i_right += i_step_right
