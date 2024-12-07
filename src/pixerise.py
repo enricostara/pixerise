@@ -119,27 +119,40 @@ class Renderer:
                            color: tuple[int, int, int],
                            intensity1: float, intensity2: float, intensity3: float):
         """
-        Draw a triangle with interpolated intensities for a single color.
+        Draw a triangle with smooth shading using per-vertex intensity interpolation.
+        This method implements Gouraud shading by interpolating intensity values across
+        the triangle's surface.
         
         Args:
-            p1, p2, p3: Vertex positions as (x, y) tuples
-            color: RGB color as (r, g, b) tuple
-            intensity1, intensity2, intensity3: Intensity values (0.0 to 1.0) for each vertex
+            p1, p2, p3: Vertex positions as (x, y) tuples in screen space coordinates.
+                       The vertices can be in any order, they will be sorted internally.
+            color: Base RGB color as (r, g, b) tuple, where each component is in range [0, 255].
+                  This color will be modulated by the interpolated intensities.
+            intensity1, intensity2, intensity3: Light intensity values for each vertex in range [0.0, 1.0].
+                                              These values determine how bright the color appears at each vertex
+                                              and are linearly interpolated across the triangle.
+        
+        Note:
+            - Intensity values are automatically clamped to the valid range [0.0, 1.0]
+            - The final color at each pixel is computed as: final_rgb = base_rgb * interpolated_intensity
+            - The implementation uses a scanline algorithm with linear interpolation for efficiency
+            - Triangles completely outside the canvas or with zero intensity are skipped
         """
-        # Clamp intensities to valid range
+        # Clamp intensities to valid range [0.0, 1.0] to ensure correct color modulation
         i1 = max(0.0, min(1.0, intensity1))
         i2 = max(0.0, min(1.0, intensity2))
         i3 = max(0.0, min(1.0, intensity3))
         
+        # Delegate to the optimized JIT-compiled implementation
         draw_shaded_triangle(
-            int(p1[0]), int(p1[1]), 
+            int(p1[0]), int(p1[1]),  # Convert vertex coordinates to integers
             int(p2[0]), int(p2[1]), 
             int(p3[0]), int(p3[1]), 
-            self._canvas.grid, 
-            self._canvas._center[0], self._canvas._center[1],
-            color[0], color[1], color[2],
-            i1, i2, i3,
-            self._canvas.width, self._canvas.height)
+            self._canvas.grid,  # Target canvas buffer
+            self._canvas._center[0], self._canvas._center[1],  # Canvas center for coordinate transformation
+            color[0], color[1], color[2],  # RGB components
+            i1, i2, i3,  # Clamped intensity values
+            self._canvas.width, self._canvas.height)  # Canvas dimensions
 
     def render(self, scene: dict):
         """Render a scene containing models and their instances."""
