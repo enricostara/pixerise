@@ -2,6 +2,7 @@ import pygame
 import numpy as np
 
 from pixerise import Canvas, ViewPort, Renderer
+from kernel.clipping_mod import clip_triangle
 
 
 def display(image: Canvas):
@@ -19,6 +20,40 @@ def display(image: Canvas):
         pygame.display.set_caption(str(clock.get_fps()))
 
 
+def draw_clipped_triangle(renderer, vertices, color, plane_normals):
+    """Draw a triangle after clipping against multiple planes."""
+    # Convert 2D vertices to 3D (z=0)
+    vertices_3d = np.array([
+        [vertices[0][0], vertices[0][1], 0],
+        [vertices[1][0], vertices[1][1], 0],
+        [vertices[2][0], vertices[2][1], 0]
+    ])
+    
+    # Start with the original triangle
+    current_triangles = [vertices_3d]
+    
+    # Clip against each plane
+    for normal in plane_normals:
+        next_triangles = []
+        for tri in current_triangles:
+            clipped, num_triangles = clip_triangle(normal, tri)
+            for i in range(num_triangles):
+                next_triangles.append(clipped[i])
+        current_triangles = next_triangles
+        
+        if not current_triangles:  # Triangle completely clipped away
+            return
+    
+    # Draw all resulting triangles
+    for tri in current_triangles:
+        renderer.draw_triangle(
+            (tri[0][0], tri[0][1]),  # Convert back to 2D
+            (tri[1][0], tri[1][1]),
+            (tri[2][0], tri[2][1]),
+            color
+        )
+
+
 def main():
     # Initialize canvas and viewport
     width, height = 800, 600
@@ -28,6 +63,15 @@ def main():
     
     # Create renderer
     renderer = Renderer(canvas, viewport, scene)
+    
+    # Define clipping planes 
+    angle = np.pi/2.3  # 30 degrees
+    
+    # Create normalized plane normals
+    plane_normals = [
+        np.array([np.cos(angle), np.sin(angle), 0]),  # Left plane
+        np.array([-np.cos(angle), np.sin(angle), 0])  # Right plane
+    ]
     
     # Draw a colorful triangle pattern
     center_x, center_y = (0, 0)
@@ -73,13 +117,9 @@ def main():
         else:
             r, g, b = c, 0, x
             
-        # Draw the triangle
-        renderer.draw_triangle(
-            (x1, y1),
-            (x2, y2),
-            (x3, y3),
-            (r, g, b)
-        )
+        # Draw the clipped triangle
+        vertices = [(x1, y1), (x2, y2), (x3, y3)]
+        draw_clipped_triangle(renderer, vertices, (r, g, b), plane_normals)
     
     # Display the result
     display(canvas)

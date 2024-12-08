@@ -38,8 +38,8 @@ def main():
     for i in range(num_triangles):
         # Calculate three points for each triangle
         angle1 = (2 * np.pi * i) / num_triangles
-        angle2 = (2 * np.pi * (i + 0.3)) / num_triangles
-        angle3 = (2 * np.pi * (i + 0.7)) / num_triangles
+        angle2 = (2 * np.pi * (i + 0.15)) / num_triangles
+        angle3 = (2 * np.pi * (i + 0.85)) / num_triangles
         
         # First point (outer)
         x1 = center_x + radius * np.cos(angle1)
