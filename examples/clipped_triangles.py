@@ -73,9 +73,24 @@ def main():
         np.array([-np.cos(angle), np.sin(angle), 0])  # Right plane
     ]
     
-    # Draw a colorful triangle pattern
+    # Draw white lines to mark the clipping planes
     center_x, center_y = (0, 0)
     radius = 300
+    line_length = radius * 1.5  # Make lines longer than the pattern
+    for i, normal in enumerate(plane_normals):
+        # Calculate two points for each line
+        # The line will be perpendicular to the normal vector
+        # We can get this by using the normal's y component as x and negative x component as y
+        dx, dy = -normal[1], normal[0]  # Direction vector for the line (negated from before)
+        if i == 1:  # Second line should go in opposite direction for clockwise order
+            dx, dy = -dx, -dy
+        renderer.draw_line(
+            (0, 0),  # Start from origin
+            (dx * line_length, dy * line_length),  # Extend in one direction
+            (255, 255, 255)  # White color
+        )
+    
+    # Draw a colorful triangle pattern
     num_triangles = 16
     
     # Draw rotating triangles with different colors
