@@ -4,17 +4,38 @@ import numpy as np
 from pixerise import Canvas, ViewPort, Renderer
 
 
-def display(image: Canvas):
+def display(image: Canvas, scene, renderer):
     screen = pygame.display.set_mode(image.size, pygame.SCALED)
     clock = pygame.time.Clock()
-    surf = pygame.surfarray.make_surface(image.grid)
-    screen.blit(surf, (0, 0))
-    pygame.display.update()
+    
+    # Initialize mouse state
+    pygame.mouse.set_visible(False)
+    pygame.event.set_grab(True)
+    
     while True:
         for event in pygame.event.get():
             if (event.type == pygame.QUIT or
                     event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 return
+            
+            # Handle mouse movement
+            if event.type == pygame.MOUSEMOTION:
+                dx, dy = event.rel
+                # Convert mouse movement to rotation (scale down the movement)
+                rot_y = -dx * 0.002  # Horizontal mouse movement controls Y rotation
+                rot_x = -dy * 0.002  # Vertical mouse movement controls X rotation
+                
+                # Update camera rotation
+                current_rot = scene['camera']['transform']['rotation']
+                current_rot[0] = np.clip(current_rot[0] + rot_x, -np.pi/2, np.pi/2)  # Limit vertical rotation
+                current_rot[1] = (current_rot[1] + rot_y) % (2 * np.pi)  # Allow full horizontal rotation
+                
+                # Re-render the scene
+                renderer.render(scene)
+                surf = pygame.surfarray.make_surface(image.grid)
+                screen.blit(surf, (0, 0))
+                pygame.display.update()
+        
         clock.tick(60)
         pygame.display.set_caption(str(clock.get_fps()))
 
@@ -85,8 +106,8 @@ def main():
     renderer = Renderer(canvas, viewport, scene)
     renderer.render(scene)
     
-    # Display the result
-    display(canvas)
+    # Display the result with the scene and renderer
+    display(canvas, scene, renderer)
 
 
 if __name__ == "__main__":
