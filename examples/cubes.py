@@ -21,7 +21,14 @@ def display(image: Canvas, scene, renderer):
     # Initial render
     update_display()
     
+    # Movement speed
+    move_speed = 0.1
+
+    # Track if any movement occurred
+    movement_occurred = False
+    
     while True:
+
         for event in pygame.event.get():
             if (event.type == pygame.QUIT or
                     event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
@@ -36,11 +43,55 @@ def display(image: Canvas, scene, renderer):
                 
                 # Update camera rotation
                 current_rot = scene['camera']['transform']['rotation']
-                current_rot[0] = np.clip(current_rot[0] + rot_x, -np.pi/2, np.pi/2)  # Limit vertical rotation
+                current_rot[0] += rot_x  # Remove clipping for vertical rotation
                 current_rot[1] = (current_rot[1] + rot_y) % (2 * np.pi)  # Allow full horizontal rotation
+                scene['camera']['transform']['rotation'] = current_rot
                 
-                # Re-render the scene
-                update_display()
+                # Update display
+                movement_occurred = True
+        
+        # Continuous movement
+        keys = pygame.key.get_pressed()
+        camera_trans = scene['camera']['transform']['translation']
+        camera_rot = scene['camera']['transform']['rotation']
+        
+        # Calculate forward direction based on current rotation
+        forward = np.array([
+            -np.sin(camera_rot[1]) * np.cos(camera_rot[0]),
+            np.sin(camera_rot[0]),
+            -np.cos(camera_rot[1]) * np.cos(camera_rot[0])
+        ])
+        
+        # Calculate right vector
+        right = np.array([
+            np.cos(camera_rot[1]) * np.cos(camera_rot[0]),
+            0,
+            -np.sin(camera_rot[1]) * np.cos(camera_rot[0])
+        ])
+        
+        # Move forward with W key
+        if keys[pygame.K_w]:
+            camera_trans -= forward * move_speed
+            movement_occurred = True
+        
+        # Move backward with S key
+        if keys[pygame.K_s]:
+            camera_trans += forward * move_speed
+            movement_occurred = True
+        
+        # Move left with A key
+        if keys[pygame.K_a]:
+            camera_trans -= right * move_speed
+            movement_occurred = True
+        
+        # Move right with D key
+        if keys[pygame.K_d]:
+            camera_trans += right * move_speed
+            movement_occurred = True
+        
+        # Update display only if movement occurred
+        if movement_occurred:
+            update_display()
         
         clock.tick(60)
         pygame.display.set_caption(str(clock.get_fps()))
@@ -56,8 +107,8 @@ def main():
     scene = {
         'camera': {
             'transform': {
-                'translation': np.array([0, 5, 1], dtype=float),  # Moved higher (y from 1 to 2.5)
-                'rotation': np.array([np.pi/4, 0, 0], dtype=float)  # More downward tilt (from pi/12 to pi/4)
+                'translation': np.array([0, 1, 1], dtype=float),  # Moved higher (y from 1 to 2.5)
+                'rotation': np.array([0, 0, 0], dtype=float)  # More downward tilt (from pi/12 to pi/4)
             }
         },
         'models': {
