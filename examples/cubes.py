@@ -12,6 +12,15 @@ def display(image: Canvas, scene, renderer):
     pygame.mouse.set_visible(False)
     pygame.event.set_grab(True)
     
+    def update_display():
+        renderer.render(scene)
+        surf = pygame.surfarray.make_surface(image.grid)
+        screen.blit(surf, (0, 0))
+        pygame.display.update()
+    
+    # Initial render
+    update_display()
+    
     while True:
         for event in pygame.event.get():
             if (event.type == pygame.QUIT or
@@ -31,10 +40,7 @@ def display(image: Canvas, scene, renderer):
                 current_rot[1] = (current_rot[1] + rot_y) % (2 * np.pi)  # Allow full horizontal rotation
                 
                 # Re-render the scene
-                renderer.render(scene)
-                surf = pygame.surfarray.make_surface(image.grid)
-                screen.blit(surf, (0, 0))
-                pygame.display.update()
+                update_display()
         
         clock.tick(60)
         pygame.display.set_caption(str(clock.get_fps()))
@@ -89,7 +95,8 @@ def main():
                     'translation': np.array([-2, 0, 7], dtype=float),  # 2 units left, 7 units forward
                     'rotation': np.array([0, 0, 0], dtype=float),      # rotation angles in radians (x, y, z)
                     'scale': np.array([1, 1, 1], dtype=float)         # uniform scale
-                }
+                },
+                'color': (255, 50, 50)  # Red color for the left cube
             },
             {
                 'model': 'cube',
@@ -97,14 +104,14 @@ def main():
                     'translation': np.array([2, 1, 8], dtype=float),   # 2 units right, 1 up, 8 forward
                     'rotation': np.array([0, np.pi/4, 0], dtype=float), # rotated 45 degrees around Y axis
                     'scale': np.array([0.5, 0.5, 0.5], dtype=float)    # half the size
-                }
+                },
+                'color': (0, 255, 0)  # Green color for the right cube
             }
         ]
     }
     
     # Create renderer
     renderer = Renderer(canvas, viewport, scene)
-    renderer.render(scene)
     
     # Display the result with the scene and renderer
     display(canvas, scene, renderer)
