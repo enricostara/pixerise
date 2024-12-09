@@ -8,6 +8,7 @@ from numba import jit
 import pygame
 from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
 from kernel.transforming_mod import transform_vertex
+from kernel.clipping_mod import clip_triangle
 
 
 class Canvas:
@@ -31,7 +32,36 @@ class ViewPort:
         self._height = size[1]
         self._plane_distance = plane_distance
         self._canvas = canvas
-
+        
+        # Pre-calculate frustum planes for efficiency
+        self._calculate_frustum_planes()
+        
+    def _calculate_frustum_planes(self):
+        """Calculate the view frustum plane normals (pointing inward)."""
+        # Calculate half-dimensions at the near plane
+        half_width = self._width / 2
+        half_height = self._height / 2
+        
+        # Calculate plane normals (pointing inward)
+        self._left_plane = np.array([1, 0, half_width / self._plane_distance], dtype=np.float64)
+        self._right_plane = np.array([-1, 0, half_width / self._plane_distance], dtype=np.float64)
+        self._top_plane = np.array([0, -1, half_height / self._plane_distance], dtype=np.float64)
+        self._bottom_plane = np.array([0, 1, half_height / self._plane_distance], dtype=np.float64)
+        
+        # Normalize the plane normals
+        self._left_plane /= np.linalg.norm(self._left_plane)
+        self._right_plane /= np.linalg.norm(self._right_plane)
+        self._top_plane /= np.linalg.norm(self._top_plane)
+        self._bottom_plane /= np.linalg.norm(self._bottom_plane)
+        
+        # Store all planes in a list for easy iteration
+        self.frustum_planes = [
+            self._left_plane,
+            self._right_plane,
+            self._top_plane,
+            self._bottom_plane
+        ]
+    
     def viewport_to_canvas(self, x, y) -> (float, float):
         return x * self._canvas.width / self._width, y * self._canvas.height / self._height
 
@@ -133,7 +163,7 @@ class Renderer:
                                               and are linearly interpolated across the triangle.
         
         Note:
-            - Intensity values are automatically clamped to the valid range [0.0, 1.0]
+            - Intensity values are automatically clamped to the valid range [0.0, 1.0] to ensure correct color modulation
             - The final color at each pixel is computed as: final_rgb = base_rgb * interpolated_intensity
             - The implementation uses a scanline algorithm with linear interpolation for efficiency
             - Triangles completely outside the canvas or with zero intensity are skipped
@@ -182,24 +212,43 @@ class Renderer:
                 for vertex in vertices:
                     # Apply model transform
                     transformed = self._transform_vertex(vertex, transform)
-                    
-                    # Project to 2D
-                    projected = self._project_vertex(transformed)
-                    if projected is not None:
-                        transformed_vertices.append(projected)
-                    else:
-                        transformed_vertices.append(None)
+                    transformed_vertices.append(transformed)
                 
                 # Draw triangles
                 for triangle in triangles:
-                    # Get triangle vertices
-                    v1 = transformed_vertices[triangle[0]]
-                    v2 = transformed_vertices[triangle[1]]
-                    v3 = transformed_vertices[triangle[2]]
+                    # Get triangle vertices as numpy array
+                    triangle_vertices = np.array([
+                        transformed_vertices[triangle[0]],
+                        transformed_vertices[triangle[1]],
+                        transformed_vertices[triangle[2]]
+                    ], dtype=np.float64)
                     
-                    # Skip if any vertex is behind camera
-                    if v1 is None or v2 is None or v3 is None:
-                        continue
+                    # Clip against each frustum plane
+                    planes = self._viewport.frustum_planes
+                    clipped_triangles = [triangle_vertices]
                     
-                    # Draw triangle
-                    self.draw_triangle(v1, v2, v3, color, fill=False)
+                    for plane in planes:
+                        next_triangles = []
+                        for tri in clipped_triangles:
+                            # Clip triangle against current plane
+                            result_triangles, num_triangles = clip_triangle(plane, tri)
+                            # Add resulting triangles
+                            for i in range(num_triangles):
+                                next_triangles.append(result_triangles[i])
+                        clipped_triangles = next_triangles
+                        if not clipped_triangles:  # Triangle completely clipped away
+                            break
+                    
+                    # Project and draw the clipped triangles
+                    for clipped_tri in clipped_triangles:
+                        # Project vertices to 2D
+                        v1 = self._project_vertex(clipped_tri[0])
+                        v2 = self._project_vertex(clipped_tri[1])
+                        v3 = self._project_vertex(clipped_tri[2])
+                        
+                        # Skip if any vertex is behind camera
+                        if v1 is None or v2 is None or v3 is None:
+                            continue
+                        
+                        # Draw triangle
+                        self.draw_triangle(v1, v2, v3, color, fill=False)
