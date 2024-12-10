@@ -84,8 +84,8 @@ class TestClipping:
         assert vertices_on_plane == 2
         assert vertices_above_plane == 1
 
-        # Test case 7: Triangle with plane_d greater than 0
-        plane_d = 1.0  # Distance from the origin
+        # Test case 7: Triangle with plane_d less than 0
+        plane_d = -1.0  # Distance from the origin
         vertices = np.array([
             [0.0, 0.0, 1.0],  # above
             [1.0, 0.0, 1.0],  # above

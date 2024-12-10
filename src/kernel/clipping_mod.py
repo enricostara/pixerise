@@ -77,7 +77,7 @@ def calculate_signed_distance(vertex: np.ndarray, plane_normal: np.ndarray, plan
               negative if on the opposite side, zero if on the plane.
     """
     # The signed distance is calculated using the plane equation
-    return (np.dot(vertex, plane_normal) + plane_d) / np.linalg.norm(plane_normal)
+    return np.dot(vertex, plane_normal) + plane_d
 
 
 @jit(nopython=True)
