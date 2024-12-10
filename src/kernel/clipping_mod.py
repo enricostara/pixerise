@@ -62,28 +62,28 @@ def calculate_bounding_sphere(vertices: np.ndarray) -> tuple:
 
 
 @jit(nopython=True)
-def calculate_signed_distance(plane_normal: np.ndarray, vertex: np.ndarray) -> float:
+def calculate_signed_distance(vertex: np.ndarray, plane_normal: np.ndarray, plane_d: float) -> float:
     """
-    Calculate the signed distance between a plane passing through the origin and a vertex.
+    Calculate the signed distance between a plane defined by the equation Ax + By + Cz + D = 0 and a vertex.
     
     Args:
-        plane_normal: Numpy array of shape (3,) representing the plane normal vector (should be normalized)
         vertex: Numpy array of shape (3,) representing the vertex to calculate distance from
-        
+        plane_normal: Numpy array of shape (3,) representing the plane normal vector (should be normalized)
+        plane_d: float, the constant term in the plane equation
+    
     Returns:
         float: The signed distance from the plane to the vertex. 
               Positive if vertex is on the same side as the normal,
               negative if on the opposite side, zero if on the plane.
     """
-    
-    # The signed distance is the dot product of this vector with the normal
-    return np.dot(vertex, plane_normal)
+    # The signed distance is calculated using the plane equation
+    return (np.dot(vertex, plane_normal) + plane_d) / np.linalg.norm(plane_normal)
 
 
 @jit(nopython=True)
-def clip_triangle(plane_normal: np.ndarray, vertices: np.ndarray) -> tuple:
+def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float=0) -> tuple:
     """
-    Clip a triangle against a plane passing through the origin using the Sutherland-Hodgman algorithm.
+    Clip a triangle against a plane using the Sutherland-Hodgman algorithm.
     
     This function implements triangle clipping against a plane, handling various cases:
     1. Triangle completely above plane (preserved)
@@ -93,8 +93,9 @@ def clip_triangle(plane_normal: np.ndarray, vertices: np.ndarray) -> tuple:
     5. Two vertices above plane, one below (creates two triangles)
     
     Args:
-        plane_normal: Numpy array of shape (3,) representing the plane normal vector (should be normalized)
         vertices: Numpy array of shape (3, 3) containing the triangle vertices
+        plane_normal: Numpy array of shape (3,) representing the plane normal vector (should be normalized)
+        plane_d: float, the constant term in the plane equation
         
     Returns:
         tuple: (triangles, num_triangles) where:
@@ -109,9 +110,9 @@ def clip_triangle(plane_normal: np.ndarray, vertices: np.ndarray) -> tuple:
     """
     # Calculate signed distances from each vertex to the plane
     # These distances determine which side of the plane each vertex lies on
-    d0 = calculate_signed_distance(plane_normal, vertices[0])
-    d1 = calculate_signed_distance(plane_normal, vertices[1])
-    d2 = calculate_signed_distance(plane_normal, vertices[2])
+    d0 = calculate_signed_distance(vertices[0], plane_normal, plane_d)
+    d1 = calculate_signed_distance(vertices[1], plane_normal, plane_d)
+    d2 = calculate_signed_distance(vertices[2], plane_normal, plane_d)
     
     # Initialize result array to store up to 2 triangles
     triangles = np.empty((2, 3, 3), dtype=np.float64)

@@ -14,7 +14,7 @@ class TestClipping:
             [1.0, 0.0, 1.0],
             [0.0, 1.0, 1.0]
         ], dtype=np.float64)
-        triangles, num_triangles = clip_triangle(plane_normal, vertices)
+        triangles, num_triangles = clip_triangle(vertices, plane_normal)
         assert num_triangles == 1
         np.testing.assert_array_almost_equal(triangles[0], vertices)
 
@@ -24,7 +24,7 @@ class TestClipping:
             [1.0, 0.0, -1.0],
             [0.0, 1.0, -1.0]
         ], dtype=np.float64)
-        triangles, num_triangles = clip_triangle(plane_normal, vertices)
+        triangles, num_triangles = clip_triangle(vertices, plane_normal)
         assert num_triangles == 0
 
         # Test case 3: Triangle with one vertex above plane
@@ -33,7 +33,7 @@ class TestClipping:
             [1.0, 0.0, -1.0], # below
             [-1.0, 0.0, -1.0] # below
         ], dtype=np.float64)
-        triangles, num_triangles = clip_triangle(plane_normal, vertices)
+        triangles, num_triangles = clip_triangle(vertices, plane_normal)
         assert num_triangles == 1
         # Verify the clipped triangle has correct z coordinates
         z_coords = triangles[0, :, 2]  # get all z coordinates
@@ -46,7 +46,7 @@ class TestClipping:
             [1.0, 0.0, 1.0],   # above
             [0.0, 1.0, -1.0]   # below
         ], dtype=np.float64)
-        triangles, num_triangles = clip_triangle(plane_normal, vertices)
+        triangles, num_triangles = clip_triangle(vertices, plane_normal)
         assert num_triangles == 2
         # Verify both triangles have correct z coordinates
         for i in range(2):
@@ -60,7 +60,7 @@ class TestClipping:
             [1.0, 0.0, 1.0],  # above
             [0.0, 1.0, -1.0]  # below
         ], dtype=np.float64)
-        triangles, num_triangles = clip_triangle(plane_normal, vertices)
+        triangles, num_triangles = clip_triangle(vertices, plane_normal)
         assert num_triangles == 1
         # Check that the resulting triangle has:
         # - one vertex from original triangle (the one above plane)

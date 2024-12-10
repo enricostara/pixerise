@@ -36,7 +36,7 @@ def draw_clipped_triangle(renderer, vertices, color, plane_normals):
     for normal in plane_normals:
         next_triangles = []
         for tri in current_triangles:
-            clipped, num_triangles = clip_triangle(normal, tri)
+            clipped, num_triangles = clip_triangle(tri, normal)
             for i in range(num_triangles):
                 next_triangles.append(clipped[i])
         current_triangles = next_triangles

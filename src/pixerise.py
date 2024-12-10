@@ -54,12 +54,12 @@ class ViewPort:
         self._top_plane /= np.linalg.norm(self._top_plane)
         self._bottom_plane /= np.linalg.norm(self._bottom_plane)
         
-        # Store all planes in a list for easy iteration
+        # Define frustum planes as a list of tuples with the D constant term
         self.frustum_planes = [
-            self._left_plane,
-            self._right_plane,
-            self._top_plane,
-            self._bottom_plane
+            (self._left_plane, 0),
+            (self._right_plane, 0),
+            (self._top_plane, 0),
+            (self._bottom_plane, 0)
         ]
     
     def viewport_to_canvas(self, x, y) -> (float, float):
@@ -231,7 +231,7 @@ class Renderer:
                         next_triangles = []
                         for tri in clipped_triangles:
                             # Clip triangle against current plane
-                            result_triangles, num_triangles = clip_triangle(plane, tri)
+                            result_triangles, num_triangles = clip_triangle(tri, plane[0])
                             # Add resulting triangles
                             for i in range(num_triangles):
                                 next_triangles.append(result_triangles[i])

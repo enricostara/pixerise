@@ -16,7 +16,7 @@ class ClipTriangleBenchmark:
         warm_up_normal = np.array([0.0, 0.0, 1.0])
         print("\nWarming up JIT compilation...")
         for _ in range(100):
-            clip_triangle(warm_up_normal, warm_up_vertices)
+            clip_triangle(warm_up_vertices, warm_up_normal)
         print("Warm-up complete.\n")
 
     def benchmark_calculation(self, plane_normal, vertices):
@@ -38,7 +38,7 @@ class ClipTriangleBenchmark:
         for _ in range(NUM_LOOPS):
             start_time = time.perf_counter()
             for _ in range(CALLS_PER_LOOP):
-                clip_triangle(plane_normal, vertices)
+                clip_triangle(vertices, plane_normal)
             end_time = time.perf_counter()
             total_times.append((end_time - start_time) * 1000)  # Convert to milliseconds
             
