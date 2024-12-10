@@ -97,7 +97,6 @@ class Renderer:
             camera_translation = np.zeros(3)
             camera_rotation = np.zeros(3)
         
-        # Call JIT-compiled function
         return transform_vertex(
             vertex, translation, rotation, scale,
             camera_translation, camera_rotation, has_camera
