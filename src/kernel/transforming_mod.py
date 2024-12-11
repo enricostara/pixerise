@@ -127,3 +127,18 @@ def transform_vertex(vertex: np.ndarray,
     # Return the transformed vertex as a new array
     # This ensures the original vertex array is not modified
     return np.array([x, y, z])
+
+
+@jit(nopython=True)
+def warm_up_transorming_mod_jit_compilation():
+    # Example inputs for warming up the JIT compilation
+    example_vertex = np.array([1.0, 1.0, 1.0], dtype=np.float64)
+    example_translation = np.array([1.0, 1.0, 1.0], dtype=np.float64)
+    example_rotation = np.array([0.0, 0.0, 0.0], dtype=np.float64)
+    example_scale = np.array([1.0, 1.0, 1.0], dtype=np.float64)
+    example_camera_translation = np.array([0.0, 0.0, 0.0], dtype=np.float64)
+    example_camera_rotation = np.array([0.0, 0.0, 0.0], dtype=np.float64)
+    has_camera = False
+    
+    # Call the JIT-compiled function to trigger compilation
+    transform_vertex(example_vertex, example_translation, example_rotation, example_scale, example_camera_translation, example_camera_rotation, has_camera)

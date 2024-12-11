@@ -387,3 +387,13 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
             x_right += step_right
             i_left += i_step_left
             i_right += i_step_right
+
+
+@jit(nopython=True)
+def warm_up_rasterizing_mod_jit_compilation():
+    # Example inputs for warming up the JIT compilation
+    example_grid = np.zeros((100, 100, 3), dtype=np.uint8)
+    draw_pixel(example_grid, 0, 0, 50, 50, 255, 0, 0, 100, 100)
+    draw_line(0, 0, 10, 10, example_grid, 50, 50, 0, 255, 0, 100, 100)
+    draw_triangle(0, 0, 10, 0, 5, 10, example_grid, 50, 50, 0, 0, 255, 100, 100)
+    draw_shaded_triangle(0, 0, 10, 0, 5, 10, example_grid, 50, 50, 255, 255, 0, 0.5, 0.5, 0.5, 100, 100)

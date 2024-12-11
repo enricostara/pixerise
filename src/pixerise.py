@@ -6,9 +6,9 @@ This module contains the main classes for rendering: Canvas, ViewPort, and Rende
 import numpy as np
 from numba import jit
 import pygame
-from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
-from kernel.transforming_mod import transform_vertex
-from kernel.clipping_mod import clip_triangle, calculate_bounding_sphere
+from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle, warm_up_rasterizing_mod_jit_compilation)
+from kernel.transforming_mod import transform_vertex, warm_up_transorming_mod_jit_compilation
+from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere, warm_up_clipping_mod_jit_compilation)
 
 class Canvas:
     """A 2D canvas for drawing pixels and managing the drawing surface."""
@@ -74,6 +74,11 @@ class Renderer:
     """Main renderer class that handles rendering of 3D scenes."""
     
     def __init__(self, canvas: Canvas, viewport: ViewPort, scene: dict, background_color=(32, 32, 32)):
+        print("Starting kernel modules...")
+        warm_up_rasterizing_mod_jit_compilation()
+        warm_up_transorming_mod_jit_compilation()
+        warm_up_clipping_mod_jit_compilation()
+        print("Kernel modules initialized successfully.")
         self._canvas = canvas
         self._viewport = viewport
         self._scene = scene

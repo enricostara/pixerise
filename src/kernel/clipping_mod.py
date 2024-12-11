@@ -90,7 +90,6 @@ def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float
         - Zero distance: vertex lies exactly on the plane
     """
     # Calculate signed distances from each vertex to the plane
-    # These distances determine which side of the plane each vertex lies on
     d0 = np.dot(vertices[0], plane_normal) + plane_d
     d1 = np.dot(vertices[1], plane_normal) + plane_d
     d2 = np.dot(vertices[2], plane_normal) + plane_d
@@ -242,3 +241,16 @@ def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float
         return triangles, 2
     
     return triangles, 1  # Should never reach here
+
+
+@jit(nopython=True)
+def warm_up_clipping_mod_jit_compilation():
+    # Example inputs for warming up the JIT compilation
+    example_vertex = np.array([1.0, 1.0, 1.0], dtype=np.float64)
+    example_plane_normal = np.array([0.0, 0.0, 1.0], dtype=np.float64)
+    example_plane_d = -1.0
+    
+    # Call each JIT-compiled function to trigger compilation
+    calculate_bounding_sphere(np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], dtype=np.float64))
+    for _ in range(100):
+        clip_triangle(np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], dtype=np.float64), example_plane_normal, example_plane_d)
