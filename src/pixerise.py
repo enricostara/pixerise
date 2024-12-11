@@ -8,8 +8,7 @@ from numba import jit
 import pygame
 from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
 from kernel.transforming_mod import transform_vertex
-from kernel.clipping_mod import clip_triangle
-
+from kernel.clipping_mod import clip_triangle, calculate_bounding_sphere
 
 class Canvas:
     """A 2D canvas for drawing pixels and managing the drawing surface."""
@@ -218,6 +217,33 @@ class Renderer:
                     transformed = self._transform_vertex(vertex, transform)
                     transformed_vertices.append(transformed)
                 
+                # Convert transformed vertices to numpy array for bounding sphere calculation
+                vertices_array = np.array(transformed_vertices, dtype=np.float64)
+                
+                # Calculate bounding sphere for the entire instance
+                sphere_center, sphere_radius = calculate_bounding_sphere(vertices_array)
+                
+                # Check visibility against each frustum plane
+                fully_visible = True
+                fully_invisible = False
+                
+                for plane, plane_d in self._viewport.frustum_planes:
+                    # Calculate signed distance from sphere center to plane
+                    center_distance = np.dot(plane, sphere_center) + plane_d
+                    
+                    # If center distance is less than -radius, sphere is completely behind plane
+                    if center_distance < -sphere_radius:
+                        fully_invisible = True
+                        break
+                        
+                    # If center distance is less than radius, sphere intersects plane
+                    if abs(center_distance) < sphere_radius:
+                        fully_visible = False
+                
+                # Skip if instance is completely invisible
+                if fully_invisible:
+                    continue
+                
                 # Draw triangles
                 for triangle in triangles:
                     # Get triangle vertices as numpy array
@@ -227,28 +253,42 @@ class Renderer:
                         transformed_vertices[triangle[2]]
                     ], dtype=np.float64)
                     
-                    # Clip against each frustum plane
-                    planes = self._viewport.frustum_planes
-                    clipped_triangles = [triangle_vertices]
-                    
-                    for plane in planes:
-                        next_triangles = []
-                        for tri in clipped_triangles:
-                            # Clip triangle against current plane
-                            result_triangles, num_triangles = clip_triangle(tri, plane[0], plane[1])
-                            # Add resulting triangles
-                            for i in range(num_triangles):
-                                next_triangles.append(result_triangles[i])
-                        clipped_triangles = next_triangles
-                        if not clipped_triangles:  # Triangle completely clipped away
-                            break
-                    
-                    # Project and draw the clipped triangles
-                    for clipped_tri in clipped_triangles:
+                    if not fully_visible:
+                        # Clip against each frustum plane
+                        planes = self._viewport.frustum_planes
+                        clipped_triangles = [triangle_vertices]
+                        
+                        for plane in planes:
+                            next_triangles = []
+                            for tri in clipped_triangles:
+                                # Clip triangle against current plane
+                                result_triangles, num_triangles = clip_triangle(tri, plane[0], plane[1])
+                                # Add resulting triangles
+                                for i in range(num_triangles):
+                                    next_triangles.append(result_triangles[i])
+                            clipped_triangles = next_triangles
+                            if not clipped_triangles:  # Triangle completely clipped away
+                                break
+                        
+                        # Project and draw the clipped triangles
+                        for clipped_tri in clipped_triangles:
+                            # Project vertices to 2D
+                            v1 = self._project_vertex(clipped_tri[0])
+                            v2 = self._project_vertex(clipped_tri[1])
+                            v3 = self._project_vertex(clipped_tri[2])
+                            
+                            # Skip if any vertex is behind camera
+                            if v1 is None or v2 is None or v3 is None:
+                                continue
+                            
+                            # Draw triangle
+                            self.draw_triangle(v1, v2, v3, color, fill=False)
+                    else:
+                        # For fully visible instances, still need to check if vertices are behind camera
                         # Project vertices to 2D
-                        v1 = self._project_vertex(clipped_tri[0])
-                        v2 = self._project_vertex(clipped_tri[1])
-                        v3 = self._project_vertex(clipped_tri[2])
+                        v1 = self._project_vertex(triangle_vertices[0])
+                        v2 = self._project_vertex(triangle_vertices[1])
+                        v3 = self._project_vertex(triangle_vertices[2])
                         
                         # Skip if any vertex is behind camera
                         if v1 is None or v2 is None or v3 is None:
