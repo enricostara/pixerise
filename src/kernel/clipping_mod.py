@@ -4,10 +4,10 @@ These functions are optimized using Numba's JIT compilation for better performan
 """
 
 import numpy as np
-from numba import jit
+from numba import njit
 
 
-@jit(nopython=True)
+@njit(cache=True)
 def calculate_bounding_sphere(vertices: np.ndarray) -> tuple:
     """
     Calculate the center and radius of a bounding sphere containing all given vertices.
@@ -61,7 +61,7 @@ def calculate_bounding_sphere(vertices: np.ndarray) -> tuple:
     return center, radius
 
 
-@jit(nopython=True)
+@njit(cache=True)
 def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float=0) -> tuple:
     """
     Clip a triangle against a plane using the Sutherland-Hodgman algorithm.
@@ -241,16 +241,3 @@ def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float
         return triangles, 2
     
     return triangles, 1  # Should never reach here
-
-
-@jit(nopython=True)
-def warm_up_clipping_mod_jit_compilation():
-    # Example inputs for warming up the JIT compilation
-    example_vertex = np.array([1.0, 1.0, 1.0], dtype=np.float64)
-    example_plane_normal = np.array([0.0, 0.0, 1.0], dtype=np.float64)
-    example_plane_d = -1.0
-    
-    # Call each JIT-compiled function to trigger compilation
-    calculate_bounding_sphere(np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], dtype=np.float64))
-    for _ in range(100):
-        clip_triangle(np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], dtype=np.float64), example_plane_normal, example_plane_d)
