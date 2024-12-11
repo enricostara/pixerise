@@ -45,14 +45,6 @@ class TransformVertexBenchmark:
         NUM_LOOPS = 10
         CALLS_PER_LOOP = 1000
         total_times_jit = []
-        total_times_matrix = []
-
-        # Pre-compute matrices for matrix-based method
-        model_matrix = self.renderer.create_model_matrix(transform)
-        camera_matrix = None
-        if 'camera' in self.renderer._scene:
-            camera_transform = self.renderer._scene['camera'].get('transform', {})
-            camera_matrix = self.renderer.create_camera_matrix(camera_transform)
 
         for _ in range(NUM_LOOPS):
             # Benchmark JIT method
@@ -62,16 +54,8 @@ class TransformVertexBenchmark:
             end_time = time.perf_counter()
             total_times_jit.append((end_time - start_time) * 1000)  # Convert to milliseconds
             
-            # Benchmark matrix method
-            start_time = time.perf_counter()
-            for _ in range(CALLS_PER_LOOP):
-                self.renderer._transform_vertex_with_matrices(vertex, transform, model_matrix, camera_matrix)
-            end_time = time.perf_counter()
-            total_times_matrix.append((end_time - start_time) * 1000)  # Convert to milliseconds
-            
         return {
-            'jit': np.mean(total_times_jit),
-            'matrix': np.mean(total_times_matrix)
+            'jit': np.mean(total_times_jit)
         }
 
 
@@ -80,9 +64,7 @@ def run_benchmark(benchmark, vertex, transform, name):
     avg_times = benchmark.benchmark_transform(vertex, transform)
     
     print(f"\n{name}")
-    print(f"JIT method:     {avg_times['jit']:.3f}ms for 1000 calls")
-    print(f"Matrix method:  {avg_times['matrix']:.3f}ms for 1000 calls")
-    print(f"Matrix/JIT ratio: {avg_times['matrix']/avg_times['jit']:.2f}x")
+    print(f"JIT method: {avg_times['jit']:.3f}ms for 1000 calls")
 
 
 def main():
