@@ -244,6 +244,20 @@ class Renderer:
                 if fully_invisible:
                     continue
                 
+                # Function to project and draw a triangle
+                def project_and_draw_triangle(vertices):
+                    # Project vertices to 2D
+                    v1 = self._project_vertex(vertices[0])
+                    v2 = self._project_vertex(vertices[1])
+                    v3 = self._project_vertex(vertices[2])
+                    
+                    # Skip if any vertex is behind camera
+                    if v1 is None or v2 is None or v3 is None:
+                        return
+                    
+                    # Draw triangle
+                    self.draw_triangle(v1, v2, v3, color, fill=False)
+
                 # Draw triangles
                 for triangle in triangles:
                     # Get triangle vertices as numpy array
@@ -252,7 +266,7 @@ class Renderer:
                         transformed_vertices[triangle[1]],
                         transformed_vertices[triangle[2]]
                     ], dtype=np.float64)
-                    
+
                     if not fully_visible:
                         # Clip against each frustum plane
                         planes = self._viewport.frustum_planes
@@ -272,27 +286,7 @@ class Renderer:
                         
                         # Project and draw the clipped triangles
                         for clipped_tri in clipped_triangles:
-                            # Project vertices to 2D
-                            v1 = self._project_vertex(clipped_tri[0])
-                            v2 = self._project_vertex(clipped_tri[1])
-                            v3 = self._project_vertex(clipped_tri[2])
-                            
-                            # Skip if any vertex is behind camera
-                            if v1 is None or v2 is None or v3 is None:
-                                continue
-                            
-                            # Draw triangle
-                            self.draw_triangle(v1, v2, v3, color, fill=False)
+                            project_and_draw_triangle(clipped_tri)
                     else:
                         # For fully visible instances, still need to check if vertices are behind camera
-                        # Project vertices to 2D
-                        v1 = self._project_vertex(triangle_vertices[0])
-                        v2 = self._project_vertex(triangle_vertices[1])
-                        v3 = self._project_vertex(triangle_vertices[2])
-                        
-                        # Skip if any vertex is behind camera
-                        if v1 is None or v2 is None or v3 is None:
-                            continue
-                        
-                        # Draw triangle
-                        self.draw_triangle(v1, v2, v3, color, fill=False)
+                        project_and_draw_triangle(triangle_vertices)

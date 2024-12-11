@@ -62,25 +62,6 @@ def calculate_bounding_sphere(vertices: np.ndarray) -> tuple:
 
 
 @jit(nopython=True)
-def calculate_signed_distance(vertex: np.ndarray, plane_normal: np.ndarray, plane_d: float) -> float:
-    """
-    Calculate the signed distance between a plane defined by the equation Ax + By + Cz + D = 0 and a vertex.
-    
-    Args:
-        vertex: Numpy array of shape (3,) representing the vertex to calculate distance from
-        plane_normal: Numpy array of shape (3,) representing the plane normal vector (should be normalized)
-        plane_d: float, the constant term in the plane equation
-    
-    Returns:
-        float: The signed distance from the plane to the vertex. 
-              Positive if vertex is on the same side as the normal,
-              negative if on the opposite side, zero if on the plane.
-    """
-    # The signed distance is calculated using the plane equation
-    return np.dot(vertex, plane_normal) + plane_d
-
-
-@jit(nopython=True)
 def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float=0) -> tuple:
     """
     Clip a triangle against a plane using the Sutherland-Hodgman algorithm.
@@ -110,9 +91,9 @@ def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float
     """
     # Calculate signed distances from each vertex to the plane
     # These distances determine which side of the plane each vertex lies on
-    d0 = calculate_signed_distance(vertices[0], plane_normal, plane_d)
-    d1 = calculate_signed_distance(vertices[1], plane_normal, plane_d)
-    d2 = calculate_signed_distance(vertices[2], plane_normal, plane_d)
+    d0 = np.dot(vertices[0], plane_normal) + plane_d
+    d1 = np.dot(vertices[1], plane_normal) + plane_d
+    d2 = np.dot(vertices[2], plane_normal) + plane_d
     
     # Initialize result array to store up to 2 triangles
     triangles = np.empty((2, 3, 3), dtype=np.float64)
