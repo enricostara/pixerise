@@ -9,11 +9,12 @@ import pygame
 from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
 from kernel.transforming_mod import transform_vertex
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere)
+from typing import Tuple
 
 class Canvas:
     """A 2D canvas for drawing pixels and managing the drawing surface."""
     
-    def __init__(self, size: (int, int) = (800, 600)):
+    def __init__(self, size: Tuple[int, int] = (800, 600)):
         self.size = size
         self.width = size[0]
         self.height = size[1]
@@ -26,7 +27,7 @@ class Canvas:
 class ViewPort:
     """Manages the view frustum and coordinate transformations from viewport to canvas space."""
 
-    def __init__(self, size: (float, float), plane_distance: float, canvas: Canvas):
+    def __init__(self, size: Tuple[float, float], plane_distance: float, canvas: Canvas):
         self._width = size[0]
         self._height = size[1]
         self._plane_distance = plane_distance
@@ -66,7 +67,7 @@ class ViewPort:
             (self._near_plane, -self._plane_distance)
         ]
     
-    def viewport_to_canvas(self, x, y) -> (float, float):
+    def viewport_to_canvas(self, x, y) -> Tuple[float, float]:
         return x * self._canvas.width / self._width, y * self._canvas.height / self._height
 
 
@@ -120,7 +121,7 @@ class Renderer:
         x_canvas, y_canvas = self._viewport.viewport_to_canvas(x_proj, y_proj)
         return int(x_canvas), int(y_canvas)
 
-    def draw_line(self, start: (float, float), end: (float, float), color: (int, int, int)):
+    def draw_line(self, start: Tuple[float, float], end: Tuple[float, float], color: Tuple[int, int, int]):
         """Draw a line using Bresenham's algorithm for better performance."""
         draw_line(
             int(start[0]), int(start[1]), 
@@ -130,7 +131,7 @@ class Renderer:
             color[0], color[1], color[2],
             self._canvas.width, self._canvas.height)
 
-    def draw_triangle(self, p1: (float, float), p2: (float, float), p3: (float, float), color: (int, int, int), fill: bool = True):
+    def draw_triangle(self, p1: Tuple[float, float], p2: Tuple[float, float], p3: Tuple[float, float], color: Tuple[int, int, int], fill: bool = True):
         """Draw a triangle defined by three points. If fill is True, the triangle will be filled,
         otherwise only the outline will be drawn."""
         if fill:
@@ -148,8 +149,8 @@ class Renderer:
             self.draw_line(p2, p3, color)
             self.draw_line(p3, p1, color)
 
-    def draw_shaded_triangle(self, p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float],
-                           color: tuple[int, int, int],
+    def draw_shaded_triangle(self, p1: Tuple[float, float], p2: Tuple[float, float], p3: Tuple[float, float],
+                           color: Tuple[int, int, int],
                            intensity1: float, intensity2: float, intensity3: float):
         """
         Draw a triangle with smooth shading using per-vertex intensity interpolation.
