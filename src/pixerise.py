@@ -12,23 +12,56 @@ from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere)
 from typing import Tuple
 
 class Canvas:
-    """A 2D canvas for drawing pixels and managing the drawing surface."""
+    """A 2D canvas for drawing pixels and managing the drawing surface.
+    
+    The Canvas class provides a fundamental drawing surface for the rendering engine.
+    It manages both the color buffer (grid) and depth buffer (zbuffer) for proper
+    3D rendering with depth testing.
+    
+    Attributes:
+        size (Tuple[int, int]): Canvas dimensions as (width, height)
+        width (int): Canvas width in pixels
+        height (int): Canvas height in pixels
+        grid (np.ndarray): 3D array of shape (width, height, 3) storing RGB values
+        zbuffer (np.ndarray): 2D array of shape (width, height) storing depth values
+        half_width (int): Half of canvas width, used for center-based coordinates
+        half_height (int): Half of canvas height, used for center-based coordinates
+        _center (Tuple[int, int]): Canvas center point coordinates
+    """
     
     def __init__(self, size: Tuple[int, int] = (800, 600)):
+        """Initialize a new Canvas instance.
+        
+        Args:
+            size (Tuple[int, int], optional): Canvas dimensions (width, height).
+                Defaults to (800, 600).
+        """
         self.size = size
         self.width = size[0]
         self.height = size[1]
-        self.grid = np.ones((self.width, self.height, 3), dtype=np.uint8) * 32  # Back to column-major order (width, height)
-        self.zbuffer = np.full((self.width, self.height), np.inf, dtype=np.float32)  # Initialize z-buffer with infinity
+        # Initialize color buffer with dark gray background (column-major order)
+        self.grid = np.ones((self.width, self.height, 3), dtype=np.uint8) * 32
+        # Initialize z-buffer with infinity for depth testing
+        self.zbuffer = np.full((self.width, self.height), np.inf, dtype=np.float32)
+        # Calculate center-based coordinates
         self.half_width = self.width // 2
         self.half_height = self.height // 2
         self._center = (self.half_width, self.half_height)
 
     def clear(self, color: Tuple[int, int, int] = (32, 32, 32)):
-        """Clear the canvas and reset the z-buffer."""
+        """Clear the canvas and reset the z-buffer.
+        
+        Resets both the color buffer to the specified color and the z-buffer
+        to infinity, preparing the canvas for a new frame.
+        
+        Args:
+            color (Tuple[int, int, int], optional): RGB color to fill the canvas.
+                Each component should be in range [0, 255].
+                Defaults to dark gray (32, 32, 32).
+        """
         self.grid.fill(0)
         self.grid[:, :] = color
-        self.zbuffer.fill(np.inf)  # Reset z-buffer to infinity
+        self.zbuffer.fill(np.inf)  # Reset z-buffer for new frame
 
 
 class ViewPort:
