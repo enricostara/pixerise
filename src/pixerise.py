@@ -102,12 +102,9 @@ class Renderer:
             camera_translation, camera_rotation, has_camera
         )
 
-    def _project_vertex(self, vertex, position=None):
+    def _project_vertex(self, vertex):
         """Project a vertex from 3D to 2D screen coordinates."""
-        if position is None:
-            x, y, z = vertex
-        else:
-            x, y, z = position
+        x, y, z = vertex
         
         # Early exit if behind camera
         if z <= 0:
