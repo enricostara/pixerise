@@ -19,9 +19,16 @@ class Canvas:
         self.width = size[0]
         self.height = size[1]
         self.grid = np.ones((self.width, self.height, 3), dtype=np.uint8) * 32  # Back to column-major order (width, height)
+        self.zbuffer = np.full((self.width, self.height), np.inf, dtype=np.float32)  # Initialize z-buffer with infinity
         self.half_width = self.width // 2
         self.half_height = self.height // 2
         self._center = (self.half_width, self.half_height)
+
+    def clear(self, color: Tuple[int, int, int] = (32, 32, 32)):
+        """Clear the canvas and reset the z-buffer."""
+        self.grid.fill(0)
+        self.grid[:, :] = color
+        self.zbuffer.fill(np.inf)  # Reset z-buffer to infinity
 
 
 class ViewPort:
@@ -188,7 +195,7 @@ class Renderer:
     def render(self, scene: dict):
         """Render a scene containing models and their instances."""
         # Clear canvas
-        self._canvas.grid[:] = self._background_color
+        self._canvas.clear(tuple(self._background_color))
 
         # Get camera transform if present
         camera_transform = scene.get('camera', {}).get('transform', {})
