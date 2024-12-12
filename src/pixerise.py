@@ -65,40 +65,77 @@ class Canvas:
 
 
 class ViewPort:
-    """Manages the view frustum and coordinate transformations from viewport to canvas space."""
+    """Manages the view frustum and coordinate transformations from viewport to canvas space.
+    
+    The ViewPort class handles the 3D viewing volume (frustum) and provides methods for
+    transforming coordinates between viewport and canvas space. It pre-calculates the
+    frustum planes for efficient view frustum culling during rendering.
+    
+    The view frustum is defined by five planes:
+        - Left and Right planes
+        - Top and Bottom planes
+        - Near plane (at the specified plane distance)
+    
+    Each frustum plane is represented by its normal vector (pointing inward) and distance
+    from origin, stored in the format (normal_vector, distance).
+    
+    Attributes:
+        _width (float): Width of the viewport
+        _height (float): Height of the viewport
+        _plane_distance (float): Distance to the near plane
+        _canvas (Canvas): Reference to the target canvas
+        frustum_planes (List[Tuple[np.ndarray, float]]): List of frustum planes,
+            each defined by (normal_vector, distance)
+    """
 
     def __init__(self, size: Tuple[float, float], plane_distance: float, canvas: Canvas):
+        """Initialize a new ViewPort instance.
+        
+        Args:
+            size (Tuple[float, float]): Dimensions of the viewport (width, height)
+            plane_distance (float): Distance to the near plane from the camera
+            canvas (Canvas): Target canvas for rendering
+        """
         self._width = size[0]
         self._height = size[1]
         self._plane_distance = plane_distance
         self._canvas = canvas
         
-        # Pre-calculate frustum planes for efficiency
+        # Initialize frustum planes for view frustum culling
         self._calculate_frustum_planes()
         
     def _calculate_frustum_planes(self):
-        """Calculate the view frustum plane normals (pointing inward)."""
-        # Calculate half-dimensions at the near plane
+        """Calculate the view frustum plane normals and distances.
+        
+        This method computes the normal vectors and distances for all frustum planes.
+        The normals point inward and are normalized for efficient plane-point tests.
+        The frustum is defined in view space, where:
+            - X-axis points right
+            - Y-axis points up
+            - Z-axis points away from the viewer (into the screen)
+        """
+        # Calculate half-dimensions at the near plane for plane equations
         half_width = self._width / 2
         half_height = self._height / 2
         
-        # Calculate plane normals (pointing inward)
+        # Calculate plane normals with correct orientation (pointing inward)
+        # Each normal is computed based on the plane's orientation in view space
         self._left_plane = np.array([1, 0, half_width / self._plane_distance], dtype=np.float64)
         self._right_plane = np.array([-1, 0, half_width / self._plane_distance], dtype=np.float64)
         self._top_plane = np.array([0, -1, half_height / self._plane_distance], dtype=np.float64)
         self._bottom_plane = np.array([0, 1, half_height / self._plane_distance], dtype=np.float64)
-
-        # Define the near plane
-        self._near_plane = np.array([0, 0, 1], dtype=np.float64)  # Normal pointing towards the viewer
+        self._near_plane = np.array([0, 0, 1], dtype=np.float64)  # Points towards viewer
         
-        # Normalize the plane normals
+        # Normalize all plane normals for consistent distance calculations
         self._left_plane /= np.linalg.norm(self._left_plane)
         self._right_plane /= np.linalg.norm(self._right_plane)
         self._top_plane /= np.linalg.norm(self._top_plane)
         self._bottom_plane /= np.linalg.norm(self._bottom_plane)
         self._near_plane /= np.linalg.norm(self._near_plane)
 
-        # Define frustum planes as a list of tuples with the D constant term
+        # Store frustum planes as (normal, distance) pairs
+        # Distance is 0 for side planes (they pass through origin)
+        # Near plane distance is negative as it's measured from origin
         self.frustum_planes = [
             (self._left_plane, 0),
             (self._right_plane, 0),
@@ -107,7 +144,19 @@ class ViewPort:
             (self._near_plane, -self._plane_distance)
         ]
     
-    def viewport_to_canvas(self, x, y) -> Tuple[float, float]:
+    def viewport_to_canvas(self, x: float, y: float) -> Tuple[float, float]:
+        """Transform viewport coordinates to canvas coordinates.
+        
+        Converts coordinates from viewport space to canvas space by applying
+        appropriate scaling based on the relative dimensions of viewport and canvas.
+        
+        Args:
+            x (float): X-coordinate in viewport space
+            y (float): Y-coordinate in viewport space
+            
+        Returns:
+            Tuple[float, float]: Transformed coordinates in canvas space
+        """
         return x * self._canvas.width / self._width, y * self._canvas.height / self._height
 
 
