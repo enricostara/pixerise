@@ -44,56 +44,55 @@ class ClipTriangleBenchmark:
             
         return np.mean(total_times)  # Return average time for 1000 calls
 
+def run_benchmark(benchmark, plane_normal, vertices, name):
+    """Run benchmark for triangle clipping"""
+    avg_time = benchmark.benchmark_calculation(plane_normal, vertices)
+    
+    print(f"\n{name}")
+    print(f"Average time for 1000 calls: {avg_time:.3f}ms")
+
 def run_benchmarks():
     """Run a series of benchmark tests covering different triangle clipping scenarios."""
+    print("Running Triangle Clipping Benchmarks...")
+    print("Each test runs 10 loops of 1000 clipping operations")
+    print("Results show the average time taken for 1000 operations")
     benchmark = ClipTriangleBenchmark()
     
     # Define clipping plane (XY plane, normal pointing in +Z direction)
-    plane_normal1 = np.array([0.0, 0.0, 1.0])
+    plane_normal = np.array([0.0, 0.0, 1.0])
     
     # Test case 1: Triangle intersecting plane
-    # This tests the most common case where the triangle straddles the clipping plane
-    # Expected result: One triangle after clipping
-    vertices1 = np.array([
+    vertices = np.array([
         [1.0, 1.0, 1.0],    # Above plane
         [-1.0, 1.0, -1.0],  # Below plane
         [0.0, -1.0, 0.0]    # On plane
     ])
-    time1 = benchmark.benchmark_calculation(plane_normal1, vertices1)
-    print(f"Intersecting triangle case: {time1:.2f}ms for 1000 calls")
+    run_benchmark(benchmark, plane_normal, vertices, "Intersecting Triangle")
 
     # Test case 2: Triangle completely above plane
-    # Tests the simple case where no clipping is needed
-    # Expected result: Original triangle unchanged
-    vertices2 = np.array([
+    vertices = np.array([
         [1.0, 1.0, 2.0],
         [-1.0, 1.0, 2.0],
         [0.0, -1.0, 2.0]
     ])
-    time2 = benchmark.benchmark_calculation(plane_normal1, vertices2)
-    print(f"Above plane case: {time2:.2f}ms for 1000 calls")
+    run_benchmark(benchmark, plane_normal, vertices, "Triangle Above Plane")
 
     # Test case 3: Triangle exactly on plane
-    # Tests edge case handling when triangle lies on the clipping plane
-    # Expected result: Original triangle unchanged
-    vertices3 = np.array([
+    vertices = np.array([
         [1.0, 1.0, 0.0],
         [-1.0, 1.0, 0.0],
         [0.0, -1.0, 0.0]
     ])
-    time3 = benchmark.benchmark_calculation(plane_normal1, vertices3)
-    print(f"On plane case: {time3:.2f}ms for 1000 calls")
+    run_benchmark(benchmark, plane_normal, vertices, "Triangle On Plane")
 
     # Test case 4: Triangle with one vertex below and two above
-    # Tests the complex case where clipping creates two new triangles
-    # Expected result: Two triangles after clipping
-    vertices4 = np.array([
+    vertices = np.array([
         [0.0, 0.0, -1.0],  # Below plane
         [1.0, 0.0, 1.0],   # Above plane
         [-1.0, 0.0, 1.0]   # Above plane
     ])
-    time4 = benchmark.benchmark_calculation(plane_normal1, vertices4)
-    print(f"Two triangles case: {time4:.2f}ms for 1000 calls")
+    run_benchmark(benchmark, plane_normal, vertices, "Split Triangle (Two Output)")
+
 
 if __name__ == "__main__":
     run_benchmarks()
