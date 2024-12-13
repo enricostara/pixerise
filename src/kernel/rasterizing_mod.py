@@ -7,19 +7,32 @@ import numpy as np
 from numba import njit
 
 @njit(cache=True)
-def draw_pixel(grid: np.ndarray, x: int, y: int, center_x: int, center_y: int, 
-                color_r: int, color_g: int, color_b: int, width: int, height: int) -> None:
-    """JIT-compiled pixel drawing function."""
+def draw_pixel(color_buffer: np.ndarray, depth_buffer: np.ndarray, x: int, y: int, z: float,
+                center_x: int, center_y: int, color_r: int, color_g: int, color_b: int,
+                width: int, height: int) -> None:
+    """JIT-compiled pixel drawing function with depth testing.
+    
+    Args:
+        color_buffer: RGB color buffer array of shape (width, height, 3)
+        depth_buffer: Depth buffer array of shape (width, height)
+        x, y: Pixel coordinates relative to canvas center
+        z: Depth value of the pixel
+        center_x, center_y: Canvas center coordinates
+        color_r, color_g, color_b: RGB color components (0-255)
+        width, height: Canvas dimensions
+    """
     px = center_x + x
     py = center_y - y  # Flip y coordinate
     if 0 <= px < width and 0 <= py < height:
-        grid[px, py, 0] = color_r  # Back to column-major order for pygame compatibility
-        grid[px, py, 1] = color_g
-        grid[px, py, 2] = color_b
+        if z < depth_buffer[px, py]:  # Only draw if closer than existing depth
+            depth_buffer[px, py] = z  # Update depth buffer
+            color_buffer[px, py, 0] = color_r  # Back to column-major order for pygame compatibility
+            color_buffer[px, py, 1] = color_g
+            color_buffer[px, py, 2] = color_b
 
 @njit(cache=True)
 def draw_line(x0: int, y0: int, x1: int, y1: int, 
-               canvas_grid: np.ndarray, center_x: int, center_y: int,
+               canvas_grid: np.ndarray, depth_buffer: np.ndarray, center_x: int, center_y: int,
                color_r: int, color_g: int, color_b: int,
                canvas_width: int, canvas_height: int) -> None:
     """
@@ -36,6 +49,7 @@ def draw_line(x0: int, y0: int, x1: int, y1: int,
         x0, y0: Starting point coordinates in screen space
         x1, y1: Ending point coordinates in screen space
         canvas_grid: Target numpy array for drawing (shape: [height, width, 3] for RGB)
+        depth_buffer: Depth buffer array of shape (width, height)
         center_x, center_y: Canvas center coordinates for coordinate system transformation
         color_r, color_g, color_b: RGB color components (0-255)
         canvas_width, canvas_height: Dimensions of the canvas
@@ -83,10 +97,10 @@ def draw_line(x0: int, y0: int, x1: int, y1: int,
     for x in range(x0, x1 + 1):
         # If steep (y is primary), swap back coordinates for pixel drawing
         if steep:
-            draw_pixel(canvas_grid, y, x, center_x, center_y,
+            draw_pixel(canvas_grid, depth_buffer, y, x, 0.0, center_x, center_y,
                       color_r, color_g, color_b, canvas_width, canvas_height)
         else:
-            draw_pixel(canvas_grid, x, y, center_x, center_y,
+            draw_pixel(canvas_grid, depth_buffer, x, y, 0.0, center_x, center_y,
                       color_r, color_g, color_b, canvas_width, canvas_height)
         
         # Update error term and step in y when necessary
@@ -97,7 +111,7 @@ def draw_line(x0: int, y0: int, x1: int, y1: int,
 
 @njit(cache=True)
 def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
-                  canvas_grid: np.ndarray, center_x: int, center_y: int,
+                  canvas_grid: np.ndarray, depth_buffer: np.ndarray, center_x: int, center_y: int,
                   color_r: int, color_g: int, color_b: int,
                   canvas_width: int, canvas_height: int) -> None:
     """
@@ -113,6 +127,7 @@ def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
     Args:
         x0, y0, x1, y1, x2, y2: Triangle vertex coordinates in screen space
         canvas_grid: Target numpy array for drawing (shape: [height, width, 3] for RGB)
+        depth_buffer: Depth buffer array of shape (width, height)
         center_x, center_y: Canvas center coordinates for coordinate system transformation
         color_r, color_g, color_b: RGB color components (0-255)
         canvas_width, canvas_height: Dimensions of the canvas
@@ -183,7 +198,7 @@ def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
         
         # Draw the scanline with solid color
         for x in range(start_x, end_x + 1):
-            draw_pixel(canvas_grid, x, y, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
+            draw_pixel(canvas_grid, depth_buffer, x, y, 0.0, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
         
         # Update edge coordinates only if actually moving in y-direction
         if y1 > y0:
@@ -208,7 +223,7 @@ def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
             start_x, end_x = end_x, start_x
         
         for x in range(start_x, end_x + 1):
-            draw_pixel(canvas_grid, x, y, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
+            draw_pixel(canvas_grid, depth_buffer, x, y, 0.0, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
         
         if y2 > y1:
             x_left += step_left
@@ -217,7 +232,7 @@ def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
 
 @njit(cache=True)
 def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
-                         canvas_grid: np.ndarray, center_x: int, center_y: int,
+                         canvas_grid: np.ndarray, depth_buffer: np.ndarray, center_x: int, center_y: int,
                          color_r: int, color_g: int, color_b: int,
                          i0: float, i1: float, i2: float,
                          canvas_width: int, canvas_height: int) -> None:
@@ -235,6 +250,7 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
     Args:
         x0, y0, x1, y1, x2, y2: Triangle vertex coordinates in screen space
         canvas_grid: Target numpy array for drawing (shape: [height, width, 3] for RGB)
+        depth_buffer: Depth buffer array of shape (width, height)
         center_x, center_y: Canvas center coordinates for coordinate system transformation
         color_r, color_g, color_b: Base RGB color components (0-255)
         i0, i1, i2: Light intensity values for each vertex (0.0-1.0)
@@ -339,7 +355,7 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
                 r = int(color_r * i_curr)
                 g = int(color_g * i_curr)
                 b = int(color_b * i_curr)
-                draw_pixel(canvas_grid, x, y, center_x, center_y, r, g, b, canvas_width, canvas_height)
+                draw_pixel(canvas_grid, depth_buffer, x, y, 0.0, center_x, center_y, r, g, b, canvas_width, canvas_height)
             i_curr += i_step
         
         # Update edge coordinates and intensities:
@@ -379,7 +395,7 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
                 r = int(color_r * i_curr)
                 g = int(color_g * i_curr)
                 b = int(color_b * i_curr)
-                draw_pixel(canvas_grid, x, y, center_x, center_y, r, g, b, canvas_width, canvas_height)
+                draw_pixel(canvas_grid, depth_buffer, x, y, 0.0, center_x, center_y, r, g, b, canvas_width, canvas_height)
             i_curr += i_step
         
         if y2 > y1:

@@ -212,7 +212,7 @@ class Renderer:
         draw_line(
             int(start[0]), int(start[1]), 
             int(end[0]), int(end[1]), 
-            self._canvas.color_buffer, 
+            self._canvas.color_buffer, self._canvas.depth_buffer,
             self._canvas._center[0], self._canvas._center[1],
             color[0], color[1], color[2],
             self._canvas.width, self._canvas.height)
@@ -225,7 +225,7 @@ class Renderer:
                 int(p1[0]), int(p1[1]), 
                 int(p2[0]), int(p2[1]), 
                 int(p3[0]), int(p3[1]), 
-                self._canvas.color_buffer, 
+                self._canvas.color_buffer, self._canvas.depth_buffer,
                 self._canvas._center[0], self._canvas._center[1],
                 color[0], color[1], color[2],
                 self._canvas.width, self._canvas.height)
@@ -268,7 +268,7 @@ class Renderer:
             int(p1[0]), int(p1[1]),  # Convert vertex coordinates to integers
             int(p2[0]), int(p2[1]), 
             int(p3[0]), int(p3[1]), 
-            self._canvas.color_buffer,  # Target canvas buffer
+            self._canvas.color_buffer, self._canvas.depth_buffer,  # Target canvas buffers
             self._canvas._center[0], self._canvas._center[1],  # Canvas center for coordinate transformation
             color[0], color[1], color[2],  # RGB components
             i1, i2, i3,  # Clamped intensity values
