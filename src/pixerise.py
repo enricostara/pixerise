@@ -23,7 +23,7 @@ class Canvas:
         width (int): Canvas width in pixels
         height (int): Canvas height in pixels
         color_buffer (np.ndarray): 3D array of shape (width, height, 3) storing RGB values
-        zbuffer (np.ndarray): 2D array of shape (width, height) storing depth values
+        depth_buffer (np.ndarray): 2D array of shape (width, height) storing depth values
         half_width (int): Half of canvas width, used for center-based coordinates
         half_height (int): Half of canvas height, used for center-based coordinates
         _center (Tuple[int, int]): Canvas center point coordinates
@@ -42,7 +42,7 @@ class Canvas:
         # Initialize color buffer with dark gray background (column-major order)
         self.color_buffer = np.ones((self.width, self.height, 3), dtype=np.uint8) * 32
         # Initialize z-buffer with infinity for depth testing
-        self.zbuffer = np.full((self.width, self.height), np.inf, dtype=np.float32)
+        self.depth_buffer = np.full((self.width, self.height), np.inf, dtype=np.float32)
         # Calculate center-based coordinates
         self.half_width = self.width // 2
         self.half_height = self.height // 2
@@ -51,7 +51,7 @@ class Canvas:
     def clear(self, color: Tuple[int, int, int] = (32, 32, 32)):
         """Clear the canvas and reset the z-buffer.
         
-        Resets both the color buffer to the specified color and the z-buffer
+        Resets both the color buffer to the specified color and the depth-buffer
         to infinity, preparing the canvas for a new frame.
         
         Args:
@@ -61,7 +61,7 @@ class Canvas:
         """
         self.color_buffer.fill(0)
         self.color_buffer[:, :] = color
-        self.zbuffer.fill(np.inf)  # Reset z-buffer for new frame
+        self.depth_buffer.fill(np.inf)  # Reset z-buffer for new frame
 
 
 class ViewPort:
