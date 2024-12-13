@@ -15,14 +15,14 @@ class Canvas:
     """A 2D canvas for drawing pixels and managing the drawing surface.
     
     The Canvas class provides a fundamental drawing surface for the rendering engine.
-    It manages both the color buffer (grid) and depth buffer (zbuffer) for proper
+    It manages both the color buffer and depth buffer (zbuffer) for proper
     3D rendering with depth testing.
     
     Attributes:
         size (Tuple[int, int]): Canvas dimensions as (width, height)
         width (int): Canvas width in pixels
         height (int): Canvas height in pixels
-        grid (np.ndarray): 3D array of shape (width, height, 3) storing RGB values
+        color_buffer (np.ndarray): 3D array of shape (width, height, 3) storing RGB values
         zbuffer (np.ndarray): 2D array of shape (width, height) storing depth values
         half_width (int): Half of canvas width, used for center-based coordinates
         half_height (int): Half of canvas height, used for center-based coordinates
@@ -40,7 +40,7 @@ class Canvas:
         self.width = size[0]
         self.height = size[1]
         # Initialize color buffer with dark gray background (column-major order)
-        self.grid = np.ones((self.width, self.height, 3), dtype=np.uint8) * 32
+        self.color_buffer = np.ones((self.width, self.height, 3), dtype=np.uint8) * 32
         # Initialize z-buffer with infinity for depth testing
         self.zbuffer = np.full((self.width, self.height), np.inf, dtype=np.float32)
         # Calculate center-based coordinates
@@ -59,8 +59,8 @@ class Canvas:
                 Each component should be in range [0, 255].
                 Defaults to dark gray (32, 32, 32).
         """
-        self.grid.fill(0)
-        self.grid[:, :] = color
+        self.color_buffer.fill(0)
+        self.color_buffer[:, :] = color
         self.zbuffer.fill(np.inf)  # Reset z-buffer for new frame
 
 
@@ -212,7 +212,7 @@ class Renderer:
         draw_line(
             int(start[0]), int(start[1]), 
             int(end[0]), int(end[1]), 
-            self._canvas.grid, 
+            self._canvas.color_buffer, 
             self._canvas._center[0], self._canvas._center[1],
             color[0], color[1], color[2],
             self._canvas.width, self._canvas.height)
@@ -225,7 +225,7 @@ class Renderer:
                 int(p1[0]), int(p1[1]), 
                 int(p2[0]), int(p2[1]), 
                 int(p3[0]), int(p3[1]), 
-                self._canvas.grid, 
+                self._canvas.color_buffer, 
                 self._canvas._center[0], self._canvas._center[1],
                 color[0], color[1], color[2],
                 self._canvas.width, self._canvas.height)
@@ -268,7 +268,7 @@ class Renderer:
             int(p1[0]), int(p1[1]),  # Convert vertex coordinates to integers
             int(p2[0]), int(p2[1]), 
             int(p3[0]), int(p3[1]), 
-            self._canvas.grid,  # Target canvas buffer
+            self._canvas.color_buffer,  # Target canvas buffer
             self._canvas._center[0], self._canvas._center[1],  # Canvas center for coordinate transformation
             color[0], color[1], color[2],  # RGB components
             i1, i2, i3,  # Clamped intensity values

@@ -8,7 +8,7 @@ from kernel.clipping_mod import clip_triangle
 def display(image: Canvas):
     screen = pygame.display.set_mode(image.size, pygame.SCALED)
     clock = pygame.time.Clock()
-    surf = pygame.surfarray.make_surface(image.grid)
+    surf = pygame.surfarray.make_surface(image.color_buffer)
     screen.blit(surf, (0, 0))
     pygame.display.update()
     while True:
