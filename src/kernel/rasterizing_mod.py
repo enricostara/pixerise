@@ -112,33 +112,30 @@ def draw_line(x0: int, y0: int, z0: float, x1: int, y1: int, z1: float,
             error += dx
 
 @njit(cache=True)
-def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
+def draw_triangle(x0: int, y0: int, z0: float, x1: int, y1: int, z1: float, x2: int, y2: int, z2: float,
                   canvas_grid: np.ndarray, depth_buffer: np.ndarray, center_x: int, center_y: int,
                   color_r: int, color_g: int, color_b: int,
                   canvas_width: int, canvas_height: int) -> None:
     """
-    Draw a solid-colored triangle using a scanline rasterization algorithm.
+    Draw a solid-colored triangle using a scanline rasterization algorithm with depth buffering.
     This is a low-level, JIT-compiled implementation optimized for performance.
     
     The algorithm works by:
     1. Converting to screen coordinates and checking canvas bounds
     2. Sorting vertices by y-coordinate for consistent edge traversal
-    3. Rasterizing the triangle in two parts (upper and lower) using a scanline approach
-    4. Using fixed-point arithmetic for sub-pixel precision
+    3. Interpolating depth values along edges and scanlines
+    4. Rasterizing the triangle in two parts (upper and lower) using a scanline approach
+    5. Using fixed-point arithmetic for sub-pixel precision
     
     Args:
-        x0, y0, x1, y1, x2, y2: Triangle vertex coordinates in screen space
+        x0, y0, z0: First vertex coordinates and depth
+        x1, y1, z1: Second vertex coordinates and depth
+        x2, y2, z2: Third vertex coordinates and depth
         canvas_grid: Target numpy array for drawing (shape: [height, width, 3] for RGB)
         depth_buffer: Depth buffer array of shape (width, height)
         center_x, center_y: Canvas center coordinates for coordinate system transformation
         color_r, color_g, color_b: RGB color components (0-255)
         canvas_width, canvas_height: Dimensions of the canvas
-        
-    Implementation Notes:
-        - Uses 16.16 fixed-point arithmetic for edge traversal to avoid floating-point errors
-        - Handles edge cases like zero-height triangles
-        - Clips triangles to canvas bounds for efficiency
-        - Automatically sorts vertices for consistent edge traversal
     """
     # Transform from world space to screen space coordinates:
     # - Add center_x to shift from [-width/2, width/2] to [0, width]
@@ -159,81 +156,95 @@ def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
         max_y < 0 or min_y >= canvas_height):
         return
 
-    # Sort vertices by Y coordinate to split triangle into upper and lower parts:
-    # - This creates a consistent traversal order regardless of input vertex order
+    # Sort vertices by Y coordinate, keeping depth values aligned
     if y1 < y0:
         x0, x1 = x1, x0
         y0, y1 = y1, y0
+        z0, z1 = z1, z0
     if y2 < y0:
         x0, x2 = x2, x0
         y0, y2 = y2, y0
+        z0, z2 = z2, z0
     if y2 < y1:
         x1, x2 = x2, x1
         y1, y2 = y2, y1
+        z1, z2 = z2, z1
 
-    # Initialize edge traversal for the first two edges (from top vertex)
-    # Edge 1: y0 to y1 (left or right edge of upper triangle)
+    # Initialize edge traversal with depth values
     dx1 = x1 - x0
     dy1 = y1 - y0
-    # Convert x-coordinate to 16.16 fixed-point for sub-pixel precision
-    x_left = x0 << 16  
-    # Calculate x-step in fixed-point, ensuring non-zero denominator
-    step_left = (dx1 << 16) // max(1, dy1)  
+    dz1 = z1 - z0
+    x_left = x0 << 16
+    step_left = (dx1 << 16) // max(1, dy1)
+    z_left = z0
+    z_step_left = dz1 / max(1, dy1) if dy1 > 0 else 0.0
 
-    # Edge 2: y0 to y2 (spans full height of triangle)
     dx2 = x2 - x0
     dy2 = y2 - y0
+    dz2 = z2 - z0
     x_right = x0 << 16
     step_right = (dx2 << 16) // max(1, dy2)
+    z_right = z0
+    z_step_right = dz2 / max(1, dy2) if dy2 > 0 else 0.0
 
-    # Fill the upper triangle section (from y0 to y1):
-    # - Always draw at least one scanline even for zero-height sections
-    # - This handles degenerate cases where vertices have same y-coordinate
+    # Fill the upper triangle section
     for y in range(y0, max(y0 + 1, y1)):
-        # Convert fixed-point x-coordinates back to integers for this scanline
         start_x = x_left >> 16
         end_x = x_right >> 16
         
-        # Ensure correct left-to-right drawing order
         if start_x > end_x:
             start_x, end_x = end_x, start_x
+            z_scan = z_right
+            z_step = (z_left - z_right) / max(1, end_x - start_x + 1)
+        else:
+            z_scan = z_left
+            z_step = (z_right - z_left) / max(1, end_x - start_x + 1)
         
-        # Draw the scanline with solid color
         for x in range(start_x, end_x + 1):
-            draw_pixel(canvas_grid, depth_buffer, x, y, 0.0, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
+            draw_pixel(canvas_grid, depth_buffer, x, y, z_scan, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
+            z_scan += z_step
         
-        # Update edge coordinates only if actually moving in y-direction
         if y1 > y0:
             x_left += step_left
             x_right += step_right
+            z_left += z_step_left
+            z_right += z_step_right
 
-    # Initialize edge traversal for the third edge (y1 to y2):
-    # - This replaces the shorter edge (y0 to y1) for lower triangle section
+    # Initialize edge traversal for lower triangle
     dx3 = x2 - x1
     dy3 = y2 - y1
+    dz3 = z2 - z1
     x_left = x1 << 16
     step_left = (dx3 << 16) // max(1, dy3)
+    z_left = z1
+    z_step_left = dz3 / max(1, dy3) if dy3 > 0 else 0.0
 
-    # Fill the lower triangle section (from y1 to y2):
-    # - Implementation mirrors the upper triangle section
-    # - Always draw at least one scanline for zero-height sections
+    # Fill the lower triangle section
     for y in range(y1, max(y1 + 1, y2 + 1)):
         start_x = x_left >> 16
         end_x = x_right >> 16
         
         if start_x > end_x:
             start_x, end_x = end_x, start_x
+            z_scan = z_right
+            z_step = (z_left - z_right) / max(1, end_x - start_x + 1)
+        else:
+            z_scan = z_left
+            z_step = (z_right - z_left) / max(1, end_x - start_x + 1)
         
         for x in range(start_x, end_x + 1):
-            draw_pixel(canvas_grid, depth_buffer, x, y, 0.0, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
+            draw_pixel(canvas_grid, depth_buffer, x, y, z_scan, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
+            z_scan += z_step
         
         if y2 > y1:
             x_left += step_left
             x_right += step_right
+            z_left += z_step_left
+            z_right += z_step_right
 
 
 @njit(cache=True)
-def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
+def draw_shaded_triangle(x0: int, y0: int, z0: float, x1: int, y1: int, z1: float, x2: int, y2: int, z2: float,
                          canvas_grid: np.ndarray, depth_buffer: np.ndarray, center_x: int, center_y: int,
                          color_r: int, color_g: int, color_b: int,
                          i0: float, i1: float, i2: float,
@@ -250,7 +261,9 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
     5. Interpolating intensities along edges and scanlines using fixed-point arithmetic
     
     Args:
-        x0, y0, x1, y1, x2, y2: Triangle vertex coordinates in screen space
+        x0, y0, z0: First vertex coordinates and depth
+        x1, y1, z1: Second vertex coordinates and depth
+        x2, y2, z2: Third vertex coordinates and depth
         canvas_grid: Target numpy array for drawing (shape: [height, width, 3] for RGB)
         depth_buffer: Depth buffer array of shape (width, height)
         center_x, center_y: Canvas center coordinates for coordinate system transformation
@@ -297,20 +310,24 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
     if y1 < y0:
         x0, x1 = x1, x0
         y0, y1 = y1, y0
+        z0, z1 = z1, z0
         i0, i1 = i1, i0
     if y2 < y0:
         x0, x2 = x2, x0
         y0, y2 = y2, y0
+        z0, z2 = z2, z0
         i0, i2 = i2, i0
     if y2 < y1:
         x1, x2 = x2, x1
         y1, y2 = y2, y1
+        z1, z2 = z2, z1
         i1, i2 = i2, i1
 
     # Initialize edge traversal for the first two edges (from top vertex)
     # Edge 1: y0 to y1 (left or right edge of upper triangle)
     dx1 = x1 - x0
     dy1 = y1 - y0
+    dz1 = z1 - z0
     # Convert x-coordinate to 16.16 fixed-point for sub-pixel precision
     x_left = x0 << 16  
     # Calculate x-step in fixed-point, ensuring non-zero denominator
@@ -318,14 +335,19 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
     # Initialize intensity interpolation for this edge
     i_left = i0  
     i_step_left = (i1 - i0) / max(1, dy1)
+    z_left = z0
+    z_step_left = dz1 / max(1, dy1) if dy1 > 0 else 0.0
 
     # Edge 2: y0 to y2 (spans full height of triangle)
     dx2 = x2 - x0
     dy2 = y2 - y0
+    dz2 = z2 - z0
     x_right = x0 << 16
     step_right = (dx2 << 16) // max(1, dy2)
     i_right = i0
     i_step_right = (i2 - i0) / max(1, dy2)
+    z_right = z0
+    z_step_right = dz2 / max(1, dy2) if dy2 > 0 else 0.0
 
     # Fill the upper triangle section (from y0 to y1):
     # - Always draw at least one scanline even for zero-height sections
@@ -341,8 +363,12 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
         if start_x > end_x:
             start_x, end_x = end_x, start_x
             i_curr, i_end = i_right, i_left
+            z_scan = z_right
+            z_step = (z_left - z_right) / max(1, end_x - start_x + 1)
         else:
             i_curr, i_end = i_left, i_right
+            z_scan = z_left
+            z_step = (z_right - z_left) / max(1, end_x - start_x + 1)
         
         # Calculate intensity step for this scanline:
         # - Add 1 to span to include both endpoints
@@ -357,8 +383,9 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
                 r = int(color_r * i_curr)
                 g = int(color_g * i_curr)
                 b = int(color_b * i_curr)
-                draw_pixel(canvas_grid, depth_buffer, x, y, 0.0, center_x, center_y, r, g, b, canvas_width, canvas_height)
+                draw_pixel(canvas_grid, depth_buffer, x, y, z_scan, center_x, center_y, r, g, b, canvas_width, canvas_height)
             i_curr += i_step
+            z_scan += z_step
         
         # Update edge coordinates and intensities:
         # - Only update if actually moving in y-direction
@@ -368,15 +395,20 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
             x_right += step_right
             i_left += i_step_left
             i_right += i_step_right
+            z_left += z_step_left
+            z_right += z_step_right
 
     # Initialize edge traversal for the third edge (y1 to y2):
     # - This replaces the shorter edge (y0 to y1) for lower triangle section
     dx3 = x2 - x1
     dy3 = y2 - y1
+    dz3 = z2 - z1
     x_left = x1 << 16
     step_left = (dx3 << 16) // max(1, dy3)
     i_left = i1
     i_step_left = (i2 - i1) / max(1, dy3)
+    z_left = z1
+    z_step_left = dz3 / max(1, dy3) if dy3 > 0 else 0.0
 
     # Fill the lower triangle section (from y1 to y2):
     # - Implementation mirrors the upper triangle section
@@ -388,8 +420,12 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
         if start_x > end_x:
             start_x, end_x = end_x, start_x
             i_curr, i_end = i_right, i_left
+            z_scan = z_right
+            z_step = (z_left - z_right) / max(1, end_x - start_x + 1)
         else:
             i_curr, i_end = i_left, i_right
+            z_scan = z_left
+            z_step = (z_right - z_left) / max(1, end_x - start_x + 1)
         
         i_step = (i_end - i_curr) / max(1, end_x - start_x + 1)
         for x in range(start_x, end_x + 1):
@@ -397,11 +433,14 @@ def draw_shaded_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,
                 r = int(color_r * i_curr)
                 g = int(color_g * i_curr)
                 b = int(color_b * i_curr)
-                draw_pixel(canvas_grid, depth_buffer, x, y, 0.0, center_x, center_y, r, g, b, canvas_width, canvas_height)
+                draw_pixel(canvas_grid, depth_buffer, x, y, z_scan, center_x, center_y, r, g, b, canvas_width, canvas_height)
             i_curr += i_step
+            z_scan += z_step
         
         if y2 > y1:
             x_left += step_left
             x_right += step_right
             i_left += i_step_left
             i_right += i_step_right
+            z_left += z_step_left
+            z_right += z_step_right

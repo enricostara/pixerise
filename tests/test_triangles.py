@@ -22,7 +22,7 @@ class TestTriangleDrawing(unittest.TestCase):
         """Test drawing a simple triangle in the center of the canvas."""
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_triangle(
-            (0, 20), (-20, -20), (20, -20),
+            (0, 20, 0), (-20, -20, 0), (20, -20, 0),
             self.color
         )
         # Check if pixels are set in the expected triangle area
@@ -32,7 +32,7 @@ class TestTriangleDrawing(unittest.TestCase):
         """Test triangle that collapses to a line (all points collinear)."""
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_triangle(
-            (0, 0), (10, 10), (20, 20),
+            (0, 0, 0), (10, 10, 0), (20, 20, 0),
             self.color
         )
         # Should still draw something (the line)
@@ -40,7 +40,7 @@ class TestTriangleDrawing(unittest.TestCase):
 
     def test_degenerate_point(self):
         """Test triangle where all points are the same (collapses to a point)."""
-        point = (0, 0)
+        point = (0, 0, 0)
         self.renderer.draw_triangle(
             point, point, point,
             self.color
@@ -52,7 +52,7 @@ class TestTriangleDrawing(unittest.TestCase):
         """Test triangle that is partially outside the canvas bounds."""
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_triangle(
-            (0, 0), (self.width + 10, 10), (10, self.height + 10),
+            (0, 0, 0), (self.width + 10, 10, 0), (10, self.height + 10, 0),
             self.color
         )
         # Should draw the visible portion
@@ -62,9 +62,9 @@ class TestTriangleDrawing(unittest.TestCase):
         """Test triangle that is completely outside the canvas bounds."""
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_triangle(
-            (self.width + 10, 0),
-            (self.width + 20, 0),
-            (self.width + 15, 10),
+            (self.width + 10, 0, 0),
+            (self.width + 20, 0, 0),
+            (self.width + 15, 10, 0),
             self.color
         )
         # Should not draw anything
@@ -74,7 +74,7 @@ class TestTriangleDrawing(unittest.TestCase):
         """Test triangle with a flat top edge."""
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_triangle(
-            (-20, 20), (20, 20), (0, -20),
+            (-20, 20, 0), (20, 20, 0), (0, -20, 0),
             self.color
         )
         # Check if pixels are set in the expected triangle area
@@ -84,7 +84,7 @@ class TestTriangleDrawing(unittest.TestCase):
         """Test triangle with a flat bottom edge."""
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_triangle(
-            (0, 20), (-20, -20), (20, -20),
+            (0, 20, 0), (-20, -20, 0), (20, -20, 0),
             self.color
         )
         # Check if pixels are set in the expected triangle area
@@ -94,7 +94,7 @@ class TestTriangleDrawing(unittest.TestCase):
         """Test triangle with a vertical edge."""
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_triangle(
-            (0, 20), (0, -20), (20, 0),
+            (0, 20, 0), (0, -20, 0), (20, 0, 0),
             self.color
         )
         # Check if pixels are set in the expected triangle area
@@ -104,7 +104,7 @@ class TestTriangleDrawing(unittest.TestCase):
         """Test very thin triangle (nearly degenerate)."""
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_triangle(
-            (0, 20), (1, -20), (2, 20),
+            (0, 20, 0), (1, -20, 0), (2, 20, 0),
             self.color
         )
         # Should still draw something
@@ -114,7 +114,7 @@ class TestTriangleDrawing(unittest.TestCase):
         """Test very small triangle (few pixels)."""
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_triangle(
-            (0, 0), (1, 1), (0, 1),
+            (0, 0, 0), (1, 1, 0), (0, 1, 0),
             self.color
         )
         # Should draw at least one pixel
@@ -125,7 +125,7 @@ class TestTriangleDrawing(unittest.TestCase):
         # Test with maximum color values
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_triangle(
-            (0, 10), (-10, -10), (10, -10),
+            (0, 10, 0), (-10, -10, 0), (10, -10, 0),
             (255, 255, 255)
         )
         self.assertTrue(np.any(self.canvas.color_buffer == 255))
@@ -135,7 +135,7 @@ class TestTriangleDrawing(unittest.TestCase):
 
         # Test with minimum color values
         self.renderer.draw_triangle(
-            (0, 10), (-10, -10), (10, -10),
+            (0, 10, 0), (-10, -10, 0), (10, -10, 0),
             (0, 0, 0)
         )
         # Should not change canvas from black background

@@ -223,23 +223,23 @@ class Renderer:
             color[0], color[1], color[2],
             self._canvas.width, self._canvas.height)
 
-    def draw_triangle(self, p1: Tuple[float, float], p2: Tuple[float, float], p3: Tuple[float, float], color: Tuple[int, int, int], fill: bool = True):
+    def draw_triangle(self, p1: Tuple[float, float, float], p2: Tuple[float, float, float], p3: Tuple[float, float, float], color: Tuple[int, int, int], fill: bool = True):
         """Draw a triangle defined by three points. If fill is True, the triangle will be filled,
         otherwise only the outline will be drawn."""
         if fill:
             draw_triangle(
-                int(p1[0]), int(p1[1]), 
-                int(p2[0]), int(p2[1]), 
-                int(p3[0]), int(p3[1]), 
+                int(p1[0]), int(p1[1]), p1[2],
+                int(p2[0]), int(p2[1]), p2[2],
+                int(p3[0]), int(p3[1]), p3[2],
                 self._canvas.color_buffer, self._canvas.depth_buffer,
                 self._canvas._center[0], self._canvas._center[1],
                 color[0], color[1], color[2],
                 self._canvas.width, self._canvas.height)
         else:
             # Draw outline using lines
-            self.draw_line((p1[0], p1[1], 0), (p2[0], p2[1], 0),  color)
-            self.draw_line((p2[0], p2[1], 0), (p3[0], p3[1], 0),  color)
-            self.draw_line((p3[0], p3[1], 0), (p1[0], p1[1], 0), color)
+            self.draw_line(p1, p2, color)
+            self.draw_line(p2, p3,  color)
+            self.draw_line(p3, p1, color)
 
     def draw_shaded_triangle(self, p1: Tuple[float, float], p2: Tuple[float, float], p3: Tuple[float, float],
                            color: Tuple[int, int, int],
@@ -271,9 +271,9 @@ class Renderer:
         
         # Delegate to the optimized JIT-compiled implementation
         draw_shaded_triangle(
-            int(p1[0]), int(p1[1]),  # Convert vertex coordinates to integers
-            int(p2[0]), int(p2[1]), 
-            int(p3[0]), int(p3[1]), 
+            int(p1[0]), int(p1[1]), 0.0,  # Convert vertex coordinates to integers, add z=0
+            int(p2[0]), int(p2[1]), 0.0,  # Add z=0 for second vertex
+            int(p3[0]), int(p3[1]), 0.0,  # Add z=0 for third vertex
             self._canvas.color_buffer, self._canvas.depth_buffer,  # Target canvas buffers
             self._canvas._center[0], self._canvas._center[1],  # Canvas center for coordinate transformation
             color[0], color[1], color[2],  # RGB components

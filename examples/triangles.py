@@ -44,14 +44,17 @@ def main():
         # First point (outer)
         x1 = center_x + radius * np.cos(angle1)
         y1 = center_y + radius * np.sin(angle1)
+        z1 = 0.0
         
         # Second point (inner)
         x2 = center_x + (radius * 0.5) * np.cos(angle2)
         y2 = center_y + (radius * 0.5) * np.sin(angle2)
+        z2 = 0.0
         
         # Third point (inner)
         x3 = center_x + (radius * 0.5) * np.cos(angle3)
         y3 = center_y + (radius * 0.5) * np.sin(angle3)
+        z3 = 0.0
         
         # Create rainbow-like colors
         hue = (i / num_triangles) * 360
@@ -75,9 +78,9 @@ def main():
             
         # Draw the triangle
         renderer.draw_triangle(
-            (x1, y1),
-            (x2, y2),
-            (x3, y3),
+            (x1, y1, z1),
+            (x2, y2, z2),
+            (x3, y3, z3),
             (r, g, b)
         )
     
