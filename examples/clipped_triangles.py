@@ -85,8 +85,8 @@ def main():
         if i == 1:  # Second line should go in opposite direction for clockwise order
             dx, dy = -dx, -dy
         renderer.draw_line(
-            (0, 0),  # Start from origin
-            (dx * line_length, dy * line_length),  # Extend in one direction
+            (0, 0, 0),  # Start from origin
+            (dx * line_length, dy * line_length, 0),  # Extend in one direction
             (255, 255, 255)  # White color
         )
     

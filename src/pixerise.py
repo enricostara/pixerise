@@ -207,11 +207,17 @@ class Renderer:
         x_canvas, y_canvas = self._viewport.viewport_to_canvas(x_proj, y_proj)
         return int(x_canvas), int(y_canvas)
 
-    def draw_line(self, start: Tuple[float, float], end: Tuple[float, float], color: Tuple[int, int, int]):
-        """Draw a line using Bresenham's algorithm for better performance."""
+    def draw_line(self, start: Tuple[float, float, float], end: Tuple[float, float, float], color: Tuple[int, int, int]):
+        """Draw a line using Bresenham's algorithm with depth buffering.
+        
+        Args:
+            start: Starting point as (x, y, z) tuple
+            end: Ending point as (x, y, z) tuple
+            color: RGB color as (r, g, b) tuple
+        """
         draw_line(
-            int(start[0]), int(start[1]), 
-            int(end[0]), int(end[1]), 
+            int(start[0]), int(start[1]), float(start[2]),
+            int(end[0]), int(end[1]), float(end[2]),
             self._canvas.color_buffer, self._canvas.depth_buffer,
             self._canvas._center[0], self._canvas._center[1],
             color[0], color[1], color[2],
@@ -231,9 +237,9 @@ class Renderer:
                 self._canvas.width, self._canvas.height)
         else:
             # Draw outline using lines
-            self.draw_line(p1, p2, color)
-            self.draw_line(p2, p3, color)
-            self.draw_line(p3, p1, color)
+            self.draw_line((p1[0], p1[1], 0), (p2[0], p2[1], 0),  color)
+            self.draw_line((p2[0], p2[1], 0), (p3[0], p3[1], 0),  color)
+            self.draw_line((p3[0], p3[1], 0), (p1[0], p1[1], 0), color)
 
     def draw_shaded_triangle(self, p1: Tuple[float, float], p2: Tuple[float, float], p3: Tuple[float, float],
                            color: Tuple[int, int, int],
