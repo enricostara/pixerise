@@ -31,23 +31,24 @@ def draw_pixel(color_buffer: np.ndarray, depth_buffer: np.ndarray, x: int, y: in
             color_buffer[px, py, 2] = color_b
 
 @njit(cache=True)
-def draw_line(x0: int, y0: int, x1: int, y1: int, 
+def draw_line(x0: int, y0: int, z0: float, x1: int, y1: int, z1: float,
                canvas_grid: np.ndarray, depth_buffer: np.ndarray, center_x: int, center_y: int,
                color_r: int, color_g: int, color_b: int,
                canvas_width: int, canvas_height: int) -> None:
     """
-    Draw a line using Bresenham's line algorithm with integer arithmetic.
+    Draw a line using Bresenham's line algorithm with integer arithmetic and depth buffering.
     This is a low-level, JIT-compiled implementation optimized for performance.
     
     The algorithm works by:
     1. Determining the primary direction (x or y) based on line slope
     2. Using integer arithmetic to track the error term for the secondary axis
-    3. Drawing pixels with minimal floating-point operations
-    4. Handling all octants with a single implementation
+    3. Interpolating z-values along the line for depth testing
+    4. Drawing pixels with minimal floating-point operations
+    5. Handling all octants with a single implementation
     
     Args:
-        x0, y0: Starting point coordinates in screen space
-        x1, y1: Ending point coordinates in screen space
+        x0, y0, z0: Starting point coordinates and depth in screen space
+        x1, y1, z1: Ending point coordinates and depth in screen space
         canvas_grid: Target numpy array for drawing (shape: [height, width, 3] for RGB)
         depth_buffer: Depth buffer array of shape (width, height)
         center_x, center_y: Canvas center coordinates for coordinate system transformation
@@ -57,6 +58,7 @@ def draw_line(x0: int, y0: int, x1: int, y1: int,
     Implementation Notes:
         - Uses Bresenham's algorithm to avoid floating-point arithmetic
         - Handles all octants without special cases by swapping axes when needed
+        - Interpolates z-values linearly along the line
         - Clips lines to canvas bounds for efficiency
         - Optimized for JIT compilation with numba
     """
@@ -64,50 +66,50 @@ def draw_line(x0: int, y0: int, x1: int, y1: int,
     dx = abs(x1 - x0)
     dy = abs(y1 - y0)
     
-    # Determine if x or y is the driving axis:
-    # - If dx > dy: x is primary, increment x by 1, accumulate error in y
-    # - If dy > dx: y is primary, increment y by 1, accumulate error in x
+    # Determine if x or y is the driving axis
     steep = dy > dx
     
     # If y is the driving axis, swap x and y coordinates
-    # This allows us to always increment along the primary axis
     if steep:
         x0, y0 = y0, x0
         x1, y1 = y1, x1
-        dx, dy = dy, dx  # Update deltas after swap
+        dx, dy = dy, dx
     
     # Ensure we always draw from left to right
-    # This simplifies the main drawing loop
     if x0 > x1:
         x0, x1 = x1, x0
         y0, y1 = y1, y0
+        z0, z1 = z1, z0
     
     # Calculate step direction for the secondary axis
     y_step = 1 if y0 < y1 else -1
     
-    # Initialize Bresenham's error term:
-    # - Error represents deviation from the ideal line
-    # - When error >= dx, we need to move in the secondary axis
-    error = dx // 2  # Start at half the primary delta for symmetric error distribution
+    # Initialize Bresenham's error term
+    error = dx // 2
     y = y0
     
-    # Main line drawing loop:
-    # - Always increment x (primary axis)
-    # - Accumulate error and step y when needed
-    for x in range(x0, x1 + 1):
+    # Calculate total line length for z-interpolation
+    total_steps = dx + 1 if dx > 0 else 1
+    z_step = (z1 - z0) / total_steps if total_steps > 1 else 0
+    
+    # Main line drawing loop
+    for i, x in enumerate(range(x0, x1 + 1)):
+        # Interpolate z-value based on current position
+        z = z0 + z_step * i
+        
         # If steep (y is primary), swap back coordinates for pixel drawing
         if steep:
-            draw_pixel(canvas_grid, depth_buffer, y, x, 0.0, center_x, center_y,
+            draw_pixel(canvas_grid, depth_buffer, y, x, z, center_x, center_y,
                       color_r, color_g, color_b, canvas_width, canvas_height)
         else:
-            draw_pixel(canvas_grid, depth_buffer, x, y, 0.0, center_x, center_y,
+            draw_pixel(canvas_grid, depth_buffer, x, y, z, center_x, center_y,
                       color_r, color_g, color_b, canvas_width, canvas_height)
         
-        # Update error term and step in y when necessary
+        # Update error term and step y if needed
         error -= dy
         if error < 0:
             y += y_step
-            error += dx  # Reset error term for next pixel
+            error += dx
 
 @njit(cache=True)
 def draw_triangle(x0: int, y0: int, x1: int, y1: int, x2: int, y2: int,

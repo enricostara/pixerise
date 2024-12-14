@@ -13,7 +13,7 @@ class LineBenchmark:
         # Warm up JIT compilation with a simple case
         print("\nWarming up JIT compilation...")
         for _ in range(100):
-            self.renderer.draw_line((0, 0), (50, 50), (255, 255, 255))
+            self.renderer.draw_line((0, 0, 0), (50, 50, 0), (255, 255, 255))
         print("Warm-up complete.\n")
 
     def benchmark_line(self, start, end, color=(255, 255, 255)):
@@ -32,9 +32,9 @@ class LineBenchmark:
         return np.mean(total_times)  # Return average time for 1000 calls
 
 
-def run_benchmark(benchmark, start, end, name):
+def run_benchmark(benchmark, p1, p2, name):
     """Run benchmark for line drawing"""
-    avg_time = benchmark.benchmark_line(start, end)
+    avg_time = benchmark.benchmark_line(p1, p2)
     
     print(f"\n{name}")
     print(f"Average time for 1000 calls: {avg_time:.3f}ms")
@@ -47,19 +47,29 @@ def main():
     benchmark = LineBenchmark()
     
     # Test horizontal line
-    run_benchmark(benchmark, (-450, 0), (450, 0), "Horizontal Line")
+    run_benchmark(benchmark, 
+                 (-200, 0, 0), (200, 0, 0),
+                 "Horizontal Line")
     
     # Test vertical line
-    run_benchmark(benchmark, (0, -250), (0, 250), "Vertical Line")
+    run_benchmark(benchmark,
+                 (0, -200, 0), (0, 200, 0),
+                 "Vertical Line")
     
     # Test diagonal line
-    run_benchmark(benchmark, (-250, -250), (250, 250), "Diagonal Line")
+    run_benchmark(benchmark,
+                 (-100, -100, 0), (100, 100, 0),
+                 "Diagonal Line")
     
     # Test short line
-    run_benchmark(benchmark, (-50, -50), (50, 50), "Short Line")
+    run_benchmark(benchmark,
+                 (0, 0, 0), (10, 10, 0),
+                 "Short Line")
     
     # Test long diagonal line
-    run_benchmark(benchmark, (-450, -250), (450, 250), "Long Diagonal Line")
+    run_benchmark(benchmark,
+                 (-300, -300, 0), (300, 300, 0),
+                 "Long Diagonal Line")
 
 
 if __name__ == "__main__":
