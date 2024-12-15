@@ -12,7 +12,7 @@ class TriangleBenchmark:
 
         # Warm up JIT compilation with a simple case
         print("\nWarming up JIT compilation...")
-        p1, p2, p3 = (0, 0), (50, 0), (25, 50)
+        p1, p2, p3 = (0, 0, 0), (50, 0, 0), (25, 50, 0)
         color = (255, 255, 255)
         for _ in range(100):
             self.renderer.draw_triangle(p1, p2, p3, color)
@@ -51,42 +51,42 @@ def main():
     # Test small equilateral triangle
     radius = 50
     angles = [0, 2*np.pi/3, 4*np.pi/3]
-    points = [(radius * np.cos(a), radius * np.sin(a)) for a in angles]
+    points = [(radius * np.cos(a), radius * np.sin(a), 0) for a in angles]
     run_benchmark(benchmark, points[0], points[1], points[2], "Small Equilateral Triangle")
-    
+        
     # Test large equilateral triangle
     radius = 300
-    points = [(radius * np.cos(a), radius * np.sin(a)) for a in angles]
+    points = [(radius * np.cos(a), radius * np.sin(a), 0) for a in angles]
     run_benchmark(benchmark, points[0], points[1], points[2], "Large Equilateral Triangle")
     
     # Test flat bottom triangle
     run_benchmark(benchmark, 
-                 (0, 200), (-200, -200), (200, -200),
+                 (0, 200, 0), (-200, -200, 0), (200, -200, 0),
                  "Flat Bottom Triangle")
     
     # Test flat top triangle
     run_benchmark(benchmark,
-                 (-200, 200), (200, 200), (0, -200),
+                 (-200, 200, 0), (200, 200, 0), (0, -200, 0),
                  "Flat Top Triangle")
     
     # Test very thin triangle
     run_benchmark(benchmark,
-                 (0, 300), (20, -300), (40, 300),
+                 (0, 300, 0), (20, -300, 0), (40, 300, 0),
                  "Very Thin Triangle")
     
     # Test very small triangle
     run_benchmark(benchmark,
-                 (0, 0), (2, 2), (0, 2),
+                 (0, 0, 0), (2, 2, 0), (0, 2, 0),
                  "Very Small Triangle")
     
     # Test right triangle
     run_benchmark(benchmark,
-                 (0, 0), (0, 200), (200, 0),
+                 (0, 0, 0), (0, 200, 0), (200, 0, 0),
                  "Right Triangle")
     
     # Test obtuse triangle
     run_benchmark(benchmark,
-                 (-300, 0), (300, 0), (0, 100),
+                 (-300, 0, 0), (300, 0, 0), (0, 100, 0),
                  "Obtuse Triangle")
 
 

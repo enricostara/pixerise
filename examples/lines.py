@@ -7,7 +7,7 @@ from pixerise import Canvas, ViewPort, Renderer
 def display(image: Canvas):
     screen = pygame.display.set_mode(image.size, pygame.SCALED)
     clock = pygame.time.Clock()
-    surf = pygame.surfarray.make_surface(image.grid)
+    surf = pygame.surfarray.make_surface(image.color_buffer)
     screen.blit(surf, (0, 0))
     pygame.display.update()
     while True:
@@ -58,7 +58,7 @@ def main():
         else: color = (255, 0, x)
         
         # Draw line from center to point
-        renderer.draw_line((center_x, center_y), (screen_x, screen_y), color)
+        renderer.draw_line((center_x, center_y, 0), (screen_x, screen_y, 0), color)
     
     # Display the result
     display(canvas)

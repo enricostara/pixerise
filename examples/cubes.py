@@ -14,7 +14,7 @@ def display(image: Canvas, scene, renderer):
     
     def update_display():
         renderer.render(scene)
-        surf = pygame.surfarray.make_surface(image.grid)
+        surf = pygame.surfarray.make_surface(image.color_buffer)
         screen.blit(surf, (0, 0))
         pygame.display.update()
     
