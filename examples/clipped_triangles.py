@@ -8,7 +8,7 @@ from kernel.clipping_mod import clip_triangle
 def display(image: Canvas):
     screen = pygame.display.set_mode(image.size, pygame.SCALED)
     clock = pygame.time.Clock()
-    surf = pygame.surfarray.make_surface(image.grid)
+    surf = pygame.surfarray.make_surface(image.color_buffer)
     screen.blit(surf, (0, 0))
     pygame.display.update()
     while True:
@@ -85,8 +85,8 @@ def main():
         if i == 1:  # Second line should go in opposite direction for clockwise order
             dx, dy = -dx, -dy
         renderer.draw_line(
-            (0, 0),  # Start from origin
-            (dx * line_length, dy * line_length),  # Extend in one direction
+            (0, 0, 0),  # Start from origin
+            (dx * line_length, dy * line_length, 0),  # Extend in one direction
             (255, 255, 255)  # White color
         )
     
