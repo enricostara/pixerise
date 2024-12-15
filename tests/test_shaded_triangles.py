@@ -129,6 +129,50 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         self.assertTrue(np.max(nonzero_pixels) > 200)  # High intensity near 1.0
         self.assertTrue(np.min(nonzero_pixels) < 50)   # Low intensity near 0.0
 
+    def test_shaded_triangle_z_buffering(self):
+        """Test z-buffering behavior with overlapping shaded triangles."""
+        self.canvas.color_buffer.fill(0)  # Set background to black
+
+        # Draw a shaded triangle in the back with a higher z value
+        self.renderer.draw_shaded_triangle(
+            (-20, -20), (20, -20), (0, 20),  # Back triangle
+            self.color,
+            1.0, 0.5, 0.0  # Varying intensities
+        )
+
+        # Draw a shaded triangle in front with a lower z value
+        self.renderer.draw_shaded_triangle(
+            (-10, -10), (10, -10), (0, 10),  # Front triangle
+            (0, 255, 0),  # Green color for visibility
+            1.0, 0.5, 0.0  # Varying intensities
+        )
+
+        # Check that the color buffer shows the front triangle
+        # The front triangle should overwrite the back triangle
+        self.assertTrue(np.any(self.canvas.color_buffer[self.canvas.color_buffer[:, :, 0] == 0] == [0, 255, 0]))
+
+    def test_shaded_triangle_z_buffering_2(self):
+        """Test z-buffering behavior with overlapping shaded triangles."""
+        self.canvas.color_buffer.fill(0)  # Set background to black
+
+        # Draw a shaded triangle in the back with a higher z value
+        self.renderer.draw_shaded_triangle(
+            (-20, -20), (20, -20), (0, 20),  # Back triangle
+            self.color,
+            1.0, 0.5, 0.0  # Varying intensities
+        )
+
+        # Draw a shaded triangle in front with a lower z value
+        self.renderer.draw_shaded_triangle(
+            (-10, -10), (10, -10), (0, 10),  # Front triangle
+            (0, 255, 0),  # Green color for visibility
+            1.0, 0.5, 0.0  # Varying intensities
+        )
+
+        # Check that the color buffer shows the front triangle
+        # The front triangle should overwrite the back triangle
+        self.assertTrue(np.any(self.canvas.color_buffer[self.canvas.color_buffer[:, :, 0] == 0] == [0, 255, 0]))
+
 
 if __name__ == '__main__':
     unittest.main()
