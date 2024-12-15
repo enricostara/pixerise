@@ -205,7 +205,7 @@ class Renderer:
         
         # Convert to canvas coordinates
         x_canvas, y_canvas = self._viewport.viewport_to_canvas(x_proj, y_proj)
-        return int(x_canvas), int(y_canvas)
+        return x_canvas, y_canvas, z
 
     def draw_line(self, start: Tuple[float, float, float], end: Tuple[float, float, float], color: Tuple[int, int, int]):
         """Draw a line using Bresenham's algorithm with depth buffering.
