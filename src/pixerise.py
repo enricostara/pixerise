@@ -9,6 +9,7 @@ import pygame
 from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
 from kernel.transforming_mod import transform_vertex
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere)
+from kernel.culling_mod import cull_back_faces
 from typing import Tuple
 
 class Canvas:
@@ -98,7 +99,7 @@ class ViewPort:
         """
         self._width = size[0]
         self._height = size[1]
-        self._plane_distance = plane_distance
+        self._plane_distance = max(1.0, plane_distance) # Ensure positive plane distance
         self._canvas = canvas
         
         # Initialize frustum planes for view frustum culling
@@ -287,6 +288,8 @@ class Renderer:
 
         # Get camera transform if present
         camera_transform = scene.get('camera', {}).get('transform', {})
+        camera_pos = camera_transform.get('position', [0, 0, 0])
+        camera_pos = np.array(camera_pos, dtype=np.float64)
 
         # Render each model instance
         for model_name, model in scene.get('models', {}).items():
@@ -351,8 +354,15 @@ class Renderer:
                     # Draw triangle
                     self.draw_triangle(v1, v2, v3, color, fill=False)
 
+                # Convert triangle indices to numpy array
+                triangles_array = np.array(triangles, dtype=np.int32)
+                # Perform backface culling
+                visible_triangles = cull_back_faces(vertices_array, triangles_array, camera_pos)
+                # Filter out invisible triangles
+                triangles_array = triangles_array[visible_triangles]
+
                 # Draw triangles
-                for triangle in triangles:
+                for triangle in triangles_array:
                     # Get triangle vertices as numpy array
                     triangle_vertices = np.array([
                         transformed_vertices[triangle[0]],
