@@ -88,13 +88,29 @@ def display(image: Canvas, scene, renderer):
         if keys[pygame.K_d]:
             camera_trans += right * move_speed
             movement_occurred = True
-        
+
+        # Arrow key controls for rotation
+        if keys[pygame.K_UP]:
+            camera_rot[0] -= move_speed * 0.2
+            movement_occurred = True
+        if keys[pygame.K_DOWN]:
+            camera_rot[0] += move_speed * 0.2
+            movement_occurred = True
+        if keys[pygame.K_LEFT]:
+            camera_rot[1] += move_speed * 0.2
+            movement_occurred = True
+        if keys[pygame.K_RIGHT]:
+            camera_rot[1] -= move_speed * 0.2
+            movement_occurred = True
+
+        scene['camera']['transform']['rotation'] = camera_rot
+
         # Update display only if movement occurred
         if movement_occurred:
             update_display()
         
         clock.tick(60)
-        pygame.display.set_caption(str(clock.get_fps()))
+        pygame.display.set_caption(str(clock.get_fps())[0:2])
 
 
 def main():
