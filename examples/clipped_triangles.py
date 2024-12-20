@@ -4,7 +4,6 @@ import numpy as np
 from pixerise import Canvas, ViewPort, Renderer
 from kernel.clipping_mod import clip_triangle
 
-
 def display(image: Canvas):
     screen = pygame.display.set_mode(image.size, pygame.SCALED)
     clock = pygame.time.Clock()
@@ -18,7 +17,6 @@ def display(image: Canvas):
                 return
         clock.tick(60)
         pygame.display.set_caption(str(clock.get_fps()))
-
 
 def draw_clipped_triangle(renderer, vertices, color, plane_normals):
     """Draw a triangle after clipping against multiple planes."""
@@ -47,12 +45,11 @@ def draw_clipped_triangle(renderer, vertices, color, plane_normals):
     # Draw all resulting triangles
     for tri in current_triangles:
         renderer.draw_triangle(
-            (tri[0][0], tri[0][1]),  # Convert back to 2D
-            (tri[1][0], tri[1][1]),
-            (tri[2][0], tri[2][1]),
+            (tri[0][0], tri[0][1], tri[0][2]),  # Pass 3D points
+            (tri[1][0], tri[1][1], tri[1][2]),
+            (tri[2][0], tri[2][1], tri[2][2]),
             color
         )
-
 
 def main():
     # Initialize canvas and viewport
@@ -138,7 +135,6 @@ def main():
     
     # Display the result
     display(canvas)
-
 
 if __name__ == "__main__":
     pygame.init()
