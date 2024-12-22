@@ -128,14 +128,11 @@ def main():
             }
         },
         'lights': {
-            'ambient': {
-                'color': np.array([0.2, 0.2, 0.2], dtype=float),  # Soft ambient light
-                'intensity': 0.3
-            },
             'directional': {
                 'direction': np.array([-1, -1, -1], dtype=float),  # Light coming from top-left-front
                 'color': np.array([1.0, 0.95, 0.8], dtype=float),  # Slightly warm sunlight color
-                'intensity': 0.7
+                'intensity': 0.7,
+                'ambient': 0.2  # Add ambient light intensity
             }
         },
         'models': {
