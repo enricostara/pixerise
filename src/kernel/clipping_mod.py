@@ -173,7 +173,7 @@ def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float
         i2 = vertices[0] + t2 * (vertices[2] - vertices[0])  # Second intersection point
         # Form new triangle using the above vertex and intersection points
         triangles[0, 0] = vertices[0]
-        triangles[0, 1] = i1
+        triangles[0, 1] = i1  # Keep clockwise order
         triangles[0, 2] = i2
         return triangles, 1
         
@@ -183,7 +183,7 @@ def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float
         i1 = vertices[1] + t1 * (vertices[0] - vertices[1])
         i2 = vertices[1] + t2 * (vertices[2] - vertices[1])
         triangles[0, 0] = vertices[1]
-        triangles[0, 1] = i1
+        triangles[0, 1] = i1  # Keep clockwise order
         triangles[0, 2] = i2
         return triangles, 1
         
@@ -193,7 +193,7 @@ def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float
         i1 = vertices[2] + t1 * (vertices[0] - vertices[2])
         i2 = vertices[2] + t2 * (vertices[1] - vertices[2])
         triangles[0, 0] = vertices[2]
-        triangles[0, 1] = i1
+        triangles[0, 1] = i1  # Keep clockwise order
         triangles[0, 2] = i2
         return triangles, 1
         

@@ -96,3 +96,51 @@ class TestClipping:
         # Verify the clipped triangle has correct z coordinates
         z_coords = triangles[0, :, 2]  # get all z coordinates
         assert np.all(z_coords >= plane_d)
+
+        # Test case 8: Verify clockwise order is maintained after clipping
+        plane_d = 0.0
+        # Create a clockwise triangle that will be clipped
+        vertices = np.array([
+            [0.0, 0.0, 1.0],   # above (vertex 0)
+            [0.0, 1.0, -0.5],  # below (vertex 1)
+            [1.0, 0.0, -0.5]   # below (vertex 2)
+        ], dtype=np.float64)
+        
+        def is_clockwise(triangle, normal):
+            """Helper function to check if triangle vertices are in clockwise order
+            when viewed from the direction of the normal vector"""
+            # Project triangle onto the plane perpendicular to the normal
+            # For XY plane (normal = [0,0,1]), we just need to look at x,y coordinates
+            edge1 = triangle[1, :2] - triangle[0, :2]  # Only look at x,y components
+            edge2 = triangle[2, :2] - triangle[0, :2]
+            # Calculate 2D cross product (positive means counter-clockwise)
+            cross_2d = edge1[0] * edge2[1] - edge1[1] * edge2[0]
+            return cross_2d < 0  # Negative means clockwise when viewed from above
+            
+        # Verify input triangle is clockwise
+        assert is_clockwise(vertices, plane_normal)
+        
+        # Clip the triangle
+        triangles, num_triangles = clip_triangle(vertices, plane_normal, plane_d)
+        assert num_triangles == 1
+        
+        # Verify the clipped triangle maintains clockwise order
+        assert is_clockwise(triangles[0], plane_normal)
+        
+        # Test another case with two vertices above
+        vertices = np.array([
+            [0.0, 0.0, 1.0],   # above
+            [0.0, 1.0, 1.0],   # above
+            [1.0, 0.0, -0.5]   # below
+        ], dtype=np.float64)
+        
+        # Verify input triangle is clockwise
+        assert is_clockwise(vertices, plane_normal)
+        
+        # Clip the triangle
+        triangles, num_triangles = clip_triangle(vertices, plane_normal, plane_d)
+        assert num_triangles == 2
+        
+        # Verify both output triangles maintain clockwise order
+        assert is_clockwise(triangles[0], plane_normal)
+        assert is_clockwise(triangles[1], plane_normal)
