@@ -10,7 +10,19 @@ from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_s
 from kernel.transforming_mod import transform_vertex
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere)
 from kernel.culling_mod import cull_back_faces
+from kernel.shading_mod import compute_flat_shading
 from typing import Tuple
+from enum import Enum
+
+class ShadingMode(Enum):
+    """Enum defining different shading modes for 3D rendering.
+    
+    Available modes:
+    - FLAT: Uses a single normal per face for constant shading across the triangle
+    - WIREFRAME: Renders only the edges of triangles without filling
+    """
+    FLAT = "flat"
+    WIREFRAME = "wireframe"
 
 class Canvas:
     """A 2D canvas for drawing pixels and managing the drawing surface.
@@ -281,8 +293,13 @@ class Renderer:
             i1, i2, i3,  # Clamped intensity values
             self._canvas.width, self._canvas.height)  # Canvas dimensions
 
-    def render(self, scene: dict):
-        """Render a scene containing models and their instances."""
+    def render(self, scene: dict, shading_mode: ShadingMode = ShadingMode.WIREFRAME):
+        """Render a scene containing models and their instances.
+        
+        Args:
+            scene (dict): Scene data containing models and camera information
+            shading_mode (ShadingMode): Rendering mode to use (FLAT or WIREFRAME)
+        """
         # Clear canvas
         self._canvas.clear(tuple(self._background_color))
 
@@ -352,7 +369,30 @@ class Renderer:
                         return
                     
                     # Draw triangle
-                    self.draw_triangle(v1, v2, v3, color, fill=False)
+                    if shading_mode == ShadingMode.WIREFRAME:
+                        self.draw_triangle(v1, v2, v3, color, fill=False)
+                    else:
+                        # Compute flat shading intensity
+                        normal = np.cross(vertices[1] - vertices[0], vertices[2] - vertices[0])
+                        normal = normal / np.linalg.norm(normal)
+                        # Create single-triangle arrays for the shading computation
+                        triangle_vertices = np.array([vertices[0], vertices[1], vertices[2]])
+                        triangle_indices = np.array([[0, 1, 2]])
+                        triangle_normals = np.array([normal])
+                        
+                        # Get light settings from scene
+                        light = scene['lights']['directional']
+                        light_dir = -light['direction']  # Negate because light direction points towards surface
+                        light_dir = light_dir / np.linalg.norm(light_dir)
+                        ambient = light.get('ambient', 0.1)  # Default ambient if not specified
+                        
+                        # Compute shading
+                        shaded_colors = compute_flat_shading(triangle_vertices, triangle_indices, triangle_normals,
+                                                          light_dir, np.array(color), ambient)
+                        
+                        # Use the computed color for the triangle
+                        final_color = tuple(shaded_colors[0].astype(np.uint8))
+                        self.draw_triangle(v1, v2, v3, final_color, fill=True)
 
                 # Convert triangle indices to numpy array
                 triangles_array = np.array(triangles, dtype=np.int32)
