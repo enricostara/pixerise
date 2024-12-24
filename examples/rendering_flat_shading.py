@@ -1,7 +1,7 @@
 import pygame
 import numpy as np
 
-from pixerise import Canvas, ViewPort, Renderer
+from pixerise import ShadingMode, Canvas, ViewPort, Renderer
 
 
 def display(image: Canvas, scene, renderer):
@@ -13,7 +13,7 @@ def display(image: Canvas, scene, renderer):
     pygame.event.set_grab(True)
     
     def update_display():
-        renderer.render(scene)
+        renderer.render(scene, shading_mode=ShadingMode.FLAT)
         surf = pygame.surfarray.make_surface(image.color_buffer)
         screen.blit(surf, (0, 0))
         pygame.display.update()
@@ -130,7 +130,6 @@ def main():
         'lights': {
             'directional': {
                 'direction': np.array([-1, -1, -1], dtype=float),  # Light coming from top-left-front
-                'color': np.array([1.0, 0.95, 0.8], dtype=float),  # Slightly warm sunlight color
                 'intensity': 0.7,
                 'ambient': 0.2  # Add ambient light intensity
             }
