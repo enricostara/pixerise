@@ -16,8 +16,7 @@ class ShadingBenchmark:
         warm_up_indices = np.array([[0, 1, 2]], dtype=np.int32)
         warm_up_normals = np.array([[0.0, 0.0, 1.0]], dtype=np.float64)
         warm_up_light_dir = np.array([0.0, 0.0, 1.0], dtype=np.float64)
-        warm_up_light_color = np.array([1.0, 1.0, 1.0], dtype=np.float64)
-        warm_up_material_color = np.array([1.0, 0.0, 0.0], dtype=np.float64)
+        warm_up_material_color = np.array([255, 0, 0], dtype=np.uint8)
         warm_up_ambient = 0.1
 
         print("\nWarming up JIT compilation...")
@@ -27,13 +26,12 @@ class ShadingBenchmark:
                 warm_up_indices,
                 warm_up_normals,
                 warm_up_light_dir,
-                warm_up_light_color,
                 warm_up_material_color,
                 warm_up_ambient
             )
         print("Warm-up complete.\n")
 
-    def benchmark_calculation(self, vertices, indices, normals, light_dir, light_color, material_color, ambient):
+    def benchmark_calculation(self, vertices, indices, normals, light_dir, material_color, ambient):
         """Run performance benchmark on flat shading computation.
         
         Performs 10 loops of 1000 shading operations each to get statistically significant timing data.
@@ -43,8 +41,7 @@ class ShadingBenchmark:
             indices: Array of triangle indices
             normals: Array of triangle normals
             light_dir: Direction vector of the light source
-            light_color: Color of the light source
-            material_color: Color of the material
+            material_color: Color of the material (uint8 RGB values)
             ambient: Ambient light intensity
             
         Returns:
@@ -57,15 +54,15 @@ class ShadingBenchmark:
         for _ in range(NUM_LOOPS):
             start_time = time.perf_counter()
             for _ in range(CALLS_PER_LOOP):
-                compute_flat_shading(vertices, indices, normals, light_dir, light_color, material_color, ambient)
+                compute_flat_shading(vertices, indices, normals, light_dir, material_color, ambient)
             end_time = time.perf_counter()
             total_times.append((end_time - start_time) * 1000)  # Convert to milliseconds
             
         return np.mean(total_times)  # Return average time for 1000 calls
 
-def run_benchmark(benchmark, vertices, indices, normals, light_dir, light_color, material_color, ambient, name):
+def run_benchmark(benchmark, vertices, indices, normals, light_dir, material_color, ambient, name):
     """Run benchmark for flat shading computation"""
-    avg_time = benchmark.benchmark_calculation(vertices, indices, normals, light_dir, light_color, material_color, ambient)
+    avg_time = benchmark.benchmark_calculation(vertices, indices, normals, light_dir, material_color, ambient)
     print(f"\n{name}")
     print(f"Average time for 1000 shading operations: {avg_time:.2f} ms")
 
@@ -82,12 +79,11 @@ def run_benchmarks():
     indices = np.array([[0, 1, 2]], dtype=np.int32)
     normals = np.array([[0.0, 0.0, 1.0]], dtype=np.float64)
     light_dir = np.array([0.0, 0.0, 1.0], dtype=np.float64)
-    light_color = np.array([1.0, 1.0, 1.0], dtype=np.float64)
-    material_color = np.array([1.0, 0.0, 0.0], dtype=np.float64)
+    material_color = np.array([255, 0, 0], dtype=np.uint8)
     ambient = 0.1
 
     run_benchmark(
-        benchmark, vertices, indices, normals, light_dir, light_color, material_color, ambient,
+        benchmark, vertices, indices, normals, light_dir, material_color, ambient,
         "Single Triangle Test"
     )
 
@@ -104,31 +100,28 @@ def run_benchmarks():
         [3, 2, 6], [3, 6, 7],  # Top face
         [4, 5, 1], [4, 1, 0]   # Bottom face
     ], dtype=np.int32)
-    # Generate normals for each face
-    normals = np.array([
-        [0, 0, -1], [0, 0, -1],  # Front face
-        [1, 0, 0], [1, 0, 0],    # Right face
-        [0, 0, 1], [0, 0, 1],    # Back face
-        [-1, 0, 0], [-1, 0, 0],  # Left face
-        [0, 1, 0], [0, 1, 0],    # Top face
-        [0, -1, 0], [0, -1, 0]   # Bottom face
-    ], dtype=np.float64)
+
+    # Pre-compute normals for each triangle
+    normals = np.zeros((12, 3), dtype=np.float64)
+    for i in range(12):
+        v0, v1, v2 = vertices[indices[i]]
+        normal = np.cross(v1 - v0, v2 - v0)
+        normals[i] = normal / np.linalg.norm(normal)
 
     run_benchmark(
-        benchmark, vertices, indices, normals, light_dir, light_color, material_color, ambient,
+        benchmark, vertices, indices, normals, light_dir, material_color, ambient,
         "Cube Test (12 triangles)"
     )
 
-    # Test case 3: Large mesh (simulated sphere with 1000 triangles)
+    # Test case 3: Large mesh (1000 triangles)
     num_triangles = 1000
     vertices = np.random.rand(num_triangles * 3, 3)  # Random vertices
-    indices = np.array([[i*3, i*3+1, i*3+2] for i in range(num_triangles)], dtype=np.int32)
+    indices = np.arange(num_triangles * 3).reshape(-1, 3)
     normals = np.random.rand(num_triangles, 3)  # Random normals
-    # Normalize the normals
-    normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
+    normals /= np.linalg.norm(normals, axis=1)[:, np.newaxis]  # Normalize
 
     run_benchmark(
-        benchmark, vertices, indices, normals, light_dir, light_color, material_color, ambient,
+        benchmark, vertices, indices, normals, light_dir, material_color, ambient,
         "Large Mesh Test (1000 triangles)"
     )
 
