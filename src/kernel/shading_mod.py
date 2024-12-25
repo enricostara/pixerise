@@ -4,18 +4,21 @@ from numba import njit
 
 @njit(cache=True)
 def triangle_flat_shading(vertices, normal, light_dir, material_color, ambient: float = 0.1) -> np.ndarray:
-    """Compute flat shading for triangles.
+    """Calculate flat shading color for a triangle.
     
     Args:
-        vertices: Nx3 array of vertex positions
-        normals: 3D array of pre-computed face normal
-        light_dir: Normalized 3D vector for light direction
-        material_color: RGB base color of the material (3D array, 8-bit values)
-        ambient: Ambient light intensity (0-1)
+        vertices: Triangle vertices (3x3 array)
+        normal: Triangle normal vector (3D array)
+        light_dir: Light direction vector (3D array)
+        material_color: Base material color (RGB array)
+        ambient: Ambient light intensity (float)
         
     Returns:
-        ndarray: RGB color for the triangle (8-bit values)
+        ndarray: Final RGB color after shading
     """
+    # Ensure all inputs are float32
+    normal = normal.astype(np.float32)
+    light_dir = light_dir.astype(np.float32)
     
     # Calculate diffuse intensity using dot product
     intensity = np.maximum(np.dot(normal, light_dir), 0.0)

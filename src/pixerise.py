@@ -358,7 +358,7 @@ class Renderer:
                     continue
                 
                 # Function to project and draw a triangle
-                def project_and_draw_triangle(vertices):
+                def project_and_draw_triangle(vertices, normal):
                     # Project vertices to 2D
                     v1 = self._project_vertex(vertices[0])
                     v2 = self._project_vertex(vertices[1])
@@ -372,15 +372,13 @@ class Renderer:
                     if shading_mode == ShadingMode.WIREFRAME:
                         self.draw_triangle(v1, v2, v3, color, fill=False)
                     else:
-                        # Compute flat shading intensity
-                        normal = np.cross(vertices[1] - vertices[0], vertices[2] - vertices[0])
-                        normal = normal / np.linalg.norm(normal)
-                        
-                        # Compute shading
+                        # Compute shading using the provided normal
                         directional_light = scene['lights']['directional']
+                        light_dir = -np.array(directional_light['direction'], dtype=np.float32)
+                        color_array = np.array(color, dtype=np.float32)
                         shaded_color = triangle_flat_shading(vertices, normal,
-                                                          -directional_light['direction'], 
-                                                          np.array(color), 
+                                                          light_dir, 
+                                                          color_array, 
                                                           directional_light.get('ambient', 0.1))
                         
                         # Use the computed color for the triangle
@@ -389,13 +387,14 @@ class Renderer:
 
                 # Convert triangle indices to numpy array
                 triangles_array = np.array(triangles, dtype=np.int32)
-                # Perform backface culling
-                visible_triangles = cull_back_faces(vertices_array, triangles_array, camera_pos)
+                # Perform backface culling and get normals
+                visible_triangles, triangle_normals = cull_back_faces(vertices_array, triangles_array, camera_pos)
                 # Filter out invisible triangles
                 triangles_array = triangles_array[visible_triangles]
+                triangle_normals = triangle_normals[visible_triangles]
 
                 # Draw triangles
-                for triangle in triangles_array:
+                for i, triangle in enumerate(triangles_array):
                     # Get triangle vertices as numpy array
                     triangle_vertices = np.array([
                         transformed_vertices[triangle[0]],
@@ -414,15 +413,15 @@ class Renderer:
                                 # Clip triangle against current plane
                                 result_triangles, num_triangles = clip_triangle(tri, plane[0], plane[1])
                                 # Add resulting triangles
-                                for i in range(num_triangles):
-                                    next_triangles.append(result_triangles[i])
+                                for j in range(num_triangles):
+                                    next_triangles.append(result_triangles[j])
                             clipped_triangles = next_triangles
                             if not clipped_triangles:  # Triangle completely clipped away
                                 break
                         
                         # Project and draw the clipped triangles
                         for clipped_tri in clipped_triangles:
-                            project_and_draw_triangle(clipped_tri)
+                            project_and_draw_triangle(clipped_tri, triangle_normals[i])
                     else:
                         # For fully visible instances, still need to check if vertices are behind camera
-                        project_and_draw_triangle(triangle_vertices)
+                        project_and_draw_triangle(triangle_vertices, triangle_normals[i])
