@@ -391,7 +391,6 @@ class Renderer:
                 visible_triangles, triangle_normals = cull_back_faces(vertices_array, triangles_array, camera_pos)
                 # Filter out invisible triangles
                 triangles_array = triangles_array[visible_triangles]
-                triangle_normals = triangle_normals[visible_triangles]
 
                 # Draw triangles
                 for i, triangle in enumerate(triangles_array):

@@ -45,4 +45,4 @@ def cull_back_faces(vertices, indices, camera_pos):
         # If dot product is negative, triangle is facing away from camera
         visible[i] = np.dot(normal, view_vector) < 0
     
-    return visible, normals
+    return visible, normals[visible]
