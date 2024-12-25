@@ -144,3 +144,73 @@ class TestClipping:
         # Verify both output triangles maintain clockwise order
         assert is_clockwise(triangles[0], plane_normal)
         assert is_clockwise(triangles[1], plane_normal)
+
+        # Test case 9: Triangle clipped into two with potential winding order issues
+        vertices = np.array([
+            [0.0, -1.0, 1.0],   # above
+            [0.0, 1.0, 1.0],    # above
+            [2.0, 0.0, -1.0]    # below
+        ], dtype=np.float64)
+        
+        # Verify input triangle is clockwise
+        assert is_clockwise(vertices, plane_normal)
+        
+        # Clip the triangle
+        triangles, num_triangles = clip_triangle(vertices, plane_normal, plane_d)
+        assert num_triangles == 2
+        
+        # Verify both output triangles maintain clockwise order
+        assert is_clockwise(triangles[0], plane_normal)
+        assert is_clockwise(triangles[1], plane_normal)
+
+        # Test case 10: Two vertices exactly on plane
+        vertices = np.array([
+            [0.0, 0.0, 0.0],    # on plane
+            [0.5, 0.5, 1.0],    # above
+            [1.0, 0.0, 0.0]     # on plane
+        ], dtype=np.float64)
+        
+        # Verify input triangle is clockwise
+        assert is_clockwise(vertices, plane_normal)
+        
+        # Clip the triangle
+        triangles, num_triangles = clip_triangle(vertices, plane_normal, plane_d)
+        assert num_triangles == 1
+        assert is_clockwise(triangles[0], plane_normal)
+
+        # Test case 11: Non-axis-aligned clipping plane
+        plane_normal = np.array([1.0, 1.0, 1.0], dtype=np.float64)
+        plane_normal = plane_normal / np.linalg.norm(plane_normal)  # normalize
+        plane_d = 0.0
+        
+        vertices = np.array([
+            [1.0, 1.0, 1.0],    # above
+            [-1.0, -1.0, 1.0],  # below
+            [-1.0, 1.0, -1.0]   # below
+        ], dtype=np.float64)
+        
+        # Verify input triangle is clockwise when viewed along plane normal
+        assert is_clockwise(vertices, plane_normal)
+        
+        # Clip the triangle
+        triangles, num_triangles = clip_triangle(vertices, plane_normal, plane_d)
+        assert num_triangles == 1
+        assert is_clockwise(triangles[0], plane_normal)
+
+        # Test case 12: Almost parallel to clipping plane
+        plane_normal = np.array([0.0, 0.0, 1.0], dtype=np.float64)
+        plane_d = 0.0
+        
+        vertices = np.array([
+            [0.0, 0.0, 0.001],    # slightly above
+            [0.0, 1.0, 0.0],      # exactly on
+            [1.0, 0.0, -0.001]    # slightly below
+        ], dtype=np.float64)
+        
+        # Verify input triangle is clockwise
+        assert is_clockwise(vertices, plane_normal)
+        
+        # Clip the triangle
+        triangles, num_triangles = clip_triangle(vertices, plane_normal, plane_d)
+        assert num_triangles == 1
+        assert is_clockwise(triangles[0], plane_normal)
