@@ -10,7 +10,7 @@ from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_s
 from kernel.transforming_mod import transform_vertex
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere)
 from kernel.culling_mod import cull_back_faces
-from kernel.shading_mod import compute_flat_shading
+from kernel.shading_mod import triangle_flat_shading
 from typing import Tuple
 from enum import Enum
 
@@ -375,23 +375,16 @@ class Renderer:
                         # Compute flat shading intensity
                         normal = np.cross(vertices[1] - vertices[0], vertices[2] - vertices[0])
                         normal = normal / np.linalg.norm(normal)
-                        # Create single-triangle arrays for the shading computation
-                        triangle_vertices = np.array([vertices[0], vertices[1], vertices[2]])
-                        triangle_indices = np.array([[0, 1, 2]])
-                        triangle_normals = np.array([normal])
-                        
-                        # Get light settings from scene
-                        light = scene['lights']['directional']
-                        light_dir = -light['direction']  # Negate because light direction points towards surface
-                        light_dir = light_dir / np.linalg.norm(light_dir)
-                        ambient = light.get('ambient', 0.1)  # Default ambient if not specified
                         
                         # Compute shading
-                        shaded_colors = compute_flat_shading(triangle_vertices, triangle_indices, triangle_normals,
-                                                          light_dir, np.array(color), ambient)
+                        directional_light = scene['lights']['directional']
+                        shaded_color = triangle_flat_shading(vertices, normal,
+                                                          -directional_light['direction'], 
+                                                          np.array(color), 
+                                                          directional_light.get('ambient', 0.1))
                         
                         # Use the computed color for the triangle
-                        final_color = tuple(shaded_colors[0].astype(np.uint8))
+                        final_color = tuple(shaded_color.astype(np.uint8))
                         self.draw_triangle(v1, v2, v3, final_color, fill=True)
 
                 # Convert triangle indices to numpy array
