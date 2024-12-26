@@ -254,7 +254,7 @@ class Renderer:
             self.draw_line(p2, p3,  color)
             self.draw_line(p3, p1, color)
 
-    def draw_shaded_triangle(self, p1: Tuple[float, float], p2: Tuple[float, float], p3: Tuple[float, float],
+    def draw_shaded_triangle(self, p1: Tuple[float, float, float], p2: Tuple[float, float, float], p3: Tuple[float, float, float],
                            color: Tuple[int, int, int],
                            intensity1: float, intensity2: float, intensity3: float):
         """
@@ -263,7 +263,7 @@ class Renderer:
         the triangle's surface.
         
         Args:
-            p1, p2, p3: Vertex positions as (x, y) tuples in screen space coordinates.
+            p1, p2, p3: Vertex positions as (x, y, z) tuples in screen space coordinates.
                        The vertices can be in any order, they will be sorted internally.
             color: Base RGB color as (r, g, b) tuple, where each component is in range [0, 255].
                   This color will be modulated by the interpolated intensities.
@@ -276,6 +276,7 @@ class Renderer:
             - The final color at each pixel is computed as: final_rgb = base_rgb * interpolated_intensity
             - The implementation uses a scanline algorithm with linear interpolation for efficiency
             - Triangles completely outside the canvas or with zero intensity are skipped
+            - Z-coordinates are used for depth testing to ensure correct visibility
         """
         # Clamp intensities to valid range [0.0, 1.0] to ensure correct color modulation
         i1 = max(0.0, min(1.0, intensity1))
@@ -284,9 +285,9 @@ class Renderer:
         
         # Delegate to the optimized JIT-compiled implementation
         draw_shaded_triangle(
-            int(p1[0]), int(p1[1]), 0.0,  # Convert vertex coordinates to integers, add z=0
-            int(p2[0]), int(p2[1]), 0.0,  # Add z=0 for second vertex
-            int(p3[0]), int(p3[1]), 0.0,  # Add z=0 for third vertex
+            int(p1[0]), int(p1[1]), p1[2],  # Convert x,y to integers, pass z as float
+            int(p2[0]), int(p2[1]), p2[2],  # Pass z-coordinate for second vertex
+            int(p3[0]), int(p3[1]), p3[2],  # Pass z-coordinate for third vertex
             self._canvas.color_buffer, self._canvas.depth_buffer,  # Target canvas buffers
             self._canvas._center[0], self._canvas._center[1],  # Canvas center for coordinate transformation
             color[0], color[1], color[2],  # RGB components

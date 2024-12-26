@@ -12,7 +12,7 @@ class ShadedTriangleBenchmark:
 
         # Warm up JIT compilation with a simple case
         print("\nWarming up JIT compilation...")
-        p1, p2, p3 = (0, 0), (50, 0), (25, 50)
+        p1, p2, p3 = (0, 0, 0.5), (50, 0, 0.5), (25, 50, 0.5)
         color = (255, 255, 255)
         for _ in range(100):
             self.renderer.draw_shaded_triangle(p1, p2, p3, color, 1.0, 1.0, 1.0)
@@ -51,63 +51,74 @@ def main():
     # Test small equilateral triangle with uniform intensity
     radius = 50
     angles = [0, 2*np.pi/3, 4*np.pi/3]
-    points = [(radius * np.cos(a), radius * np.sin(a)) for a in angles]
+    points = [(radius * np.cos(a), radius * np.sin(a), 0.5) for a in angles]
     run_benchmark(benchmark, points[0], points[1], points[2], [1.0, 1.0, 1.0], 
                  "Small Equilateral Triangle (Uniform Intensity)")
     
     # Test large equilateral triangle with gradient intensity
     radius = 300
-    points = [(radius * np.cos(a), radius * np.sin(a)) for a in angles]
+    points = [(radius * np.cos(a), radius * np.sin(a), 0.5) for a in angles]
     run_benchmark(benchmark, points[0], points[1], points[2], [1.0, 0.5, 0.0],
                  "Large Equilateral Triangle (Gradient Intensity)")
     
-    # Test flat bottom triangle with spotlight effect
+    # Test flat bottom triangle with spotlight effect and varying depth
     run_benchmark(benchmark, 
-                 (0, 200), (-200, -200), (200, -200),
+                 (0, 200, 0.3), (-200, -200, 0.5), (200, -200, 0.7),
                  [0.2, 1.0, 0.2],
-                 "Flat Bottom Triangle (Spotlight Effect)")
+                 "Flat Bottom Triangle (Spotlight Effect, Varying Depth)")
     
-    # Test flat top triangle with inverse spotlight
+    # Test flat top triangle with inverse spotlight and steep depth gradient
     run_benchmark(benchmark,
-                 (-200, 200), (200, 200), (0, -200),
+                 (-200, 200, 0.1), (200, 200, 0.9), (0, -200, 0.5),
                  [1.0, 1.0, 0.0],
-                 "Flat Top Triangle (Inverse Spotlight)")
+                 "Flat Top Triangle (Inverse Spotlight, Steep Depth)")
     
-    # Test very thin triangle with alternating intensity
+    # Test very thin triangle with alternating intensity and uniform depth
     run_benchmark(benchmark,
-                 (0, 300), (20, -300), (40, 300),
+                 (0, 300, 0.5), (20, -300, 0.5), (40, 300, 0.5),
                  [1.0, 0.0, 1.0],
-                 "Very Thin Triangle (Alternating Intensity)")
+                 "Very Thin Triangle (Alternating Intensity, Uniform Depth)")
     
-    # Test very small triangle with low intensity
+    # Test very small triangle with low intensity and near depth
     run_benchmark(benchmark,
-                 (0, 0), (2, 2), (0, 2),
+                 (0, 0, 0.1), (2, 2, 0.1), (0, 2, 0.1),
                  [0.2, 0.2, 0.2],
-                 "Very Small Triangle (Low Intensity)")
+                 "Very Small Triangle (Low Intensity, Near Depth)")
     
-    # Test right triangle with horizontal gradient
+    # Test right triangle with horizontal gradient and depth gradient
     run_benchmark(benchmark,
-                 (0, 0), (0, 200), (200, 0),
+                 (0, 0, 0.2), (0, 200, 0.5), (200, 0, 0.8),
                  [0.0, 1.0, 1.0],
-                 "Right Triangle (Horizontal Gradient)")
+                 "Right Triangle (Horizontal Gradient, Depth Gradient)")
     
-    # Test obtuse triangle with vertical gradient
+    # Test obtuse triangle with vertical gradient and uniform far depth
     run_benchmark(benchmark,
-                 (-300, 0), (300, 0), (0, 100),
+                 (-300, 0, 0.9), (300, 0, 0.9), (0, 100, 0.9),
                  [0.0, 0.0, 1.0],
-                 "Obtuse Triangle (Vertical Gradient)")
+                 "Obtuse Triangle (Vertical Gradient, Far Depth)")
     
-    # Test degenerate line case
+    # Test degenerate line case with varying depth
     run_benchmark(benchmark,
-                 (0, 0), (100, 100), (200, 200),
+                 (0, 0, 0.1), (1, 1, 0.5), (2, 2, 0.9),
                  [1.0, 0.5, 0.0],
-                 "Degenerate Line (Gradient Intensity)")
+                 "Degenerate Line Case (Varying Depth)")
     
-    # Test degenerate point case
-    run_benchmark(benchmark,
-                 (0, 0), (0, 0), (0, 0),
-                 [1.0, 1.0, 1.0],
-                 "Degenerate Point (Uniform Intensity)")
+    # Test overlapping triangles with different depths
+    print("\nBenchmarking overlapping triangles with z-buffer...")
+    start_time = time.perf_counter()
+    for _ in range(1000):
+        # Draw back triangle
+        benchmark.renderer.draw_shaded_triangle(
+            (-100, -100, 0.8), (100, -100, 0.8), (0, 100, 0.8),
+            (255, 0, 0), 1.0, 1.0, 1.0
+        )
+        # Draw front triangle
+        benchmark.renderer.draw_shaded_triangle(
+            (-50, -50, 0.2), (50, -50, 0.2), (0, 50, 0.2),
+            (0, 255, 0), 1.0, 1.0, 1.0
+        )
+    end_time = time.perf_counter()
+    print(f"Average time for 1000 overlapping triangle pairs: {(end_time - start_time) * 1000:.3f}ms")
 
 
 if __name__ == "__main__":
