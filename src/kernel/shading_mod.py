@@ -27,3 +27,32 @@ def triangle_flat_shading(vertices, normal, light_dir, material_color, ambient: 
     color = np.clip(color, 0.0, 255.0)
     
     return color.astype(np.uint8)
+
+
+@njit(cache=True)
+def triangle_gouraud_shading(vertices, vertex_normals, light_dir, material_color, 
+                           ambient: float = 0.1) -> np.ndarray:
+    """Calculate Gouraud shading intensities for triangle vertices.
+    
+    Args:
+        vertices: Triangle vertices (3x3 array)
+        vertex_normals: Normal vectors for each vertex (3x3 array, pre-normalized)
+        light_dir: Light direction vector (3D array, pre-normalized)
+        material_color: Base material color (RGB array)
+        ambient: Ambient light intensity (float)
+        
+    Returns:
+        ndarray: Array of vertex intensities (3,) for interpolation
+    """
+    # Initialize vertex intensities
+    vertex_intensities = np.zeros(3)
+    
+    # Calculate lighting for each vertex
+    for i in range(3):
+        # Calculate diffuse intensity using dot product
+        intensity = np.maximum(np.dot(vertex_normals[i], light_dir), 0.0)
+        
+        # Add ambient term
+        vertex_intensities[i] = ambient + (1.0 - ambient) * intensity
+    
+    return vertex_intensities
