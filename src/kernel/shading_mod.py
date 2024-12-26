@@ -3,11 +3,10 @@ from numba import njit
 
 
 @njit(cache=True)
-def triangle_flat_shading(vertices, normal, light_dir, material_color, ambient: float = 0.1) -> np.ndarray:
+def triangle_flat_shading(normal, light_dir, material_color, ambient: float = 0.1) -> np.ndarray:
     """Calculate flat shading color for a triangle.
     
     Args:
-        vertices: Triangle vertices (3x3 array)
         normal: Triangle normal vector (3D array)
         light_dir: Light direction vector (3D array)
         material_color: Base material color (RGB array)

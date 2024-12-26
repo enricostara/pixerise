@@ -377,10 +377,7 @@ class Renderer:
                         directional_light = scene['lights']['directional']
                         light_dir = -np.array(directional_light['direction'], dtype=np.float32)
                         color_array = np.array(color, dtype=np.float32)
-                        shaded_color = triangle_flat_shading(vertices, normal,
-                                                          light_dir, 
-                                                          color_array, 
-                                                          directional_light.get('ambient', 0.1))
+                        shaded_color = triangle_flat_shading(normal, light_dir, color_array, directional_light.get('ambient', 0.1))
                         
                         # Use the computed color for the triangle
                         final_color = tuple(shaded_color.astype(np.uint8))
