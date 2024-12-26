@@ -16,9 +16,6 @@ def triangle_flat_shading(vertices, normal, light_dir, material_color, ambient: 
     Returns:
         ndarray: Final RGB color after shading
     """
-    # Ensure all inputs are float32
-    normal = normal.astype(np.float32)
-    light_dir = light_dir.astype(np.float32)
     
     # Calculate diffuse intensity using dot product
     intensity = np.maximum(np.dot(normal, light_dir), 0.0)
