@@ -10,7 +10,7 @@ from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_s
 from kernel.transforming_mod import transform_vertex
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere)
 from kernel.culling_mod import cull_back_faces
-from kernel.shading_mod import triangle_flat_shading
+from kernel.shading_mod import triangle_flat_shading, triangle_gouraud_shading
 from typing import Tuple
 from enum import Enum
 
@@ -19,9 +19,11 @@ class ShadingMode(Enum):
     
     Available modes:
     - FLAT: Uses a single normal per face for constant shading across the triangle
+    - GOURAUD: Interpolates shading across the triangle using vertex normals
     - WIREFRAME: Renders only the edges of triangles without filling
     """
     FLAT = "flat"
+    GOURAUD = "gouraud"
     WIREFRAME = "wireframe"
 
 class Canvas:
@@ -359,7 +361,7 @@ class Renderer:
                     continue
                 
                 # Function to project and draw a triangle
-                def project_and_draw_triangle(vertices, normal):
+                def project_and_draw_triangle(vertices, normal, vertex_normals):
                     # Project vertices to 2D
                     v1 = self._project_vertex(vertices[0])
                     v2 = self._project_vertex(vertices[1])
@@ -373,15 +375,19 @@ class Renderer:
                     if shading_mode == ShadingMode.WIREFRAME:
                         self.draw_triangle(v1, v2, v3, color, fill=False)
                     else:
-                        # Compute shading using the provided normal
                         directional_light = scene['lights']['directional']
                         light_dir = -np.array(directional_light['direction'], dtype=np.float32)
                         color_array = np.array(color, dtype=np.float32)
-                        shaded_color = triangle_flat_shading(normal, light_dir, color_array, directional_light.get('ambient', 0.1))
-                        
-                        # Use the computed color for the triangle
-                        final_color = tuple(shaded_color.astype(np.uint8))
-                        self.draw_triangle(v1, v2, v3, final_color, fill=True)
+                        ambient = directional_light.get('ambient', 0.1)
+
+                        if shading_mode == ShadingMode.GOURAUD:
+                            # Compute vertex intensities using vertex normals
+                            intensities = triangle_gouraud_shading(vertex_normals, light_dir, ambient)
+                            self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
+                        else:  # FLAT shading
+                            shaded_color = triangle_flat_shading(normal, light_dir, color_array, ambient)
+                            final_color = tuple(shaded_color.astype(np.uint8))
+                            self.draw_triangle(v1, v2, v3, final_color, fill=True)
 
                 # Convert triangle indices to numpy array
                 triangles_array = np.array(triangles, dtype=np.int32)
@@ -418,7 +424,7 @@ class Renderer:
                         
                         # Project and draw the clipped triangles
                         for clipped_tri in clipped_triangles:
-                            project_and_draw_triangle(clipped_tri, triangle_normals[i])
+                            project_and_draw_triangle(clipped_tri, triangle_normals[i], [triangle_normals[i], triangle_normals[i], triangle_normals[i]])
                     else:
                         # For fully visible instances, still need to check if vertices are behind camera
-                        project_and_draw_triangle(triangle_vertices, triangle_normals[i])
+                        project_and_draw_triangle(triangle_vertices, triangle_normals[i], [triangle_normals[i], triangle_normals[i], triangle_normals[i]])
