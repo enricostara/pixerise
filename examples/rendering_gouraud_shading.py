@@ -208,9 +208,10 @@ def main():
         for j in range(subdivisions):
             first = i * (subdivisions + 1) + j
             second = first + subdivisions + 1
+            # Fix winding order to be clockwise
             triangles.extend([
-                [first, second, first + 1],
-                [second, second + 1, first + 1]
+                [first, first + 1, second],      # Upper triangle
+                [second, first + 1, second + 1]  # Lower triangle
             ])
     
     # Convert to numpy arrays and assign to sphere model
