@@ -127,3 +127,94 @@ def transform_vertex(vertex: np.ndarray,
     # Return the transformed vertex as a new array
     # This ensures the original vertex array is not modified
     return np.array([x, y, z])
+
+
+@njit(cache=True)
+def transform_vertex_normal(normal: np.ndarray, 
+                          rotation: np.ndarray,
+                          camera_rotation: np.ndarray,
+                          has_camera: bool) -> np.ndarray:
+    """
+    Transform a vertex normal in 3D space using rotation and optional camera transformations.
+    This function is optimized using Numba's JIT compilation and avoids matrix creation overhead
+    by performing transformations inline.
+    
+    The transformations are applied in the following order:
+    1. Model Rotation (Y * X * Z order)
+    2. Camera Rotation (if has_camera is True):
+       - Camera Rotation (inverse, Z * X * Y order)
+    
+    Args:
+        normal: Numpy array of shape (3,) representing the normal vector (nx, ny, nz)
+        rotation: Numpy array of shape (3,) containing rotation angles in radians (rx, ry, rz)
+                 around X, Y, and Z axes respectively
+        camera_rotation: Numpy array of shape (3,) containing camera rotation angles in radians
+                        (crx, cry, crz) around X, Y, and Z axes respectively
+        has_camera: Boolean flag indicating whether to apply camera transformation
+    
+    Returns:
+        Numpy array of shape (3,) containing the transformed normal vector
+    
+    Note:
+        - Rotations use right-hand rule: positive angles rotate counterclockwise when looking
+          along the positive axis towards the origin
+        - Camera transformations are applied as inverse operations
+        - The implementation avoids matrix multiplication by directly computing the transformed
+          coordinates, which is more efficient for single normal transformations
+    """
+    # Extract normal components for direct manipulation
+    x, y, z = normal
+    
+    # Step 1: Apply model rotations in Y * X * Z order
+    # This order minimizes gimbal lock for most common use cases
+    
+    # 1a: Z-axis rotation (around Z-axis)
+    rx, ry, rz = rotation
+    cz, sz = np.cos(rz), np.sin(rz)
+    x_new = x * cz - y * sz
+    y_new = x * sz + y * cz
+    x, y = x_new, y_new
+    
+    # 1b: X-axis rotation (around X-axis)
+    cx, sx = np.cos(rx), np.sin(rx)
+    y_new = y * cx - z * sx
+    z_new = y * sx + z * cx
+    y, z = y_new, z_new
+    
+    # 1c: Y-axis rotation (around Y-axis)
+    cy, sy = np.cos(ry), np.sin(ry)
+    x_new = x * cy - z * sy   # Changed from: x * cy + z * sy
+    z_new = x * sy + z * cy   # Changed from: -x * sy + z * cy
+    x, z = x_new, z_new
+    
+    # Step 2: Apply camera rotation if enabled
+    if has_camera:
+        # Apply inverse camera rotations in Z * X * Y order
+        
+        # Y-axis camera rotation (inverse)
+        crx, cry, crz = camera_rotation
+        ccy, csy = np.cos(cry), np.sin(cry)
+        x_new = x * ccy + z * csy   # Changed sign for inverse rotation
+        z_new = -x * csy + z * ccy  # Changed sign for inverse rotation
+        x, z = x_new, z_new
+        
+        # X-axis camera rotation (inverse)
+        ccx, csx = np.cos(crx), np.sin(crx)
+        y_new = y * ccx + z * csx
+        z_new = -y * csx + z * ccx
+        y, z = y_new, z_new
+        
+        # Z-axis camera rotation (inverse)
+        ccz, csz = np.cos(crz), np.sin(crz)
+        x_new = x * ccz + y * csz
+        y_new = -x * csz + y * ccz
+        x, y = x_new, y_new
+    
+    # Normalize the resulting normal vector
+    length = np.sqrt(x * x + y * y + z * z)
+    if length > 0:
+        x /= length
+        y /= length
+        z /= length
+    
+    return np.array([x, y, z])
