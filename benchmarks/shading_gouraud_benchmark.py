@@ -12,8 +12,8 @@ class GouraudShadingBenchmark:
             [0.0, 0.0, 1.0],
             [0.0, 0.0, 1.0],
             [0.0, 0.0, 1.0]
-        ], dtype=np.float64)
-        warm_up_light_dir = np.array([0.0, 0.0, 1.0], dtype=np.float64)
+        ], dtype=np.float32)
+        warm_up_light_dir = np.array([0.0, 0.0, 1.0], dtype=np.float32)
         warm_up_ambient = 0.1
 
         print("\nWarming up JIT compilation...")
@@ -66,8 +66,8 @@ def run_benchmarks():
         [0.0, 0.0, 1.0],
         [0.0, 0.0, 1.0],
         [0.0, 0.0, 1.0]
-    ], dtype=np.float64)
-    light_dir = np.array([0.0, 0.0, 1.0], dtype=np.float64)
+    ], dtype=np.float32)
+    light_dir = np.array([0.0, 0.0, 1.0], dtype=np.float32)
     ambient = 0.1
 
     run_benchmark(
@@ -81,7 +81,7 @@ def run_benchmarks():
         [s, 0.0, s],
         [0.0, s, s],
         [-s, 0.0, s]
-    ], dtype=np.float64)
+    ], dtype=np.float32)
     
     run_benchmark(
         benchmark, vertex_normals, light_dir, ambient,
@@ -93,7 +93,7 @@ def run_benchmarks():
         [0.577, 0.577, 0.577],  # Equal components
         [0.0, 0.0, 1.0],        # Straight up
         [1.0, 0.0, 0.0]         # Right facing
-    ], dtype=np.float64)
+    ], dtype=np.float32)
     
     run_benchmark(
         benchmark, vertex_normals, light_dir, ambient,
@@ -101,12 +101,12 @@ def run_benchmarks():
     )
 
     # Test case 4: Light from side with varying normals
-    light_dir = np.array([1.0, 0.0, 0.0], dtype=np.float64)  # Light from right side
+    light_dir = np.array([1.0, 0.0, 0.0], dtype=np.float32)  # Light from right side
     vertex_normals = np.array([
         [1.0, 0.0, 0.0],  # Facing light
         [s, 0.0, s],      # 45 degrees
         [0.0, 0.0, 1.0]   # Perpendicular
-    ], dtype=np.float64)
+    ], dtype=np.float32)
     
     run_benchmark(
         benchmark, vertex_normals, light_dir, ambient,

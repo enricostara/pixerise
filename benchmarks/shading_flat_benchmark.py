@@ -8,8 +8,8 @@ class ShadingBenchmark:
     def __init__(self):
         # Initialize with JIT warm-up using a simple case
         # This ensures subsequent benchmarks measure actual performance, not JIT compilation time
-        warm_up_normal = np.array([0.0, 0.0, 1.0], dtype=np.float64)
-        warm_up_light_dir = np.array([0.0, 0.0, 1.0], dtype=np.float64)
+        warm_up_normal = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+        warm_up_light_dir = np.array([0.0, 0.0, 1.0], dtype=np.float32)
         warm_up_material_color = np.array([255, 0, 0], dtype=np.uint8)
         warm_up_ambient = 0.1
 
@@ -61,8 +61,8 @@ def run_benchmarks():
     benchmark = ShadingBenchmark()
 
     # Test case 1: Single triangle with normal pointing up
-    normal = np.array([0.0, 0.0, 1.0], dtype=np.float64)
-    light_dir = np.array([0.0, 0.0, 1.0], dtype=np.float64)
+    normal = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+    light_dir = np.array([0.0, 0.0, 1.0], dtype=np.float32)
     material_color = np.array([255, 0, 0], dtype=np.uint8)
     ambient = 0.1
 
@@ -72,7 +72,7 @@ def run_benchmarks():
     )
 
     # Test case 2: Single triangle with normal at 45 degrees
-    normal = np.array([0.707, 0.0, 0.707], dtype=np.float64)  # 45 degrees to Z axis
+    normal = np.array([0.707, 0.0, 0.707], dtype=np.float32)  # 45 degrees to Z axis
     
     run_benchmark(
         benchmark, normal, light_dir, material_color, ambient,
@@ -80,7 +80,7 @@ def run_benchmarks():
     )
 
     # Test case 3: Single triangle with complex normal
-    normal = np.array([0.577, 0.577, 0.577], dtype=np.float64)  # Equal components
+    normal = np.array([0.577, 0.577, 0.577], dtype=np.float32)  # Equal components
     
     run_benchmark(
         benchmark, normal, light_dir, material_color, ambient,

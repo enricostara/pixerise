@@ -95,7 +95,7 @@ def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float
     d2 = np.dot(vertices[2], plane_normal) + plane_d
     
     # Initialize result array to store up to 2 triangles
-    triangles = np.empty((2, 3, 3), dtype=np.float64)
+    triangles = np.empty((2, 3, 3), dtype=np.float32)
     
     # Case 1: All vertices on or above the plane
     # No clipping needed, return original triangle
