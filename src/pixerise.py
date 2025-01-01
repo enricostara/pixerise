@@ -7,7 +7,7 @@ import numpy as np
 from numba import jit
 import pygame
 from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
-from kernel.transforming_mod import transform_vertex
+from kernel.transforming_mod import transform_vertex, transform_vertex_normal
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere)
 from kernel.culling_mod import cull_back_faces
 from kernel.shading_mod import triangle_flat_shading, triangle_gouraud_shading
@@ -135,11 +135,11 @@ class ViewPort:
         
         # Calculate plane normals with correct orientation (pointing inward)
         # Each normal is computed based on the plane's orientation in view space
-        self._left_plane = np.array([1, 0, half_width / self._plane_distance], dtype=np.float64)
-        self._right_plane = np.array([-1, 0, half_width / self._plane_distance], dtype=np.float64)
-        self._top_plane = np.array([0, -1, half_height / self._plane_distance], dtype=np.float64)
-        self._bottom_plane = np.array([0, 1, half_height / self._plane_distance], dtype=np.float64)
-        self._near_plane = np.array([0, 0, 1], dtype=np.float64)  # Points towards viewer
+        self._left_plane = np.array([1, 0, half_width / self._plane_distance], dtype=np.float32)
+        self._right_plane = np.array([-1, 0, half_width / self._plane_distance], dtype=np.float32)
+        self._top_plane = np.array([0, -1, half_height / self._plane_distance], dtype=np.float32)
+        self._bottom_plane = np.array([0, 1, half_height / self._plane_distance], dtype=np.float32)
+        self._near_plane = np.array([0, 0, 1], dtype=np.float32)  # Points towards viewer
         
         # Normalize all plane normals for consistent distance calculations
         self._left_plane /= np.linalg.norm(self._left_plane)
@@ -309,13 +309,14 @@ class Renderer:
         # Get camera transform if present
         camera_transform = scene.get('camera', {}).get('transform', {})
         camera_pos = camera_transform.get('position', [0, 0, 0])
-        camera_pos = np.array(camera_pos, dtype=np.float64)
+        camera_pos = np.array(camera_pos, dtype=np.float32)
 
         # Render each model instance
         for model_name, model in scene.get('models', {}).items():
             # Get model data
             vertices = model.get('vertices', [])
             triangles = model.get('triangles', [])
+            vertex_normals = model.get('vertex_normals', [])  # Get vertex normals from model
             
             # Render each instance of the model
             for instance in scene.get('instances', []):
@@ -328,13 +329,24 @@ class Renderer:
                 
                 # Transform vertices
                 transformed_vertices = []
-                for vertex in vertices:
-                    # Apply model transform
+                transformed_normals = []  # Store transformed normals
+                has_vertex_normals = len(vertex_normals) == len(vertices)
+                
+                for i, vertex in enumerate(vertices):
+                    # Apply model transform to vertex
                     transformed = self._transform_vertex(vertex, transform)
                     transformed_vertices.append(transformed)
+                    
+                    # Transform normal using rotation only if available
+                    if has_vertex_normals:
+                        normal = vertex_normals[i]
+                        rotation = transform.get('rotation', np.zeros(3))
+                        camera_rotation = camera_transform.get('rotation', np.zeros(3))
+                        transformed_normal = transform_vertex_normal(normal, rotation, camera_rotation, True)
+                        transformed_normals.append(transformed_normal)
                 
                 # Convert transformed vertices to numpy array for bounding sphere calculation
-                vertices_array = np.array(transformed_vertices, dtype=np.float64)
+                vertices_array = np.array(transformed_vertices, dtype=np.float32)
                 
                 # Calculate bounding sphere for the entire instance
                 sphere_center, sphere_radius = calculate_bounding_sphere(vertices_array)
@@ -382,8 +394,13 @@ class Renderer:
 
                         if shading_mode == ShadingMode.GOURAUD:
                             # Compute vertex intensities using vertex normals
-                            intensities = triangle_gouraud_shading(vertex_normals, light_dir, ambient)
-                            self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
+                            if has_vertex_normals:
+                                intensities = triangle_gouraud_shading(vertex_normals, light_dir, ambient)
+                                self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
+                            else:
+                                # If no vertex normals, use face normal for all vertices
+                                intensities = triangle_gouraud_shading([normal, normal, normal], light_dir, ambient)
+                                self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
                         else:  # FLAT shading
                             shaded_color = triangle_flat_shading(normal, light_dir, color_array, ambient)
                             final_color = tuple(shaded_color.astype(np.uint8))
@@ -403,7 +420,22 @@ class Renderer:
                         transformed_vertices[triangle[0]],
                         transformed_vertices[triangle[1]],
                         transformed_vertices[triangle[2]]
-                    ], dtype=np.float64)
+                    ], dtype=np.float32)
+
+                    # Get corresponding transformed normals for this triangle
+                    if has_vertex_normals:
+                        triangle_transformed_normals = np.array([
+                            transformed_normals[triangle[0]],
+                            transformed_normals[triangle[1]],
+                            transformed_normals[triangle[2]]
+                        ], dtype=np.float32)
+                    else:
+                        # If no vertex normals, use face normal for all vertices
+                        triangle_transformed_normals = np.array([
+                            triangle_normals[i],
+                            triangle_normals[i],
+                            triangle_normals[i]
+                        ], dtype=np.float32)
 
                     if not fully_visible:
                         # Clip against each frustum plane
@@ -424,7 +456,7 @@ class Renderer:
                         
                         # Project and draw the clipped triangles
                         for clipped_tri in clipped_triangles:
-                            project_and_draw_triangle(clipped_tri, triangle_normals[i], [triangle_normals[i], triangle_normals[i], triangle_normals[i]])
+                            project_and_draw_triangle(clipped_tri, triangle_normals[i], triangle_transformed_normals)
                     else:
                         # For fully visible instances, still need to check if vertices are behind camera
-                        project_and_draw_triangle(triangle_vertices, triangle_normals[i], [triangle_normals[i], triangle_normals[i], triangle_normals[i]])
+                        project_and_draw_triangle(triangle_vertices, triangle_normals[i], triangle_transformed_normals)
