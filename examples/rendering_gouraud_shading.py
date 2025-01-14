@@ -218,7 +218,7 @@ def main():
     # Convert to numpy arrays and assign to sphere model
     scene['models']['sphere']['vertices'] = np.array(vertices, dtype=np.float32)
     scene['models']['sphere']['triangles'] = np.array(triangles, dtype=np.int32)
-    scene['models']['sphere']['vertex_normals'] = scene['models']['sphere']['vertices'] / np.linalg.norm(scene['models']['sphere']['vertices'], axis=1)[:, np.newaxis]  # Normalized vertices are the normals
+    scene['models']['sphere']['vertex_normals'] = -scene['models']['sphere']['vertices'] / np.linalg.norm(scene['models']['sphere']['vertices'], axis=1)[:, np.newaxis]  # Inverted normalized vertices are the normals
     
     # Create renderer
     renderer = Renderer(canvas, viewport, scene)
