@@ -188,37 +188,83 @@ def main():
         ]
     }
     
-    # Generate sphere vertices and triangles
+    # Generate sphere vertices and triangles using icosphere
     radius = 1.0
-    subdivisions = 16  # subdivision count for smooth shading
+    subdivisions = 2  # Each subdivision multiplies triangle count by 4
     
-    # Generate vertices
-    vertices = []
-    for i in range(subdivisions + 1):
-        lat = np.pi * (-0.5 + float(i) / subdivisions)
-        for j in range(subdivisions + 1):
-            lon = 2 * np.pi * float(j) / subdivisions
-            x = np.cos(lat) * np.cos(lon)
-            y = np.sin(lat)
-            z = np.cos(lat) * np.sin(lon)
-            vertices.append([x * radius, y * radius, z * radius])
+    # Generate initial icosahedron
+    t = (1.0 + np.sqrt(5.0)) / 2.0  # Golden ratio
     
-    # Generate triangles
-    triangles = []
-    for i in range(subdivisions):
-        for j in range(subdivisions):
-            first = i * (subdivisions + 1) + j
-            second = first + subdivisions + 1
-            # Fix winding order to be clockwise
-            triangles.extend([
-                [first, first + 1, second],      # Upper triangle
-                [second, first + 1, second + 1]  # Lower triangle
+    # Initial 12 vertices of icosahedron
+    vertices = np.array([
+        [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
+        [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
+        [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]
+    ], dtype=float)
+    
+    # Normalize vertices to create unit sphere
+    vertices /= np.sqrt(1 + t*t)
+    vertices *= radius
+    
+    # Initial 20 triangles of icosahedron
+    triangles = [
+        [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+        [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+        [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+        [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+    ]
+    
+    # Subdivision function
+    vertex_cache = {}
+    
+    def get_middle_point(p1, p2, vertices, radius):
+        # Generate vertex key
+        key = tuple(sorted([p1, p2]))
+        if key in vertex_cache:
+            return vertex_cache[key]
+        
+        # Calculate middle point
+        point1 = np.array(vertices[p1])
+        point2 = np.array(vertices[p2])
+        middle = (point1 + point2) / 2.0
+        
+        # Normalize to sphere surface
+        length = np.sqrt(np.sum(middle**2))
+        middle = middle / length * radius
+        
+        # Add vertex and return index
+        vertices.append(middle.tolist())
+        index = len(vertices) - 1
+        vertex_cache[key] = index
+        return index
+    
+    # Perform subdivision
+    for _ in range(subdivisions):
+        new_triangles = []
+        vertices = vertices.tolist()  # Convert to list for easier appending
+        
+        for tri in triangles:
+            v1, v2, v3 = tri
+            # Get midpoints
+            a = get_middle_point(v1, v2, vertices, radius)
+            b = get_middle_point(v2, v3, vertices, radius)
+            c = get_middle_point(v3, v1, vertices, radius)
+            
+            # Create 4 triangles
+            new_triangles.extend([
+                [v1, a, c],
+                [v2, b, a],
+                [v3, c, b],
+                [a, b, c]
             ])
+        
+        triangles = new_triangles
+        vertices = np.array(vertices)
     
-    # Convert to numpy arrays and assign to sphere model
+    # Convert final lists to numpy arrays
     scene['models']['sphere']['vertices'] = np.array(vertices, dtype=np.float32)
     scene['models']['sphere']['triangles'] = np.array(triangles, dtype=np.int32)
-    scene['models']['sphere']['vertex_normals'] = -scene['models']['sphere']['vertices'] / np.linalg.norm(scene['models']['sphere']['vertices'], axis=1)[:, np.newaxis]  # Inverted normalized vertices are the normals
+    scene['models']['sphere']['vertex_normals'] = -vertices / radius  # For unit sphere, normalized vertices = normals
     
     # Create renderer
     renderer = Renderer(canvas, viewport, scene)
