@@ -86,7 +86,8 @@ class TestTransformVertexNormal:
             has_camera=True
         )
         # Normal should be transformed relative to camera
-        expected = np.array([1.0, 0.0, 0.0])  # Points along camera's X axis
+        # With corrected Y rotation matrix, Z becomes negative X
+        expected = np.array([-1.0, 0.0, 0.0])  # Points along negative camera X axis
         np.testing.assert_array_almost_equal(result, expected, decimal=5)
 
     def test_normalization(self):

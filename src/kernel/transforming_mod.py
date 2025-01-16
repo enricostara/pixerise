@@ -194,19 +194,19 @@ def transform_vertex_normal(normal: np.ndarray,
         # Y-axis camera rotation (inverse)
         crx, cry, crz = camera_rotation
         ccy, csy = np.cos(cry), np.sin(cry)
-        x_new = x * ccy + z * csy   # Changed sign for inverse rotation
-        z_new = -x * csy + z * ccy  # Changed sign for inverse rotation
+        x_new = x * ccy - z * csy   # Inverse of Y rotation matrix
+        z_new = x * csy + z * ccy
         x, z = x_new, z_new
         
         # X-axis camera rotation (inverse)
         ccx, csx = np.cos(crx), np.sin(crx)
-        y_new = y * ccx + z * csx
+        y_new = y * ccx + z * csx   # Inverse of X rotation matrix
         z_new = -y * csx + z * ccx
         y, z = y_new, z_new
         
         # Z-axis camera rotation (inverse)
         ccz, csz = np.cos(crz), np.sin(crz)
-        x_new = x * ccz + y * csz
+        x_new = x * ccz + y * csz   # Inverse of Z rotation matrix
         y_new = -x * csz + y * ccz
         x, y = x_new, y_new
     

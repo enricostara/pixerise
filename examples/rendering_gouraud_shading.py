@@ -164,15 +164,20 @@ def main():
                 'vertices': [],
                 'triangles': [],
                 'vertex_normals': []
+            },
+            'sphere_flat': {
+                'vertices': [],
+                'triangles': [],
+                'vertex_normals': []
             }
         },
         'instances': [
             {
                 'model': 'cube',
                 'transform': {
-                    'translation': np.array([-2, 0, 7], dtype=float),
+                    'translation': np.array([0, 1, 8], dtype=float),
                     'rotation': np.array([np.pi/6, np.pi/4, 0], dtype=float),  # Rotated for better shading visibility
-                    'scale': np.array([1, 1, 1], dtype=float)
+                    'scale': np.array([.6, .6, .6], dtype=float)
                 },
                 'color': (200, 100, 100)  # Reddish color to show shading variations
             },
@@ -184,6 +189,15 @@ def main():
                     'scale': np.array([0.8, 0.8, 0.8], dtype=float)
                 },
                 'color': (100, 200, 100)  # Greenish color
+            },
+            {
+                'model': 'sphere_flat',  # Changed from cube to sphere
+                'transform': {
+                    'translation': np.array([4, 1, 8], dtype=float),
+                    'rotation': np.array([0, 0, 0], dtype=float),  # Sphere rotation less important
+                    'scale': np.array([0.8, 0.8, 0.8], dtype=float)
+                },
+                'color': (100, 100, 200)  # Blueish color
             }
         ]
     }
@@ -206,12 +220,12 @@ def main():
     vertices /= np.sqrt(1 + t*t)
     vertices *= radius
     
-    # Initial 20 triangles of icosahedron
+    # Initial 20 triangles of icosahedron - clockwise winding order
     triangles = [
-        [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
-        [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
-        [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
-        [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+        [0, 5, 11], [0, 1, 5], [0, 7, 1], [0, 10, 7], [0, 11, 10],
+        [1, 9, 5], [5, 4, 11], [11, 2, 10], [10, 6, 7], [7, 8, 1],
+        [3, 4, 9], [3, 2, 4], [3, 6, 2], [3, 8, 6], [3, 9, 8],
+        [4, 5, 9], [2, 11, 4], [6, 10, 2], [8, 7, 6], [9, 1, 8]
     ]
     
     # Subdivision function
@@ -250,12 +264,12 @@ def main():
             b = get_middle_point(v2, v3, vertices, radius)
             c = get_middle_point(v3, v1, vertices, radius)
             
-            # Create 4 triangles
+            # Create 4 triangles with clockwise winding order
             new_triangles.extend([
-                [v1, a, c],
-                [v2, b, a],
-                [v3, c, b],
-                [a, b, c]
+                [v1, c, a],
+                [v2, a, b],
+                [v3, b, c],
+                [a, c, b]
             ])
         
         triangles = new_triangles
@@ -265,6 +279,10 @@ def main():
     scene['models']['sphere']['vertices'] = np.array(vertices, dtype=np.float32)
     scene['models']['sphere']['triangles'] = np.array(triangles, dtype=np.int32)
     scene['models']['sphere']['vertex_normals'] = -vertices / radius  # For unit sphere, normalized vertices = normals
+     
+    # Convert final lists to numpy arrays
+    scene['models']['sphere_flat']['vertices'] = np.array(vertices, dtype=np.float32)
+    scene['models']['sphere_flat']['triangles'] = np.array(triangles, dtype=np.int32)
     
     # Create renderer
     renderer = Renderer(canvas, viewport, scene)
