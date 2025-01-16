@@ -397,15 +397,10 @@ class Renderer:
                     color_array = np.array(color, dtype=np.float32)
                     ambient = directional_light.get('ambient', 0.1)
 
-                    if shading_mode == ShadingMode.GOURAUD:
+                    if shading_mode == ShadingMode.GOURAUD and has_vertex_normals:
                         # Compute vertex intensities using vertex normals
-                        if has_vertex_normals:
-                            intensities = triangle_gouraud_shading(vertex_normals, light_dir, ambient)
-                            self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
-                        else:
-                            # If no vertex normals, use face normal for all vertices
-                            intensities = triangle_gouraud_shading([normal, normal, normal], light_dir, ambient)
-                            self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
+                        intensities = triangle_gouraud_shading(vertex_normals, light_dir, ambient)
+                        self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
                     else:  # FLAT shading
                         shaded_color = triangle_flat_shading(normal, light_dir, color_array, ambient)
                         final_color = tuple(shaded_color.astype(np.uint8))

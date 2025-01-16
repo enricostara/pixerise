@@ -179,7 +179,7 @@ def main():
                     'rotation': np.array([np.pi/6, np.pi/4, 0], dtype=float),  # Rotated for better shading visibility
                     'scale': np.array([.6, .6, .6], dtype=float)
                 },
-                'color': (200, 100, 100)  # Reddish color to show shading variations
+                'color': (200, 70, 70)  # Reddish color to show shading variations
             },
             {
                 'model': 'sphere',  # Changed from cube to sphere
@@ -188,7 +188,7 @@ def main():
                     'rotation': np.array([0, 0, 0], dtype=float),  # Sphere rotation less important
                     'scale': np.array([0.8, 0.8, 0.8], dtype=float)
                 },
-                'color': (100, 200, 100)  # Greenish color
+                'color': (70, 200, 70)  # Greenish color
             },
             {
                 'model': 'sphere_flat',  # Changed from cube to sphere
@@ -197,7 +197,7 @@ def main():
                     'rotation': np.array([0, 0, 0], dtype=float),  # Sphere rotation less important
                     'scale': np.array([0.8, 0.8, 0.8], dtype=float)
                 },
-                'color': (100, 100, 200)  # Blueish color
+                'color': (70, 70, 200)  # Blueish color
             }
         ]
     }
