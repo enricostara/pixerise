@@ -311,152 +311,157 @@ class Renderer:
         camera_pos = camera_transform.get('position', [0, 0, 0])
         camera_pos = np.array(camera_pos, dtype=np.float32)
 
-        # Render each model instance
+        # Pre-process models into a dictionary of tuples for faster lookup
+        models_dict = {}
         for model_name, model in scene.get('models', {}).items():
-            # Get model data
-            vertices = model.get('vertices', [])
-            triangles = model.get('triangles', [])
-            vertex_normals = model.get('vertex_normals', [])  # Get vertex normals from model
+            models_dict[model_name] = (
+                model.get('vertices', []),
+                model.get('triangles', []),
+                model.get('vertex_normals', [])
+            )
+
+        # Render each instance
+        for instance in scene.get('instances', []):
+            model_name = instance.get('model')
+            if model_name not in models_dict:
+                continue
+
+            vertices, triangles, vertex_normals = models_dict[model_name]
+
+            # Get instance transform and color
+            transform = instance.get('transform', {})
+            color = instance.get('color', (255, 255, 255))
             
-            # Render each instance of the model
-            for instance in scene.get('instances', []):
-                if instance.get('model') != model_name:
-                    continue
+            # Transform vertices
+            transformed_vertices = []
+            transformed_normals = []  # Store transformed normals
+            has_vertex_normals = len(vertex_normals) == len(vertices)
+            
+            for i, vertex in enumerate(vertices):
+                # Apply model transform to vertex
+                transformed = self._transform_vertex(vertex, transform)
+                transformed_vertices.append(transformed)
+                
+                # Transform normal using rotation only if available
+                if has_vertex_normals:
+                    normal = vertex_normals[i]
+                    rotation = transform.get('rotation', np.zeros(3))
+                    camera_rotation = camera_transform.get('rotation', np.zeros(3))
+                    transformed_normal = transform_vertex_normal(normal, rotation, camera_rotation, True)
+                    transformed_normals.append(transformed_normal)
+            
+            # Convert transformed vertices to numpy array for bounding sphere calculation
+            vertices_array = np.array(transformed_vertices, dtype=np.float32)
+            
+            # Calculate bounding sphere for the entire instance
+            sphere_center, sphere_radius = calculate_bounding_sphere(vertices_array)
+            
+            # Check visibility against each frustum plane
+            fully_visible = True
+            fully_invisible = False
+            
+            for plane, plane_d in self._viewport.frustum_planes:
+                # Calculate signed distance from sphere center to plane
+                center_distance = np.dot(plane, sphere_center) + plane_d
+                
+                # If center distance is less than -radius, sphere is completely behind plane
+                if center_distance < -sphere_radius:
+                    fully_invisible = True
+                    break
                     
-                # Get instance transform and color
-                transform = instance.get('transform', {})
-                color = instance.get('color', (255, 255, 255))
+                # If center distance is less than radius, sphere intersects plane
+                if abs(center_distance) < sphere_radius:
+                    fully_visible = False
+            
+            # Skip if instance is completely invisible
+            if fully_invisible:
+                continue
+            
+            # Function to project and draw a triangle
+            def project_and_draw_triangle(vertices, normal, vertex_normals):
+                # Project vertices to 2D
+                v1 = self._project_vertex(vertices[0])
+                v2 = self._project_vertex(vertices[1])
+                v3 = self._project_vertex(vertices[2])
                 
-                # Transform vertices
-                transformed_vertices = []
-                transformed_normals = []  # Store transformed normals
-                has_vertex_normals = len(vertex_normals) == len(vertices)
+                # Skip if any vertex is behind camera
+                if v1 is None or v2 is None or v3 is None:
+                    return
                 
-                for i, vertex in enumerate(vertices):
-                    # Apply model transform to vertex
-                    transformed = self._transform_vertex(vertex, transform)
-                    transformed_vertices.append(transformed)
-                    
-                    # Transform normal using rotation only if available
-                    if has_vertex_normals:
-                        normal = vertex_normals[i]
-                        rotation = transform.get('rotation', np.zeros(3))
-                        camera_rotation = camera_transform.get('rotation', np.zeros(3))
-                        transformed_normal = transform_vertex_normal(normal, rotation, camera_rotation, True)
-                        transformed_normals.append(transformed_normal)
-                
-                # Convert transformed vertices to numpy array for bounding sphere calculation
-                vertices_array = np.array(transformed_vertices, dtype=np.float32)
-                
-                # Calculate bounding sphere for the entire instance
-                sphere_center, sphere_radius = calculate_bounding_sphere(vertices_array)
-                
-                # Check visibility against each frustum plane
-                fully_visible = True
-                fully_invisible = False
-                
-                for plane, plane_d in self._viewport.frustum_planes:
-                    # Calculate signed distance from sphere center to plane
-                    center_distance = np.dot(plane, sphere_center) + plane_d
-                    
-                    # If center distance is less than -radius, sphere is completely behind plane
-                    if center_distance < -sphere_radius:
-                        fully_invisible = True
-                        break
-                        
-                    # If center distance is less than radius, sphere intersects plane
-                    if abs(center_distance) < sphere_radius:
-                        fully_visible = False
-                
-                # Skip if instance is completely invisible
-                if fully_invisible:
-                    continue
-                
-                # Function to project and draw a triangle
-                def project_and_draw_triangle(vertices, normal, vertex_normals):
-                    # Project vertices to 2D
-                    v1 = self._project_vertex(vertices[0])
-                    v2 = self._project_vertex(vertices[1])
-                    v3 = self._project_vertex(vertices[2])
-                    
-                    # Skip if any vertex is behind camera
-                    if v1 is None or v2 is None or v3 is None:
-                        return
-                    
-                    # Draw triangle
-                    if shading_mode == ShadingMode.WIREFRAME:
-                        self.draw_triangle(v1, v2, v3, color, fill=False)
-                    else:
-                        directional_light = scene['lights']['directional']
-                        light_dir = -np.array(directional_light['direction'], dtype=np.float32)
-                        color_array = np.array(color, dtype=np.float32)
-                        ambient = directional_light.get('ambient', 0.1)
+                # Draw triangle
+                if shading_mode == ShadingMode.WIREFRAME:
+                    self.draw_triangle(v1, v2, v3, color, fill=False)
+                else:
+                    directional_light = scene['lights']['directional']
+                    light_dir = -np.array(directional_light['direction'], dtype=np.float32)
+                    color_array = np.array(color, dtype=np.float32)
+                    ambient = directional_light.get('ambient', 0.1)
 
-                        if shading_mode == ShadingMode.GOURAUD:
-                            # Compute vertex intensities using vertex normals
-                            if has_vertex_normals:
-                                intensities = triangle_gouraud_shading(vertex_normals, light_dir, ambient)
-                                self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
-                            else:
-                                # If no vertex normals, use face normal for all vertices
-                                intensities = triangle_gouraud_shading([normal, normal, normal], light_dir, ambient)
-                                self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
-                        else:  # FLAT shading
-                            shaded_color = triangle_flat_shading(normal, light_dir, color_array, ambient)
-                            final_color = tuple(shaded_color.astype(np.uint8))
-                            self.draw_triangle(v1, v2, v3, final_color, fill=True)
+                    if shading_mode == ShadingMode.GOURAUD:
+                        # Compute vertex intensities using vertex normals
+                        if has_vertex_normals:
+                            intensities = triangle_gouraud_shading(vertex_normals, light_dir, ambient)
+                            self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
+                        else:
+                            # If no vertex normals, use face normal for all vertices
+                            intensities = triangle_gouraud_shading([normal, normal, normal], light_dir, ambient)
+                            self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
+                    else:  # FLAT shading
+                        shaded_color = triangle_flat_shading(normal, light_dir, color_array, ambient)
+                        final_color = tuple(shaded_color.astype(np.uint8))
+                        self.draw_triangle(v1, v2, v3, final_color, fill=True)
 
-                # Convert triangle indices to numpy array
-                triangles_array = np.array(triangles, dtype=np.int32)
-                # Perform backface culling and get normals
-                visible_triangles, triangle_normals = cull_back_faces(vertices_array, triangles_array, camera_pos)
-                # Filter out invisible triangles
-                triangles_array = triangles_array[visible_triangles]
+            # Convert triangle indices to numpy array
+            triangles_array = np.array(triangles, dtype=np.int32)
+            # Perform backface culling and get normals
+            visible_triangles, triangle_normals = cull_back_faces(vertices_array, triangles_array, camera_pos)
+            # Filter out invisible triangles
+            triangles_array = triangles_array[visible_triangles]
 
-                # Draw triangles
-                for i, triangle in enumerate(triangles_array):
-                    # Get triangle vertices as numpy array
-                    triangle_vertices = np.array([
-                        transformed_vertices[triangle[0]],
-                        transformed_vertices[triangle[1]],
-                        transformed_vertices[triangle[2]]
+            # Draw triangles
+            for i, triangle in enumerate(triangles_array):
+                # Get triangle vertices as numpy array
+                triangle_vertices = np.array([
+                    transformed_vertices[triangle[0]],
+                    transformed_vertices[triangle[1]],
+                    transformed_vertices[triangle[2]]
+                ], dtype=np.float32)
+
+                # Get corresponding transformed normals for this triangle
+                if has_vertex_normals:
+                    triangle_transformed_normals = np.array([
+                        transformed_normals[triangle[0]],
+                        transformed_normals[triangle[1]],
+                        transformed_normals[triangle[2]]
+                    ], dtype=np.float32)
+                else:
+                    # If no vertex normals, use face normal for all vertices
+                    triangle_transformed_normals = np.array([
+                        triangle_normals[i],
+                        triangle_normals[i],
+                        triangle_normals[i]
                     ], dtype=np.float32)
 
-                    # Get corresponding transformed normals for this triangle
-                    if has_vertex_normals:
-                        triangle_transformed_normals = np.array([
-                            transformed_normals[triangle[0]],
-                            transformed_normals[triangle[1]],
-                            transformed_normals[triangle[2]]
-                        ], dtype=np.float32)
-                    else:
-                        # If no vertex normals, use face normal for all vertices
-                        triangle_transformed_normals = np.array([
-                            triangle_normals[i],
-                            triangle_normals[i],
-                            triangle_normals[i]
-                        ], dtype=np.float32)
-
-                    if not fully_visible:
-                        # Clip against each frustum plane
-                        planes = self._viewport.frustum_planes
-                        clipped_triangles = [triangle_vertices]
-                        
-                        for plane in planes:
-                            next_triangles = []
-                            for tri in clipped_triangles:
-                                # Clip triangle against current plane
-                                result_triangles, num_triangles = clip_triangle(tri, plane[0], plane[1])
-                                # Add resulting triangles
-                                for j in range(num_triangles):
-                                    next_triangles.append(result_triangles[j])
-                            clipped_triangles = next_triangles
-                            if not clipped_triangles:  # Triangle completely clipped away
-                                break
-                        
-                        # Project and draw the clipped triangles
-                        for clipped_tri in clipped_triangles:
-                            project_and_draw_triangle(clipped_tri, triangle_normals[i], triangle_transformed_normals)
-                    else:
-                        # For fully visible instances, still need to check if vertices are behind camera
-                        project_and_draw_triangle(triangle_vertices, triangle_normals[i], triangle_transformed_normals)
+                if not fully_visible:
+                    # Clip against each frustum plane
+                    planes = self._viewport.frustum_planes
+                    clipped_triangles = [triangle_vertices]
+                    
+                    for plane in planes:
+                        next_triangles = []
+                        for tri in clipped_triangles:
+                            # Clip triangle against current plane
+                            result_triangles, num_triangles = clip_triangle(tri, plane[0], plane[1])
+                            # Add resulting triangles
+                            for j in range(num_triangles):
+                                next_triangles.append(result_triangles[j])
+                        clipped_triangles = next_triangles
+                        if not clipped_triangles:  # Triangle completely clipped away
+                            break
+                    
+                    # Project and draw the clipped triangles
+                    for clipped_tri in clipped_triangles:
+                        project_and_draw_triangle(clipped_tri, triangle_normals[i], triangle_transformed_normals)
+                else:
+                    # For fully visible instances, still need to check if vertices are behind camera
+                    project_and_draw_triangle(triangle_vertices, triangle_normals[i], triangle_transformed_normals)
