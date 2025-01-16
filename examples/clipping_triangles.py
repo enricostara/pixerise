@@ -25,7 +25,7 @@ def draw_clipped_triangle(renderer, vertices, color, plane_normals):
         [vertices[0][0], vertices[0][1], 0],
         [vertices[1][0], vertices[1][1], 0],
         [vertices[2][0], vertices[2][1], 0]
-    ])
+    ], dtype=np.float32)
     
     # Start with the original triangle
     current_triangles = [vertices_3d]
@@ -66,8 +66,8 @@ def main():
     
     # Create normalized plane normals
     plane_normals = [
-        np.array([np.cos(angle), np.sin(angle), 0]),  # Left plane
-        np.array([-np.cos(angle), np.sin(angle), 0])  # Right plane
+        np.array([np.cos(angle), np.sin(angle), 0], dtype=np.float32),  # Left plane
+        np.array([-np.cos(angle), np.sin(angle), 0], dtype=np.float32)  # Right plane
     ]
     
     # Draw white lines to mark the clipping planes
