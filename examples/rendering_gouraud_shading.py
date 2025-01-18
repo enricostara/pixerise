@@ -182,7 +182,7 @@ def main():
                 'color': (200, 70, 70)  # Reddish color to show shading variations
             },
             {
-                'model': 'sphere',  # Changed from cube to sphere
+                'model': 'sphere_flat',  # Changed from cube to sphere
                 'transform': {
                     'translation': np.array([2, 1, 8], dtype=float),
                     'rotation': np.array([0, 0, 0], dtype=float),  # Sphere rotation less important
@@ -191,7 +191,7 @@ def main():
                 'color': (70, 200, 70)  # Greenish color
             },
             {
-                'model': 'sphere_flat',  # Changed from cube to sphere
+                'model': 'sphere',  # Changed from cube to sphere
                 'transform': {
                     'translation': np.array([4, 1, 8], dtype=float),
                     'rotation': np.array([0, 0, 0], dtype=float),  # Sphere rotation less important
