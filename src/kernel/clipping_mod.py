@@ -244,6 +244,14 @@ def clip_triangle(vertices: np.ndarray, plane_normal: np.ndarray, plane_d: float
 
 
 @njit(cache=True)
+def normalize_vector(v):
+    """Normalize a vector"""
+    norm = np.sqrt(np.sum(v * v))
+    if norm > 0:
+        return v / norm
+    return v
+
+@njit(cache=True)
 def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, plane_normal: np.ndarray, plane_d: float=0) -> tuple:
     """
     Clip a triangle against a plane using the Sutherland-Hodgman algorithm.
@@ -299,7 +307,7 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
             # Calculate intersection point using linear interpolation
             t = d1 / (d1 - d2)  # Interpolation factor
             i = vertices[1] + t * (vertices[2] - vertices[1])  # Intersection point
-            i_normal = vertex_normals[1] + t * (vertex_normals[2] - vertex_normals[1])  # Interpolated normal
+            i_normal = normalize_vector(vertex_normals[1] + t * (vertex_normals[2] - vertex_normals[1]))  # Interpolated normal
             triangles[0, 0] = vertices[1]  # Keep clockwise order
             triangles[0, 1] = vertices[0]
             triangles[0, 2] = i
@@ -310,7 +318,7 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
         if d1 < 0 and d2 >= 0:  # v1 below, v2 above
             t = d2 / (d2 - d1)
             i = vertices[2] + t * (vertices[1] - vertices[2])
-            i_normal = vertex_normals[2] + t * (vertex_normals[1] - vertex_normals[2])
+            i_normal = normalize_vector(vertex_normals[2] + t * (vertex_normals[1] - vertex_normals[2]))
             triangles[0, 0] = vertices[2]  # Keep clockwise order
             triangles[0, 1] = vertices[0]
             triangles[0, 2] = i
@@ -323,7 +331,7 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
         if d0 >= 0 and d2 < 0:  # v0 above, v2 below
             t = d0 / (d0 - d2)
             i = vertices[0] + t * (vertices[2] - vertices[0])
-            i_normal = vertex_normals[0] + t * (vertex_normals[2] - vertex_normals[0])
+            i_normal = normalize_vector(vertex_normals[0] + t * (vertex_normals[2] - vertex_normals[0]))
             triangles[0, 0] = vertices[0]  # Keep clockwise order
             triangles[0, 1] = vertices[1]
             triangles[0, 2] = i
@@ -334,7 +342,7 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
         if d0 < 0 and d2 >= 0:  # v0 below, v2 above
             t = d2 / (d2 - d0)
             i = vertices[2] + t * (vertices[0] - vertices[2])
-            i_normal = vertex_normals[2] + t * (vertex_normals[0] - vertex_normals[2])
+            i_normal = normalize_vector(vertex_normals[2] + t * (vertex_normals[0] - vertex_normals[2]))
             triangles[0, 0] = vertices[2]  # Keep clockwise order
             triangles[0, 1] = vertices[1]
             triangles[0, 2] = i
@@ -347,7 +355,7 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
         if d0 >= 0 and d1 < 0:  # v0 above, v1 below
             t = d0 / (d0 - d1)
             i = vertices[0] + t * (vertices[1] - vertices[0])
-            i_normal = vertex_normals[0] + t * (vertex_normals[1] - vertex_normals[0])
+            i_normal = normalize_vector(vertex_normals[0] + t * (vertex_normals[1] - vertex_normals[0]))
             triangles[0, 0] = vertices[0]  # Keep clockwise order
             triangles[0, 1] = i
             triangles[0, 2] = vertices[2]
@@ -358,7 +366,7 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
         if d0 < 0 and d1 >= 0:  # v0 below, v1 above
             t = d1 / (d1 - d0)
             i = vertices[1] + t * (vertices[0] - vertices[1])
-            i_normal = vertex_normals[1] + t * (vertex_normals[0] - vertex_normals[1])
+            i_normal = normalize_vector(vertex_normals[1] + t * (vertex_normals[0] - vertex_normals[1]))
             triangles[0, 0] = vertices[1]  # Keep clockwise order
             triangles[0, 1] = i
             triangles[0, 2] = vertices[2]
@@ -376,8 +384,8 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
         i1 = vertices[0] + t1 * (vertices[1] - vertices[0])  # First intersection point
         i2 = vertices[0] + t2 * (vertices[2] - vertices[0])  # Second intersection point
         # Interpolate normals
-        i1_normal = vertex_normals[0] + t1 * (vertex_normals[1] - vertex_normals[0])
-        i2_normal = vertex_normals[0] + t2 * (vertex_normals[2] - vertex_normals[0])
+        i1_normal = normalize_vector(vertex_normals[0] + t1 * (vertex_normals[1] - vertex_normals[0]))
+        i2_normal = normalize_vector(vertex_normals[0] + t2 * (vertex_normals[2] - vertex_normals[0]))
         # Form new triangle using the above vertex and intersection points
         triangles[0, 0] = vertices[0]  # Keep clockwise order
         triangles[0, 1] = i1
@@ -392,8 +400,8 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
         t2 = d1 / (d1 - d2)
         i1 = vertices[1] + t1 * (vertices[0] - vertices[1])
         i2 = vertices[1] + t2 * (vertices[2] - vertices[1])
-        i1_normal = vertex_normals[1] + t1 * (vertex_normals[0] - vertex_normals[1])
-        i2_normal = vertex_normals[1] + t2 * (vertex_normals[2] - vertex_normals[1])
+        i1_normal = normalize_vector(vertex_normals[1] + t1 * (vertex_normals[0] - vertex_normals[1]))
+        i2_normal = normalize_vector(vertex_normals[1] + t2 * (vertex_normals[2] - vertex_normals[1]))
         triangles[0, 0] = vertices[1]  # Keep clockwise order
         triangles[0, 1] = i2
         triangles[0, 2] = i1
@@ -407,8 +415,8 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
         t2 = d2 / (d2 - d1)
         i1 = vertices[2] + t1 * (vertices[0] - vertices[2])
         i2 = vertices[2] + t2 * (vertices[1] - vertices[2])
-        i1_normal = vertex_normals[2] + t1 * (vertex_normals[0] - vertex_normals[2])
-        i2_normal = vertex_normals[2] + t2 * (vertex_normals[1] - vertex_normals[2])
+        i1_normal = normalize_vector(vertex_normals[2] + t1 * (vertex_normals[0] - vertex_normals[2]))
+        i2_normal = normalize_vector(vertex_normals[2] + t2 * (vertex_normals[1] - vertex_normals[2]))
         triangles[0, 0] = vertices[2]  # Keep clockwise order
         triangles[0, 1] = i2
         triangles[0, 2] = i1
@@ -424,8 +432,8 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
         t2 = d2 / (d2 - d0)  # Interpolation factor for edge v2-v0
         i1 = vertices[1] + t1 * (vertices[0] - vertices[1])  # First intersection point
         i2 = vertices[2] + t2 * (vertices[0] - vertices[2])  # Second intersection point
-        i1_normal = vertex_normals[1] + t1 * (vertex_normals[0] - vertex_normals[1])
-        i2_normal = vertex_normals[2] + t2 * (vertex_normals[0] - vertex_normals[2])
+        i1_normal = normalize_vector(vertex_normals[1] + t1 * (vertex_normals[0] - vertex_normals[1]))
+        i2_normal = normalize_vector(vertex_normals[2] + t2 * (vertex_normals[0] - vertex_normals[2]))
         # Form two triangles
         triangles[0, 0] = vertices[1]  # First triangle
         triangles[0, 1] = vertices[2]
@@ -446,8 +454,8 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
         t2 = d2 / (d2 - d1)
         i1 = vertices[0] + t1 * (vertices[1] - vertices[0])
         i2 = vertices[2] + t2 * (vertices[1] - vertices[2])
-        i1_normal = vertex_normals[0] + t1 * (vertex_normals[1] - vertex_normals[0])
-        i2_normal = vertex_normals[2] + t2 * (vertex_normals[1] - vertex_normals[2])
+        i1_normal = normalize_vector(vertex_normals[0] + t1 * (vertex_normals[1] - vertex_normals[0]))
+        i2_normal = normalize_vector(vertex_normals[2] + t2 * (vertex_normals[1] - vertex_normals[2]))
         triangles[0, 0] = vertices[0]
         triangles[0, 1] = i1
         triangles[0, 2] = i2
@@ -467,8 +475,8 @@ def clip_triangle_and_normals(vertices: np.ndarray, vertex_normals: np.ndarray, 
         t2 = d1 / (d1 - d2)
         i1 = vertices[0] + t1 * (vertices[2] - vertices[0])
         i2 = vertices[1] + t2 * (vertices[2] - vertices[1])
-        i1_normal = vertex_normals[0] + t1 * (vertex_normals[2] - vertex_normals[0])
-        i2_normal = vertex_normals[1] + t2 * (vertex_normals[2] - vertex_normals[1])
+        i1_normal = normalize_vector(vertex_normals[0] + t1 * (vertex_normals[2] - vertex_normals[0]))
+        i2_normal = normalize_vector(vertex_normals[1] + t2 * (vertex_normals[2] - vertex_normals[1]))
         triangles[0, 0] = vertices[0]
         triangles[0, 1] = vertices[1]
         triangles[0, 2] = i1
