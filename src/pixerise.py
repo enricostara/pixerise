@@ -8,7 +8,7 @@ from numba import jit
 import pygame
 from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
 from kernel.transforming_mod import transform_vertex, transform_vertex_normal
-from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere)
+from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere, clip_triangle_and_normals)
 from kernel.culling_mod import cull_back_faces
 from kernel.shading_mod import triangle_flat_shading, triangle_gouraud_shading
 from typing import Tuple
@@ -441,22 +441,43 @@ class Renderer:
                     # Clip against each frustum plane
                     planes = self._viewport.frustum_planes
                     clipped_triangles = [triangle_vertices]
+                    clipped_normals = [triangle_transformed_normals]
                     
-                    for plane in planes:
-                        next_triangles = []
-                        for tri in clipped_triangles:
-                            # Clip triangle against current plane
-                            result_triangles, num_triangles = clip_triangle(tri, plane[0], plane[1])
-                            # Add resulting triangles
-                            for j in range(num_triangles):
-                                next_triangles.append(result_triangles[j])
-                        clipped_triangles = next_triangles
-                        if not clipped_triangles:  # Triangle completely clipped away
-                            break
-                    
-                    # Project and draw the clipped triangles
-                    for clipped_tri in clipped_triangles:
-                        project_and_draw_triangle(clipped_tri, triangle_normals[i], triangle_transformed_normals)
+                    if has_vertex_normals:
+                        for plane in planes:
+                            next_triangles = []
+                            next_normals = []
+                            for tri_idx, tri in enumerate(clipped_triangles):
+                                # Clip triangle against current plane
+                                result_triangles, result_normals, num_triangles = clip_triangle_and_normals(
+                                    tri, clipped_normals[tri_idx], plane[0], plane[1]
+                                )
+                                # Add resulting triangles and their normals
+                                for j in range(num_triangles):
+                                    next_triangles.append(result_triangles[j])
+                                    next_normals.append(result_normals[j])
+                            clipped_triangles = next_triangles
+                            clipped_normals = next_normals
+                            if not clipped_triangles:  # Triangle completely clipped away
+                                break
+                        # Project and draw the clipped triangles
+                        for i, clipped_tri in enumerate(clipped_triangles):
+                            project_and_draw_triangle(clipped_tri, triangle_normals[i], clipped_normals[i])
+
+                    else:
+                        for plane in planes:
+                            next_triangles = []
+                            for tri in clipped_triangles:
+                                clipped, num_triangles = clip_triangle(tri, plane[0])
+                                for j in range(num_triangles):
+                                    next_triangles.append(clipped[j])
+                            clipped_triangles = next_triangles
+                            if not clipped_triangles:  # Triangle completely clipped away
+                                break
+                        # Project and draw the clipped triangles
+                        for clipped_tri in clipped_triangles:
+                            project_and_draw_triangle(clipped_tri, triangle_normals[i], triangle_transformed_normals)
+                            
                 else:
                     # For fully visible instances, still need to check if vertices are behind camera
                     project_and_draw_triangle(triangle_vertices, triangle_normals[i], triangle_transformed_normals)
