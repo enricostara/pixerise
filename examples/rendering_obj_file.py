@@ -27,7 +27,7 @@ def load_obj_file(file_path):
                     face.append(vertex_idx)
                 # Convert polygons to triangles (assuming convex polygons)
                 for i in range(1, len(face)-1):
-                    triangles.append([face[0], face[i], face[i+1]])
+                    triangles.append([face[0], face[i+1], face[i]])  # Invert vertex index order
     
     return np.array(vertices, dtype=float), np.array(triangles, dtype=int)
 
