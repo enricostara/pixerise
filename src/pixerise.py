@@ -7,7 +7,7 @@ import numpy as np
 from numba import jit
 import pygame
 from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
-from kernel.transforming_mod import transform_vertex, transform_vertex_normal, viewport_to_canvas
+from kernel.transforming_mod import transform_vertex, transform_vertex_normal, project_vertex
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere, clip_triangle_and_normals)
 from kernel.culling_mod import cull_back_faces
 from kernel.shading_mod import triangle_flat_shading, triangle_gouraud_shading
@@ -168,22 +168,6 @@ class Renderer:
         self._viewport = viewport
         self._scene = scene
         self._background_color = np.array(background_color, dtype=int)
-
-    def _project_vertex(self, vertex):
-        """Project a vertex from 3D to 2D screen coordinates."""
-        x, y, z = vertex
-        
-        # Early exit if behind camera
-        if z <= 0:
-            return None
-        
-        # Project to viewport
-        x_proj = x / z
-        y_proj = y / z
-        
-        # Convert to canvas coordinates
-        x_canvas, y_canvas = viewport_to_canvas(x_proj, y_proj, self._canvas.width, self._canvas.height, self._viewport.width, self._viewport.height)
-        return x_canvas, y_canvas, z
 
     def draw_line(self, start: Tuple[float, float, float], end: Tuple[float, float, float], color: Tuple[int, int, int]):
         """Draw a line using Bresenham's algorithm with depth buffering.
@@ -356,9 +340,12 @@ class Renderer:
             # Function to project and draw a triangle
             def project_and_draw_triangle(vertices, vertex_normals):
                 # Project vertices to 2D
-                v1 = self._project_vertex(vertices[0])
-                v2 = self._project_vertex(vertices[1])
-                v3 = self._project_vertex(vertices[2])
+                v1 = project_vertex(vertices[0], self._canvas.width, self._canvas.height,
+                                         self._viewport.width, self._viewport.height)
+                v2 = project_vertex(vertices[1], self._canvas.width, self._canvas.height,
+                                         self._viewport.width, self._viewport.height)
+                v3 = project_vertex(vertices[2], self._canvas.width, self._canvas.height,
+                                         self._viewport.width, self._viewport.height)
                 
                 # Skip if any vertex is behind camera
                 if v1 is None or v2 is None or v3 is None:

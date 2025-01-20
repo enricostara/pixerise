@@ -221,6 +221,36 @@ def transform_vertex_normal(normal: np.ndarray,
 
 
 @njit(cache=True)
+def project_vertex(vertex: np.ndarray, canvas_width: float, canvas_height: float,
+                  viewport_width: float, viewport_height: float) -> tuple:
+    """Project a vertex from 3D to 2D screen coordinates.
+    
+    Args:
+        vertex (np.ndarray): 3D vertex coordinates (x, y, z)
+        canvas_width (float): Width of the canvas
+        canvas_height (float): Height of the canvas
+        viewport_width (float): Width of the viewport
+        viewport_height (float): Height of the viewport
+        
+    Returns:
+        tuple: Projected coordinates (x, y, z) in canvas space, or None if vertex is behind camera
+    """
+    x, y, z = vertex
+    
+    # Early exit if behind camera
+    if z <= 0:
+        return None
+    
+    # Project to viewport
+    x_proj = x / z
+    y_proj = y / z
+    
+    # Convert to canvas coordinates
+    x_canvas, y_canvas = viewport_to_canvas(x_proj, y_proj, canvas_width, canvas_height, viewport_width, viewport_height)
+    return (x_canvas, y_canvas, z)
+
+
+@njit(cache=True)
 def viewport_to_canvas(x: float, y: float, canvas_width: float, canvas_height: float,
                       viewport_width: float, viewport_height: float) -> tuple:
     """Transform viewport coordinates to canvas coordinates.
