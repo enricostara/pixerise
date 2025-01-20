@@ -218,3 +218,25 @@ def transform_vertex_normal(normal: np.ndarray,
         z /= length
     
     return np.array([x, y, z])
+
+
+@njit(cache=True)
+def viewport_to_canvas(x: float, y: float, canvas_width: float, canvas_height: float,
+                      viewport_width: float, viewport_height: float) -> tuple:
+    """Transform viewport coordinates to canvas coordinates.
+    
+    Converts coordinates from viewport space to canvas space by applying
+    appropriate scaling based on the relative dimensions of viewport and canvas.
+    
+    Args:
+        x (float): X-coordinate in viewport space
+        y (float): Y-coordinate in viewport space
+        canvas_width (float): Width of the canvas
+        canvas_height (float): Height of the canvas
+        viewport_width (float): Width of the viewport
+        viewport_height (float): Height of the viewport
+        
+    Returns:
+        tuple: Transformed coordinates in canvas space (x, y)
+    """
+    return (x * canvas_width / viewport_width, y * canvas_height / viewport_height)

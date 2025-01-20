@@ -7,7 +7,7 @@ import numpy as np
 from numba import jit
 import pygame
 from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
-from kernel.transforming_mod import transform_vertex, transform_vertex_normal
+from kernel.transforming_mod import transform_vertex, transform_vertex_normal, viewport_to_canvas
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere, clip_triangle_and_normals)
 from kernel.culling_mod import cull_back_faces
 from kernel.shading_mod import triangle_flat_shading, triangle_gouraud_shading
@@ -111,10 +111,10 @@ class ViewPort:
             plane_distance (float): Distance to the near plane from the camera
             canvas (Canvas): Target canvas for rendering
         """
-        self._width = size[0]
-        self._height = size[1]
-        self._plane_distance = max(1.0, plane_distance) # Ensure positive plane distance
-        self._canvas = canvas
+        self.width = size[0]
+        self.height = size[1]
+        self.plane_distance = max(1.0, plane_distance) # Ensure positive plane distance
+        self.canvas = canvas
         
         # Initialize frustum planes for view frustum culling
         self._calculate_frustum_planes()
@@ -130,15 +130,15 @@ class ViewPort:
             - Z-axis points away from the viewer (into the screen)
         """
         # Calculate half-dimensions at the near plane for plane equations
-        half_width = self._width / 2
-        half_height = self._height / 2
+        half_width = self.width / 2
+        half_height = self.height / 2
         
         # Calculate plane normals with correct orientation (pointing inward)
         # Each normal is computed based on the plane's orientation in view space
-        self._left_plane = np.array([1, 0, half_width / self._plane_distance], dtype=np.float32)
-        self._right_plane = np.array([-1, 0, half_width / self._plane_distance], dtype=np.float32)
-        self._top_plane = np.array([0, -1, half_height / self._plane_distance], dtype=np.float32)
-        self._bottom_plane = np.array([0, 1, half_height / self._plane_distance], dtype=np.float32)
+        self._left_plane = np.array([1, 0, half_width / self.plane_distance], dtype=np.float32)
+        self._right_plane = np.array([-1, 0, half_width / self.plane_distance], dtype=np.float32)
+        self._top_plane = np.array([0, -1, half_height / self.plane_distance], dtype=np.float32)
+        self._bottom_plane = np.array([0, 1, half_height / self.plane_distance], dtype=np.float32)
         self._near_plane = np.array([0, 0, 1], dtype=np.float32)  # Points towards viewer
         
         # Normalize all plane normals for consistent distance calculations
@@ -156,23 +156,8 @@ class ViewPort:
             (self._right_plane, 0),
             (self._top_plane, 0),
             (self._bottom_plane, 0),
-            (self._near_plane, -self._plane_distance)
+            (self._near_plane, -self.plane_distance)
         ]
-    
-    def viewport_to_canvas(self, x: float, y: float) -> Tuple[float, float]:
-        """Transform viewport coordinates to canvas coordinates.
-        
-        Converts coordinates from viewport space to canvas space by applying
-        appropriate scaling based on the relative dimensions of viewport and canvas.
-        
-        Args:
-            x (float): X-coordinate in viewport space
-            y (float): Y-coordinate in viewport space
-            
-        Returns:
-            Tuple[float, float]: Transformed coordinates in canvas space
-        """
-        return x * self._canvas.width / self._width, y * self._canvas.height / self._height
 
 
 class Renderer:
@@ -197,7 +182,7 @@ class Renderer:
         y_proj = y / z
         
         # Convert to canvas coordinates
-        x_canvas, y_canvas = self._viewport.viewport_to_canvas(x_proj, y_proj)
+        x_canvas, y_canvas = viewport_to_canvas(x_proj, y_proj, self._canvas.width, self._canvas.height, self._viewport.width, self._viewport.height)
         return x_canvas, y_canvas, z
 
     def draw_line(self, start: Tuple[float, float, float], end: Tuple[float, float, float], color: Tuple[int, int, int]):
