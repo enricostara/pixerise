@@ -184,28 +184,6 @@ class Renderer:
         self._scene = scene
         self._background_color = np.array(background_color, dtype=int)
 
-    def _transform_vertex(self, vertex: np.ndarray, transform: dict) -> np.ndarray:
-        """Apply transformation to a vertex using homogeneous coordinates."""
-        # Get transform components
-        translation = transform.get('translation', np.zeros(3))
-        rotation = transform.get('rotation', np.zeros(3))
-        scale = transform.get('scale', np.ones(3))
-        
-        # Get camera transform if present
-        has_camera = 'camera' in self._scene
-        if has_camera:
-            camera_transform = self._scene['camera'].get('transform', {})
-            camera_translation = camera_transform.get('translation', np.zeros(3))
-            camera_rotation = camera_transform.get('rotation', np.zeros(3))
-        else:
-            camera_translation = np.zeros(3)
-            camera_rotation = np.zeros(3)
-        
-        return transform_vertex(
-            vertex, translation, rotation, scale,
-            camera_translation, camera_rotation, has_camera
-        )
-
     def _project_vertex(self, vertex):
         """Project a vertex from 3D to 2D screen coordinates."""
         x, y, z = vertex
@@ -332,6 +310,20 @@ class Renderer:
             transform = instance.get('transform', {})
             color = instance.get('color', (255, 255, 255))
             
+            # Get transform components
+            translation = transform.get('translation', np.zeros(3))
+            rotation = transform.get('rotation', np.zeros(3))
+            scale = transform.get('scale', np.ones(3))
+            
+            # Get camera transform if present
+            has_camera = 'camera' in self._scene
+            camera_translation = np.zeros(3)
+            camera_rotation = np.zeros(3)
+            if has_camera:
+                camera_transform = self._scene['camera'].get('transform', {})
+                camera_translation = camera_transform.get('translation', np.zeros(3))
+                camera_rotation = camera_transform.get('rotation', np.zeros(3))
+            
             # Transform vertices
             transformed_vertices = []
             transformed_normals = []  # Store transformed normals
@@ -339,14 +331,13 @@ class Renderer:
             
             for i, vertex in enumerate(vertices):
                 # Apply model transform to vertex
-                transformed = self._transform_vertex(vertex, transform)
+                transformed = transform_vertex(vertex, translation, rotation, scale,
+                                            camera_translation, camera_rotation, has_camera)
                 transformed_vertices.append(transformed)
                 
                 # Transform normal using rotation only if available
                 if has_vertex_normals:
                     normal = vertex_normals[i]
-                    rotation = transform.get('rotation', np.zeros(3))
-                    camera_rotation = camera_transform.get('rotation', np.zeros(3))
                     transformed_normal = transform_vertex_normal(normal, rotation, camera_rotation, True)
                     transformed_normals.append(transformed_normal)
             
