@@ -6,30 +6,96 @@ from pixerise import ShadingMode, Canvas, ViewPort, Renderer
 
 
 def load_obj_file(file_path):
-    """Load vertices and triangles from an OBJ file."""
+    """Load vertices, vertex normals, and faces from an OBJ file, organizing them into groups.
+    
+    The function supports:
+    - Vertex positions (v)
+    - Vertex normals (vn)
+    - Face definitions (f)
+    - Groups (g) and objects (o)
+    
+    Returns:
+        dict: A dictionary containing model data with groups
+    """
     vertices = []
-    triangles = []
+    vertex_normals = []
+    groups = {}
+    current_group = 'default'
+    groups[current_group] = {
+        'vertices': [],
+        'triangles': [],
+        'vertex_normals': []
+    }
+    
+    vertex_map = {}  # Maps (pos_idx, normal_idx) to new vertex index
     
     with open(file_path, 'r') as f:
-        for line in f:
-            if line.startswith('v '):  # Vertex
-                # Split line and convert coordinates to float
-                _, x, y, z = line.split()
-                vertices.append([float(x), float(y), float(z)])
-            elif line.startswith('f '):  # Face
-                # Split line and get vertex indices (OBJ indices start at 1)
-                # Handle both v and v/vt/vn formats
-                face = []
-                parts = line.split()[1:]  # Skip the 'f' at the start
-                for part in parts:
-                    # Get the vertex index (before any '/' character)
-                    vertex_idx = int(part.split('/')[0]) - 1  # Subtract 1 for 0-based indexing
-                    face.append(vertex_idx)
-                # Convert polygons to triangles (assuming convex polygons)
-                for i in range(1, len(face)-1):
-                    triangles.append([face[0], face[i+1], face[i]])  # Invert vertex index order
+        for line in f.readlines():
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+                
+            parts = line.split()
+            if not parts:
+                continue
+                
+            if parts[0] == 'v':  # Vertex position
+                vertices.append([float(x) for x in parts[1:4]])
+            
+            elif parts[0] == 'vn':  # Vertex normal
+                vertex_normals.append([float(x) for x in parts[1:4]])
+            
+            elif parts[0] in ('g', 'o'):  # Group or object
+                current_group = ' '.join(parts[1:]) or 'default'
+                if current_group not in groups:
+                    groups[current_group] = {
+                        'vertices': [],
+                        'triangles': [],
+                        'vertex_normals': []
+                    }
+                    vertex_map = {}  # Reset vertex map for new group
+            
+            elif parts[0] == 'f':  # Face
+                # Get vertex data for each face vertex
+                face_vertices = []
+                
+                for vert in parts[1:]:
+                    # Parse vertex indices
+                    v_data = vert.split('/')
+                    v_idx = int(v_data[0]) - 1  # OBJ is 1-based
+                    vn_idx = int(v_data[2]) - 1 if len(v_data) > 2 and v_data[2] else -1
+                    
+                    # Create unique vertex if needed
+                    vert_key = (v_idx, vn_idx)
+                    if vert_key not in vertex_map:
+                        new_idx = len(groups[current_group]['vertices'])
+                        vertex_map[vert_key] = new_idx
+                        groups[current_group]['vertices'].append(vertices[v_idx])
+                        if vn_idx >= 0:
+                            groups[current_group]['vertex_normals'].append(vertex_normals[vn_idx])
+                    
+                    face_vertices.append(vertex_map[vert_key])
+                
+                # Triangulate face
+                for i in range(1, len(face_vertices) - 1):
+                    groups[current_group]['triangles'].append([
+                        face_vertices[0],
+                        face_vertices[i + 1],
+                        face_vertices[i]
+                    ])
     
-    return np.array(vertices, dtype=float), np.array(triangles, dtype=int)
+    # Convert lists to numpy arrays and clean up empty groups
+    result = {'groups': {}}
+    for group_name, group_data in groups.items():
+        if len(group_data['triangles']) > 0:  # Only keep groups with geometry
+            result['groups'][group_name] = {
+                'vertices': np.array(group_data['vertices'], dtype=np.float32),
+                'triangles': np.array(group_data['triangles'], dtype=np.int32),
+                'vertex_normals': np.array(group_data['vertex_normals'], dtype=np.float32) if group_data['vertex_normals'] else []
+            }
+            print(group_name, len(group_data['triangles']), len(groups))
+    
+    return result
 
 
 def display(image: Canvas, scene, renderer):
@@ -149,14 +215,17 @@ def main():
 
     # Load Tank model
     obj_path = Path(__file__).parent / 'tank.obj'
-    vertices, triangles = load_obj_file(obj_path)
+    model_data = load_obj_file(obj_path)
     
     # Calculate model scale to fit viewport
-    max_coord = np.max(np.abs(vertices))
-    # scale_factor = 2.0 / max_coord  # Scale to fit in a 2x2x2 box
+    # Find max coordinate across all groups
+    max_coord = max(
+        np.max(np.abs(group_data['vertices']))
+        for group_data in model_data['groups'].values()
+    )
     scale_factor = 0.1
 
-    # Define scene with Tank model
+    # Create scene with camera and directional light
     scene = {
         'camera': {
             'transform': {
@@ -172,10 +241,7 @@ def main():
             }
         },
         'models': {
-            'tank': {
-                'vertices': vertices,
-                'triangles': triangles
-            }
+            'tank': model_data
         },
         'instances': [
             {
