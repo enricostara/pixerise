@@ -4,8 +4,6 @@ This module contains the main classes for rendering: Canvas, ViewPort, and Rende
 """
 
 import numpy as np
-from numba import jit
-import pygame
 from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
 from kernel.transforming_mod import transform_vertex, transform_vertex_normal, project_vertex
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere, clip_triangle_and_normals)
@@ -252,11 +250,6 @@ class Renderer:
         # Clear canvas
         self._canvas.clear(tuple(self._background_color))
 
-        # Get camera transform if present
-        camera_transform = scene.get('camera', {}).get('transform', {})
-        camera_pos = camera_transform.get('position', [0, 0, 0])
-        camera_pos = np.array(camera_pos, dtype=np.float32)
-
         # Pre-process models into a dictionary of tuples for faster lookup
         models_dict = {}
         for model_name, model in scene.get('models', {}).items():
@@ -391,9 +384,8 @@ class Renderer:
                 # Convert triangle indices to numpy array
                 triangles_array = np.array(triangles, dtype=np.int32)
                 # Perform backface culling and get normals
-                visible_triangles, triangle_normals = cull_back_faces(vertices_array, triangles_array, camera_pos)
-                # Filter out invisible triangles
-                triangles_array = triangles_array[visible_triangles]
+                triangles_array, triangle_normals = cull_back_faces(vertices_array, triangles_array)
+
 
                 # Draw triangles
                 for i, triangle in enumerate(triangles_array):
