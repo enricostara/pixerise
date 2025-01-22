@@ -163,10 +163,9 @@ class ViewPort:
 class Renderer:
     """Main renderer class that handles rendering of 3D scenes."""
     
-    def __init__(self, canvas: Canvas, viewport: ViewPort, scene: dict, background_color=(32, 32, 32)):
+    def __init__(self, canvas: Canvas, viewport: ViewPort, background_color=(32, 32, 32)):
         self._canvas = canvas
         self._viewport = viewport
-        self._scene = scene
         self._background_color = np.array(background_color, dtype=int)
 
     def draw_line(self, start: Tuple[float, float, float], end: Tuple[float, float, float], color: Tuple[int, int, int]):
@@ -301,11 +300,11 @@ class Renderer:
             scale = transform.get('scale', np.ones(3))
             
             # Get camera transform if present
-            has_camera = 'camera' in self._scene
+            has_camera = 'camera' in scene
             camera_translation = np.zeros(3)
             camera_rotation = np.zeros(3)
             if has_camera:
-                camera_transform = self._scene['camera'].get('transform', {})
+                camera_transform = scene['camera'].get('transform', {})
                 camera_translation = camera_transform.get('translation', np.zeros(3))
                 camera_rotation = camera_transform.get('rotation', np.zeros(3))
             

@@ -285,7 +285,7 @@ def main():
     scene['models']['sphere_flat']['triangles'] = np.array(triangles, dtype=np.int32)
     
     # Create renderer
-    renderer = Renderer(canvas, viewport, scene)
+    renderer = Renderer(canvas, viewport)
     
     # Display the result with the scene and renderer
     display(canvas, scene, renderer)

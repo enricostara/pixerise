@@ -56,10 +56,9 @@ def main():
     width, height = 800, 600
     canvas = Canvas((width, height))
     viewport = ViewPort((width, height), 1, canvas)
-    scene = {}
     
     # Create renderer
-    renderer = Renderer(canvas, viewport, scene)
+    renderer = Renderer(canvas, viewport)
     
     # Define clipping planes 
     angle = np.pi/2.3  # 30 degrees

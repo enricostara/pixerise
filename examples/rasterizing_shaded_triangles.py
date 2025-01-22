@@ -24,10 +24,9 @@ def main():
     width, height = 800, 600
     canvas = Canvas((width, height))
     viewport = ViewPort((width, height), 1, canvas)
-    scene = {}
     
     # Create renderer
-    renderer = Renderer(canvas, viewport, scene)
+    renderer = Renderer(canvas, viewport)
     
     # Draw a colorful triangle pattern with overlapping triangles at different depths
     center_x, center_y = (0, 0)

@@ -24,10 +24,9 @@ def main():
     width, height = 800, 600
     canvas = Canvas((width, height))
     viewport = ViewPort((width, height), 1, canvas)
-    scene = {}  # Empty scene for now
     
     # Create renderer
-    renderer = Renderer(canvas, viewport, scene)
+    renderer = Renderer(canvas, viewport)
     
     # Draw some example lines
     # Draw a colorful star pattern
