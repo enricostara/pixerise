@@ -9,8 +9,7 @@ class TestTriangleDrawing(unittest.TestCase):
         self.height = 100
         self.canvas = Canvas((self.width, self.height))
         self.viewport = ViewPort((self.width, self.height), 1, self.canvas)
-        self.scene = {}
-        self.renderer = Renderer(self.canvas, self.viewport, self.scene)
+        self.renderer = Renderer(self.canvas, self.viewport)
         self.color = (255, 0, 0)  # Red color for visibility
 
     def tearDown(self):

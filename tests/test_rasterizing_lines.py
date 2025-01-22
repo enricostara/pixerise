@@ -9,9 +9,8 @@ class TestLineDrawing:
         """Setup test environment with a small canvas for easier verification"""
         canvas = Canvas((10, 10))  # Small 10x10 canvas for testing
         viewport = ViewPort((10, 10), 1, canvas)
-        scene = {}
-        renderer = Renderer(canvas, viewport, scene)
-        return renderer, canvas
+        renderer = Renderer(canvas, viewport)
+        return canvas, viewport, renderer
 
     def verify_pixel(self, canvas, x, y, expected_color):
         """Helper method to verify pixel color at given coordinates"""
@@ -22,7 +21,7 @@ class TestLineDrawing:
 
     def test_horizontal_line(self, setup):
         """Test drawing a horizontal line"""
-        renderer, canvas = setup
+        canvas, viewport, renderer = setup
         color = (255, 0, 0)
         renderer.draw_line((-2, 0, 0.0), (2, 0, 0.0), color)
         
@@ -32,7 +31,7 @@ class TestLineDrawing:
 
     def test_vertical_line(self, setup):
         """Test drawing a vertical line"""
-        renderer, canvas = setup
+        canvas, viewport, renderer = setup
         color = (0, 255, 0)
         renderer.draw_line((0, -2, 0.0), (0, 2, 0.0), color)
         
@@ -42,7 +41,7 @@ class TestLineDrawing:
 
     def test_diagonal_line(self, setup):
         """Test drawing a diagonal line"""
-        renderer, canvas = setup
+        canvas, viewport, renderer = setup
         color = (0, 0, 255)
         renderer.draw_line((-2, -2, 0.0), (2, 2, 0.0), color)
         
@@ -52,7 +51,7 @@ class TestLineDrawing:
 
     def test_single_point_line(self, setup):
         """Test drawing a line where start and end points are the same"""
-        renderer, canvas = setup
+        canvas, viewport, renderer = setup
         color = (255, 255, 0)
         point = (1, 1, 0.0)
         renderer.draw_line(point, point, color)
@@ -68,7 +67,7 @@ class TestLineDrawing:
 
     def test_steep_line(self, setup):
         """Test drawing a steep line (|dy| > |dx|)"""
-        renderer, canvas = setup
+        canvas, viewport, renderer = setup
         color = (255, 0, 255)
         renderer.draw_line((1, -2, 0.0), (2, 2, 0.0), color)
         
@@ -79,7 +78,7 @@ class TestLineDrawing:
 
     def test_negative_slope_line(self, setup):
         """Test drawing a line with negative slope"""
-        renderer, canvas = setup
+        canvas, viewport, renderer = setup
         color = (0, 255, 255)
         renderer.draw_line((-2, 2, 0.0), (2, -2, 0.0), color)
         
@@ -89,7 +88,7 @@ class TestLineDrawing:
 
     def test_out_of_bounds_line(self, setup):
         """Test drawing a line that extends beyond canvas boundaries"""
-        renderer, canvas = setup
+        canvas, viewport, renderer = setup
         color = (128, 128, 128)
         # Draw line from far left to far right
         renderer.draw_line((-20, 0, 0.0), (20, 0, 0.0), color)
@@ -100,7 +99,7 @@ class TestLineDrawing:
 
     def test_zero_length_line(self, setup):
         """Test drawing a zero-length line (point)"""
-        renderer, canvas = setup
+        canvas, viewport, renderer = setup
         color = (200, 200, 200)
         renderer.draw_line((0, 0, 0.0), (0, 0, 0.0), color)
         
@@ -109,7 +108,7 @@ class TestLineDrawing:
         
     def test_depth_test(self, setup):
         """Test depth testing for overlapping lines"""
-        renderer, canvas = setup
+        canvas, viewport, renderer = setup
         color1 = (255, 0, 0)  # Red line in front
         color2 = (0, 255, 0)  # Green line behind
         
@@ -125,7 +124,7 @@ class TestLineDrawing:
             
     def test_depth_interpolation(self, setup):
         """Test z-value interpolation along a line"""
-        renderer, canvas = setup
+        canvas, viewport, renderer = setup
         color = (255, 0, 0)
         
         # Draw a line with varying depth

@@ -10,12 +10,12 @@ class TestTransformVertex:
         """Setup test environment"""
         canvas = Canvas((100, 100))
         viewport = ViewPort((100, 100), 1, canvas)
-        scene = {}
-        renderer = Renderer(canvas, viewport, scene)
-        return renderer
+        renderer = Renderer(canvas, viewport)
+        return canvas, viewport, renderer
 
     def test_identity_transform(self, setup):
         """Test vertex transformation with no transformations applied"""
+        canvas, viewport, renderer = setup
         vertex = np.array([1.0, 2.0, 3.0])
         transform = {}  # Empty transform should act as identity
         
@@ -28,6 +28,7 @@ class TestTransformVertex:
 
     def test_translation(self, setup):
         """Test translation transformation"""
+        canvas, viewport, renderer = setup
         vertex = np.array([1.0, 2.0, 3.0])
         transform = {
             'translation': np.array([10.0, 20.0, 30.0])
@@ -43,6 +44,7 @@ class TestTransformVertex:
 
     def test_scale(self, setup):
         """Test scale transformation"""
+        canvas, viewport, renderer = setup
         vertex = np.array([1.0, 2.0, 3.0])
         transform = {
             'scale': np.array([2.0, 3.0, 4.0])
@@ -58,6 +60,7 @@ class TestTransformVertex:
 
     def test_rotation_x(self, setup):
         """Test rotation around X axis"""
+        canvas, viewport, renderer = setup
         vertex = np.array([1.0, 1.0, 0.0])
         transform = {
             'rotation': np.array([np.pi/2, 0.0, 0.0])  # 90 degrees around X
@@ -74,6 +77,7 @@ class TestTransformVertex:
 
     def test_rotation_y(self, setup):
         """Test rotation around Y axis"""
+        canvas, viewport, renderer = setup
         vertex = np.array([1.0, 1.0, 0.0])
         transform = {
             'rotation': np.array([0.0, np.pi/2, 0.0])  # 90 degrees around Y
@@ -90,6 +94,7 @@ class TestTransformVertex:
 
     def test_rotation_z(self, setup):
         """Test rotation around Z axis"""
+        canvas, viewport, renderer = setup
         vertex = np.array([1.0, 0.0, 1.0])
         transform = {
             'rotation': np.array([0.0, 0.0, np.pi/2])  # 90 degrees around Z
@@ -106,6 +111,7 @@ class TestTransformVertex:
 
     def test_combined_transform(self, setup):
         """Test combination of translation, rotation, and scale"""
+        canvas, viewport, renderer = setup
         vertex = np.array([1.0, 0.0, 0.0])
         transform = {
             'translation': np.array([1.0, 1.0, 1.0]),
@@ -124,6 +130,7 @@ class TestTransformVertex:
 
     def test_camera_transform(self, setup):
         """Test transformation with camera"""
+        canvas, viewport, renderer = setup
         vertex = np.array([0.0, 0.0, 1.0])
         transform = {'translation': np.array([1.0, 0.0, 0.0])}
 
