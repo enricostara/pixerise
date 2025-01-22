@@ -174,6 +174,7 @@ def main():
         'instances': [
             {
                 'model': 'cube',
+                'name': 'left',
                 'transform': {
                     'translation': np.array([0, 1, 8], dtype=float),
                     'rotation': np.array([np.pi/6, np.pi/4, 0], dtype=float),  # Rotated for better shading visibility
@@ -183,6 +184,7 @@ def main():
             },
             {
                 'model': 'sphere_flat',  # Changed from cube to sphere
+                'name': 'middle',
                 'transform': {
                     'translation': np.array([2, 1, 8], dtype=float),
                     'rotation': np.array([0, 0, 0], dtype=float),  # Sphere rotation less important
@@ -192,6 +194,7 @@ def main():
             },
             {
                 'model': 'sphere',  # Changed from cube to sphere
+                'name': 'right',
                 'transform': {
                     'translation': np.array([4, 1, 8], dtype=float),
                     'rotation': np.array([0, 0, 0], dtype=float),  # Sphere rotation less important

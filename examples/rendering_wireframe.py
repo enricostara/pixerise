@@ -158,6 +158,7 @@ def main():
         'instances': [
             {
                 'model': 'cube',
+                'name': 'left',
                 'transform': {
                     'translation': np.array([-2, 0, 7], dtype=float),  # 2 units left, 7 units forward
                     'rotation': np.array([0, 0, 0], dtype=float),      # rotation angles in radians (x, y, z)
@@ -167,6 +168,7 @@ def main():
             },
             {
                 'model': 'cube',
+                'name': 'right',
                 'transform': {
                     'translation': np.array([2, 1, 8], dtype=float),   # 2 units right, 1 up, 8 forward
                     'rotation': np.array([0, np.pi/4, 0], dtype=float), # rotated 45 degrees around Y axis

@@ -246,6 +246,7 @@ def main():
         'instances': [
             {
                 'model': 'tank',
+                'name': 'tank',
                 'transform': {
                     'translation': np.array([0, 0, 0], dtype=float),
                     'rotation': np.array([0, np.pi, 0], dtype=float),  # Rotate to face camera
