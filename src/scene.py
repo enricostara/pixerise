@@ -64,7 +64,7 @@ class Model:
 @dataclass(slots=True)
 class Instance:
     """An instance of a model with transformation and color properties."""
-    model_name: str
+    model: str
     translation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
     rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
     scale: np.ndarray = field(default_factory=lambda: np.ones(3, dtype=np.float32))
@@ -85,16 +85,30 @@ class Instance:
     @classmethod
     def from_dict(cls, data: dict) -> 'Instance':
         """Create an Instance from a dictionary representation."""
-        instance = cls(model_name=data['model'])
-        if 'translation' in data:
-            instance.translation = np.array(data['translation'], dtype=np.float32)
-        if 'rotation' in data:
-            instance.rotation = np.array(data['rotation'], dtype=np.float32)
-        if 'scale' in data:
-            instance.scale = np.array(data['scale'], dtype=np.float32)
+        instance = cls(model=data['model'])
+        if 'transform' in data:
+            transform = data['transform']
+            if 'translation' in transform:
+                instance.translation = np.array(transform['translation'], dtype=np.float32)
+            if 'rotation' in transform:
+                instance.rotation = np.array(transform['rotation'], dtype=np.float32)
+            if 'scale' in transform:
+                instance.scale = np.array(transform['scale'], dtype=np.float32)
         if 'color' in data:
             instance.color = tuple(data['color'])
         return instance
+
+    def to_dict(self) -> dict:
+        """Convert the Instance to a dictionary representation."""
+        return {
+            'model': self.model,
+            'transform': {
+                'translation': self.translation.tolist(),
+                'rotation': self.rotation.tolist(),
+                'scale': self.scale.tolist()
+            },
+            'color': self.color
+        }
 
 
 @dataclass(slots=True)
@@ -148,7 +162,7 @@ class DirectionalLight:
 class Scene:
     """A 3D scene containing models, instances, camera settings, and lights."""
     models: Dict[str, Model] = field(default_factory=dict)
-    instances: List[Instance] = field(default_factory=list)
+    instances: Dict[str, Instance] = field(default_factory=dict)
     camera: Camera = field(default_factory=Camera)
     directional_light: DirectionalLight = field(default_factory=lambda: DirectionalLight(direction=np.array([0, 0, -1], dtype=np.float32)))
 
@@ -167,9 +181,25 @@ class Scene:
         """
         return self.models.get(model_name)
 
-    def add_instance(self, instance: Instance) -> None:
-        """Add a model instance to the scene."""
-        self.instances.append(instance)
+    def add_instance(self, name: str, instance: Instance) -> None:
+        """Add a model instance to the scene.
+        
+        Args:
+            name: Unique name for the instance
+            instance: Instance to add
+        """
+        self.instances[name] = instance
+
+    def get_instance(self, instance_name: str) -> Optional[Instance]:
+        """Get an instance by name.
+        
+        Args:
+            instance_name: Name of the instance to get
+            
+        Returns:
+            Instance if found, None otherwise
+        """
+        return self.instances.get(instance_name)
 
     def set_camera(self, camera: Camera) -> None:
         """Set the scene's camera."""
@@ -191,7 +221,8 @@ class Scene:
         
         # Add instances
         for instance_data in data.get('instances', []):
-            scene.add_instance(Instance.from_dict(instance_data))
+            name = instance_data.get('name', f"instance_{len(scene.instances)}")
+            scene.add_instance(name, Instance.from_dict(instance_data))
         
         # Set camera if present
         if 'camera' in data:
@@ -207,7 +238,10 @@ class Scene:
         """Convert the Scene to a dictionary representation."""
         return {
             'models': {name: model.to_dict() for name, model in self.models.items()},
-            'instances': [instance.to_dict() for instance in self.instances],
+            'instances': [
+                {**instance.to_dict(), 'name': name}
+                for name, instance in self.instances.items()
+            ],
             'camera': self.camera.to_dict(),
             'lights': {
                 'directional': self.directional_light.to_dict()
