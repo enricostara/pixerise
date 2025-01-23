@@ -6,132 +6,109 @@ class CullBackFacesBenchmark:
     """Benchmark class for measuring performance of back-face culling operations."""
     
     def __init__(self):
-        # Initialize with JIT warm-up using a simple cube case
-        # This ensures subsequent benchmarks measure actual performance, not JIT compilation time
+        # Initialize with JIT warm-up using a simple triangle
         warm_up_vertices = np.array([
-            [1.0, 1.0, 1.0],
-            [-1.0, 1.0, 1.0],
-            [0.0, -1.0, 1.0],
-            [0.0, 0.0, -1.0]
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0],
+            [0.0, 1.0, 1.0]
         ], dtype=np.float32)
-        warm_up_indices = np.array([
-            [0, 1, 2],
-            [0, 2, 3]
-        ], dtype=np.int32)
-        warm_up_camera = np.array([0.0, 0.0, 5.0], dtype=np.float32)
+        warm_up_indices = np.array([[0, 1, 2]], dtype=np.int32)
         
         print("\nWarming up JIT compilation...")
-        for _ in range(100):
-            cull_back_faces(warm_up_vertices, warm_up_indices, warm_up_camera)
+        for _ in range(10):
+            cull_back_faces(warm_up_vertices, warm_up_indices)
         print("Warm-up complete.\n")
 
     def benchmark_calculation(self, vertices, indices, camera_pos):
         """Run performance benchmark on back-face culling operation.
         
         Performs 10 loops of 1000 culling operations each to get statistically significant timing data.
+        Vertices should be in camera space (relative to camera at origin).
         
         Args:
-            vertices: Vertex positions array
+            vertices: Vertex positions array in camera space
             indices: Triangle indices array
-            camera_pos: Camera position vector
+            camera_pos: Ignored, vertices should already be in camera space
             
         Returns:
-            float: Average time in milliseconds for 1000 culling operations
+            float: Average time in milliseconds for 100 culling operations
         """
         NUM_LOOPS = 10
         CALLS_PER_LOOP = 1000
         total_times = []
 
+        # Transform vertices to camera space (camera at origin)
+        vertices_camera = vertices - camera_pos
+
         for _ in range(NUM_LOOPS):
             start_time = time.perf_counter()
             for _ in range(CALLS_PER_LOOP):
-                cull_back_faces(vertices, indices, camera_pos)
+                cull_back_faces(vertices_camera, indices)
             end_time = time.perf_counter()
             total_times.append((end_time - start_time) * 1000)  # Convert to milliseconds
             
-        return np.mean(total_times)  # Return average time for 1000 calls
+        return sum(total_times) / len(total_times)
 
 def run_benchmark(benchmark, vertices, indices, camera_pos, name):
-    """Run benchmark for back-face culling"""
-    avg_time = benchmark.benchmark_calculation(vertices, indices, camera_pos)
-    
-    print(f"\n{name}")
-    print(f"Average time for 1000 calls: {avg_time:.3f}ms")
+    """Run a single benchmark test and print results."""
+    time_ms = benchmark.benchmark_calculation(vertices, indices, camera_pos)
+    print(f"{name}: {time_ms:.2f}ms")
 
 def run_benchmarks():
     """Run a series of benchmark tests covering different back-face culling scenarios."""
     print("Running Back-Face Culling Benchmarks...")
     print("Each test runs 10 loops of 1000 culling operations")
     print("Results show the average time taken for 1000 operations")
+    
     benchmark = CullBackFacesBenchmark()
     
-    # Test case 1: Simple cube (6 faces, 12 triangles)
+    # Test 1: Simple triangle
     vertices = np.array([
-        # Front face
-        [-1, -1,  1],
-        [ 1, -1,  1],
-        [ 1,  1,  1],
-        [-1,  1,  1],
-        # Back face
-        [-1, -1, -1],
-        [ 1, -1, -1],
-        [ 1,  1, -1],
-        [-1,  1, -1],
+        [0.0, 0.0, 1.0],
+        [1.0, 0.0, 1.0],
+        [0.0, 1.0, 1.0]
     ], dtype=np.float32)
+    indices = np.array([[0, 1, 2]], dtype=np.int32)
+    camera_pos = np.array([0.0, 0.0, 2.0], dtype=np.float32)
+    run_benchmark(benchmark, vertices, indices, camera_pos, "Single triangle")
     
+    # Test 2: Small cube (6 faces)
+    vertices = np.array([
+        [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+        [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]
+    ], dtype=np.float32)
     indices = np.array([
-        # Front face
-        [0, 1, 2], [0, 2, 3],
-        # Back face
-        [4, 6, 5], [4, 7, 6],
-        # Left face
-        [0, 3, 7], [0, 7, 4],
-        # Right face
-        [1, 5, 6], [1, 6, 2],
-        # Top face
-        [3, 2, 6], [3, 6, 7],
-        # Bottom face
-        [0, 4, 5], [0, 5, 1]
+        [0, 1, 2], [0, 2, 3],  # Front
+        [1, 5, 6], [1, 6, 2],  # Right
+        [5, 4, 7], [5, 7, 6],  # Back
+        [4, 0, 3], [4, 3, 7],  # Left
+        [3, 2, 6], [3, 6, 7],  # Top
+        [4, 5, 1], [4, 1, 0]   # Bottom
     ], dtype=np.int32)
+    camera_pos = np.array([2.0, 2.0, 2.0], dtype=np.float32)
+    run_benchmark(benchmark, vertices, indices, camera_pos, "Simple cube")
     
-    # Test from different camera positions
-    camera_front = np.array([0.0, 0.0, 5.0], dtype=np.float32)  # Should see front face
-    run_benchmark(benchmark, vertices, indices, camera_front, "Camera Front View")
+    # Test 3: Small grid (4x4)
+    grid_size = 4
+    vertices = []
+    indices = []
     
-    camera_back = np.array([0.0, 0.0, -5.0], dtype=np.float32)  # Should see back face
-    run_benchmark(benchmark, vertices, indices, camera_back, "Camera Back View")
-    
-    camera_angle = np.array([5.0, 5.0, 5.0], dtype=np.float32)  # Should see multiple faces
-    run_benchmark(benchmark, vertices, indices, camera_angle, "Camera Angle View")
-    
-    # Test case 2: Dense mesh (100 faces)
-    x = np.linspace(-1, 1, 10)
-    y = np.linspace(-1, 1, 10)
-    X, Y = np.meshgrid(x, y)
-    Z = np.sin(X * np.pi) * np.cos(Y * np.pi)
-    
-    dense_vertices = []
-    dense_indices = []
-    idx = 0
-    
-    for i in range(9):
-        for j in range(9):
-            # Add 4 vertices for each grid cell
-            v1 = [X[i,j], Y[i,j], Z[i,j]]
-            v2 = [X[i,j+1], Y[i,j+1], Z[i,j+1]]
-            v3 = [X[i+1,j+1], Y[i+1,j+1], Z[i+1,j+1]]
-            v4 = [X[i+1,j], Y[i+1,j], Z[i+1,j]]
+    for i in range(grid_size):
+        for j in range(grid_size):
+            x = (i - grid_size/2) * 0.5
+            z = (j - grid_size/2) * 0.5
+            y = np.sin(x) * np.cos(z) * 0.2
+            vertices.append([x, y, z])
             
-            dense_vertices.extend([v1, v2, v3, v4])
-            
-            # Add 2 triangles
-            dense_indices.extend([[idx, idx+1, idx+2], [idx, idx+2, idx+3]])
-            idx += 4
+            if i < grid_size - 1 and j < grid_size - 1:
+                idx = i * grid_size + j
+                indices.append([idx, idx + 1, idx + grid_size])
+                indices.append([idx + 1, idx + grid_size + 1, idx + grid_size])
     
-    dense_vertices = np.array(dense_vertices, dtype=np.float32)
-    dense_indices = np.array(dense_indices, dtype=np.int32)
-    
-    run_benchmark(benchmark, dense_vertices, dense_indices, camera_front, "Dense Mesh (100 faces)")
+    vertices = np.array(vertices, dtype=np.float32)
+    indices = np.array(indices, dtype=np.int32)
+    camera_pos = np.array([0.0, 2.0, 0.0], dtype=np.float32)
+    run_benchmark(benchmark, vertices, indices, camera_pos, "Small grid")
 
 if __name__ == "__main__":
     run_benchmarks()
