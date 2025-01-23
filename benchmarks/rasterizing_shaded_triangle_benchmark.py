@@ -7,8 +7,7 @@ class ShadedTriangleBenchmark:
     def __init__(self, width=1920, height=1080):
         self.canvas = Canvas((width, height))
         self.viewport = ViewPort((width, height), 1, self.canvas)
-        self.scene = {}
-        self.renderer = Renderer(self.canvas, self.viewport, self.scene)
+        self.renderer = Renderer(self.canvas, self.viewport)
 
         # Warm up JIT compilation with a simple case
         print("\nWarming up JIT compilation...")
