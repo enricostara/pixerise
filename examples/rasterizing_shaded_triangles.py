@@ -33,7 +33,7 @@ def main():
     radius = 300
     num_triangles = 16
     
-    # First layer: Draw rotating triangles with different colors (further back)
+    # Draw rotating triangles with different colors (further back)
     for i in range(num_triangles):
         # Calculate three points for each triangle
         angle1 = (2 * np.pi * i) / num_triangles
@@ -90,56 +90,6 @@ def main():
             i1, i2, i3
         )
     
-    # Second layer: Draw a smaller set of triangles in front
-    num_front_triangles = 8
-    front_radius = radius * 0.7
-    
-    for i in range(num_front_triangles):
-        # Calculate points with a different rotation offset
-        angle1 = (2 * np.pi * i) / num_front_triangles + np.pi/num_front_triangles
-        angle2 = (2 * np.pi * (i + 0.3)) / num_front_triangles + np.pi/num_front_triangles
-        angle3 = (2 * np.pi * (i + 0.7)) / num_front_triangles + np.pi/num_front_triangles
-        
-        # Points for front triangles
-        x1 = center_x + front_radius * np.cos(angle1)
-        y1 = center_y + front_radius * np.sin(angle1)
-        z1 = 0.2  # Closer to viewer
-        
-        x2 = center_x + (front_radius * 0.3) * np.cos(angle2)
-        y2 = center_y + (front_radius * 0.3) * np.sin(angle2)
-        z2 = 0.2  # Closer to viewer
-        
-        x3 = center_x + (front_radius * 0.3) * np.cos(angle3)
-        y3 = center_y + (front_radius * 0.3) * np.sin(angle3)
-        z3 = 0.2  # Closer to viewer
-        
-        # Use complementary colors for front triangles
-        hue = ((i / num_front_triangles) * 360 + 180) % 360
-        h = hue / 60
-        c = 255
-        x = int(c * (1 - abs(h % 2 - 1)))
-        
-        if h < 1:
-            r, g, b = c, x, 0
-        elif h < 2:
-            r, g, b = x, c, 0
-        elif h < 3:
-            r, g, b = 0, c, x
-        elif h < 4:
-            r, g, b = 0, x, c
-        elif h < 5:
-            r, g, b = x, 0, c
-        else:
-            r, g, b = c, 0, x
-        
-        # Front triangles have higher intensity
-        renderer.draw_shaded_triangle(
-            (x1, y1, z1),
-            (x2, y2, z2),
-            (x3, y3, z3),
-            (r, g, b),
-            1.0, 0.8, 0.6  # Brighter intensities for front triangles
-        )
     
     # Display the result
     display(canvas)
