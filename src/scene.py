@@ -122,18 +122,50 @@ class Camera:
         return camera
 
 
+@dataclass(slots=True)
+class DirectionalLight:
+    """A directional light in the scene."""
+    direction: np.ndarray  # 3D vector
+    ambient: float = 0.1
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'DirectionalLight':
+        """Create a DirectionalLight from a dictionary representation."""
+        return cls(
+            direction=np.array(data['direction'], dtype=np.float32),
+            ambient=data.get('ambient', 0.1)
+        )
+
+    def to_dict(self) -> dict:
+        """Convert the DirectionalLight to a dictionary representation."""
+        return {
+            'direction': self.direction.tolist(),
+            'ambient': self.ambient
+        }
+
+
+@dataclass(slots=True)
 class Scene:
-    """A 3D scene containing models, instances, and camera settings."""
-    
-    def __init__(self):
-        """Initialize an empty scene."""
-        self.models: Dict[str, Model] = {}
-        self.instances: List[Instance] = []
-        self.camera = Camera()
+    """A 3D scene containing models, instances, camera settings, and lights."""
+    models: Dict[str, Model] = field(default_factory=dict)
+    instances: List[Instance] = field(default_factory=list)
+    camera: Camera = field(default_factory=Camera)
+    directional_light: DirectionalLight = field(default_factory=lambda: DirectionalLight(direction=np.array([0, 0, -1], dtype=np.float32)))
 
     def add_model(self, name: str, model: Model) -> None:
         """Add a model to the scene."""
         self.models[name] = model
+
+    def get_model(self, model_name: str) -> Optional[Model]:
+        """Get a model by name.
+        
+        Args:
+            model_name: Name of the model to get
+            
+        Returns:
+            Model if found, None otherwise
+        """
+        return self.models.get(model_name)
 
     def add_instance(self, instance: Instance) -> None:
         """Add a model instance to the scene."""
@@ -143,56 +175,41 @@ class Scene:
         """Set the scene's camera."""
         self.camera = camera
 
-    @staticmethod
-    def from_dict(data: dict) -> 'Scene':
-        """Create a Scene from a dictionary representation.
-        
-        This is a helper method to convert the current JSON scene format to the new Scene type.
-        """
-        scene = Scene()
+    def set_directional_light(self, light: DirectionalLight) -> None:
+        """Set the scene's directional light."""
+        self.directional_light = light
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Scene':
+        """Create a Scene from a dictionary representation."""
+        scene = cls()
         
         # Add models
         for model_name, model_data in data.get('models', {}).items():
-            scene.add_model(model_name, Model.from_dict(model_data))
+            model = Model.from_dict(model_data)
+            scene.add_model(model_name, model)
         
         # Add instances
         for instance_data in data.get('instances', []):
             scene.add_instance(Instance.from_dict(instance_data))
         
-        # Set camera
+        # Set camera if present
         if 'camera' in data:
             scene.set_camera(Camera.from_dict(data['camera']))
+
+        # Set directional light if present
+        if 'lights' in data and 'directional' in data['lights']:
+            scene.set_directional_light(DirectionalLight.from_dict(data['lights']['directional']))
         
         return scene
 
     def to_dict(self) -> dict:
-        """Convert the Scene to its dictionary representation."""
+        """Convert the Scene to a dictionary representation."""
         return {
-            'models': {
-                name: {
-                    'groups': {
-                        group_name: {
-                            'vertices': group.vertices.tolist(),
-                            'triangles': group.triangles.tolist(),
-                            'vertex_normals': group.vertex_normals.tolist() if group.vertex_normals is not None else []
-                        }
-                        for group_name, group in model.groups.items()
-                    }
-                }
-                for name, model in self.models.items()
-            },
-            'instances': [
-                {
-                    'model': instance.model_name,
-                    'translation': instance.translation.tolist(),
-                    'rotation': instance.rotation.tolist(),
-                    'scale': instance.scale.tolist(),
-                    'color': instance.color
-                }
-                for instance in self.instances
-            ],
-            'camera': {
-                'translation': self.camera.translation.tolist(),
-                'rotation': self.camera.rotation.tolist()
+            'models': {name: model.to_dict() for name, model in self.models.items()},
+            'instances': [instance.to_dict() for instance in self.instances],
+            'camera': self.camera.to_dict(),
+            'lights': {
+                'directional': self.directional_light.to_dict()
             }
         }
