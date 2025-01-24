@@ -60,6 +60,29 @@ class Model:
         
         return model
 
+    def to_dict(self) -> dict:
+        """Convert the Model to a dictionary representation."""
+        if len(self.groups) == 1 and 'default' in self.groups:
+            # If there's only a default group, use flat structure
+            group = self.groups['default']
+            return {
+                'vertices': group.vertices.tolist(),
+                'triangles': group.triangles.tolist(),
+                'vertex_normals': group.vertex_normals.tolist() if group.vertex_normals is not None else None
+            }
+        else:
+            # Otherwise, use groups structure
+            return {
+                'groups': {
+                    name: {
+                        'vertices': group.vertices.tolist(),
+                        'triangles': group.triangles.tolist(),
+                        'vertex_normals': group.vertex_normals.tolist() if group.vertex_normals is not None else None
+                    }
+                    for name, group in self.groups.items()
+                }
+            }
+
 
 @dataclass(slots=True)
 class Instance:
@@ -128,12 +151,20 @@ class Camera:
     @classmethod
     def from_dict(cls, data: dict) -> 'Camera':
         """Create a Camera from a dictionary representation."""
-        camera = cls()
-        if 'translation' in data:
-            camera.translation = np.array(data['translation'], dtype=np.float32)
-        if 'rotation' in data:
-            camera.rotation = np.array(data['rotation'], dtype=np.float32)
-        return camera
+        transform = data.get('transform', {})
+        return cls(
+            translation=np.array(transform.get('translation', [0, 0, 0]), dtype=np.float32),
+            rotation=np.array(transform.get('rotation', [0, 0, 0]), dtype=np.float32)
+        )
+
+    def to_dict(self) -> dict:
+        """Convert the Camera to a dictionary representation."""
+        return {
+            'transform': {
+                'translation': self.translation.tolist(),
+                'rotation': self.rotation.tolist()
+            }
+        }
 
 
 @dataclass(slots=True)
@@ -214,36 +245,32 @@ class Scene:
         """Create a Scene from a dictionary representation."""
         scene = cls()
         
-        # Add models
-        for model_name, model_data in data.get('models', {}).items():
-            model = Model.from_dict(model_data)
-            scene.add_model(model_name, model)
-        
-        # Add instances
-        for instance_data in data.get('instances', []):
-            name = instance_data.get('name', f"instance_{len(scene.instances)}")
-            scene.add_instance(name, Instance.from_dict(instance_data))
-        
-        # Set camera if present
+        # Load camera
         if 'camera' in data:
-            scene.set_camera(Camera.from_dict(data['camera']))
-
-        # Set directional light if present
-        if 'lights' in data and 'directional' in data['lights']:
-            scene.set_directional_light(DirectionalLight.from_dict(data['lights']['directional']))
+            scene.camera = Camera.from_dict(data['camera'])
+        
+        # Load models
+        if 'models' in data:
+            for name, model_data in data['models'].items():
+                scene.models[name] = Model.from_dict(model_data)
+        
+        # Load instances
+        if 'instances' in data:
+            for instance_data in data['instances']:
+                name = instance_data.get('name', f'instance_{len(scene.instances)}')
+                scene.instances[name] = Instance.from_dict(instance_data)
+        
+        # Load directional light
+        if 'directional_light' in data:
+            scene.directional_light = DirectionalLight.from_dict(data['directional_light'])
         
         return scene
 
     def to_dict(self) -> dict:
         """Convert the Scene to a dictionary representation."""
         return {
-            'models': {name: model.to_dict() for name, model in self.models.items()},
-            'instances': [
-                {**instance.to_dict(), 'name': name}
-                for name, instance in self.instances.items()
-            ],
             'camera': self.camera.to_dict(),
-            'lights': {
-                'directional': self.directional_light.to_dict()
-            }
+            'models': {name: model.to_dict() for name, model in self.models.items()},
+            'instances': [instance.to_dict() for instance in self.instances.values()],
+            'directional_light': self.directional_light.to_dict()
         }
