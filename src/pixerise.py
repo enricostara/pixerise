@@ -9,8 +9,9 @@ from kernel.transforming_mod import transform_vertex, transform_vertex_normal, p
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere, clip_triangle_and_normals)
 from kernel.culling_mod import cull_back_faces
 from kernel.shading_mod import triangle_flat_shading, triangle_gouraud_shading
-from typing import Tuple
+from typing import Tuple, Union
 from enum import Enum
+from scene import Scene
 
 class ShadingMode(Enum):
     """Enum defining different shading modes for 3D rendering.
@@ -240,70 +241,39 @@ class Renderer:
             i1, i2, i3,  # Clamped intensity values
             self._canvas.width, self._canvas.height)  # Canvas dimensions
 
-    def render(self, scene: dict, shading_mode: ShadingMode = ShadingMode.WIREFRAME):
+    def render(self, scene: Scene, shading_mode: ShadingMode = ShadingMode.WIREFRAME):
         """Render a scene containing models and their instances.
         
         Args:
-            scene (dict): Scene data containing models and camera information
+            scene (Scene): Scene object containing models and camera information
             shading_mode (ShadingMode): Rendering mode to use (FLAT, GOURAUD, or WIREFRAME)
         """
         # Clear canvas
         self._canvas.clear(tuple(self._background_color))
 
-        # Pre-process models into a dictionary of tuples for faster lookup
-        models_dict = {}
-        for model_name, model in scene.get('models', {}).items():
-            # Process groups or create a default group
-            groups = model.get('groups', {})
-            if not groups:
-                # If no groups are defined, create a default group with model data
-                groups = {
-                    'default': {
-                        'vertices': model.get('vertices', []),
-                        'triangles': model.get('triangles', []),
-                        'vertex_normals': model.get('vertex_normals', [])
-                    }
-                }
-            
-            # Store groups data for the model
-            model_groups = {}
-            for group_name, group_data in groups.items():
-                model_groups[group_name] = (
-                    group_data.get('vertices', []),
-                    group_data.get('triangles', []),
-                    group_data.get('vertex_normals', [])
-                )
-            models_dict[model_name] = model_groups
-
         # Render each instance
-        for instance in scene.get('instances', []):
-            model_name = instance.get('model')
-            if model_name not in models_dict:
+        for instance in scene.instances.values():
+            model = scene.get_model(instance.model)
+            if model is None:
                 continue
 
-            model_groups = models_dict[model_name]
-
             # Get instance transform and color
-            transform = instance.get('transform', {})
-            color = instance.get('color', (255, 255, 255))
+            color = instance.color
             
             # Get transform components
-            translation = transform.get('translation', np.zeros(3))
-            rotation = transform.get('rotation', np.zeros(3))
-            scale = transform.get('scale', np.ones(3))
+            translation = instance.translation
+            rotation = instance.rotation
+            scale = instance.scale
             
-            # Get camera transform if present
-            has_camera = 'camera' in scene
-            camera_translation = np.zeros(3)
-            camera_rotation = np.zeros(3)
-            if has_camera:
-                camera_transform = scene['camera'].get('transform', {})
-                camera_translation = camera_transform.get('translation', np.zeros(3))
-                camera_rotation = camera_transform.get('rotation', np.zeros(3))
+            # Get camera transform
+            camera_translation = scene.camera.translation
+            camera_rotation = scene.camera.rotation
             
-            # Transform vertices
-            for group_name, group_data in model_groups.items():
-                vertices, triangles, vertex_normals = group_data
+            # Transform vertices for each model group
+            for group in model.groups.values():
+                vertices = group.vertices
+                triangles = group.triangles
+                vertex_normals = group.vertex_normals
                 
                 transformed_vertices = []
                 transformed_normals = []  # Store transformed normals
@@ -312,7 +282,7 @@ class Renderer:
                 for i, vertex in enumerate(vertices):
                     # Apply model transform to vertex
                     transformed = transform_vertex(vertex, translation, rotation, scale,
-                                                camera_translation, camera_rotation, has_camera)
+                                                camera_translation, camera_rotation, True)
                     transformed_vertices.append(transformed)
                     
                     # Transform normal using rotation only if available
@@ -368,11 +338,10 @@ class Renderer:
                     if shading_mode == ShadingMode.WIREFRAME:
                         self.draw_triangle(v1, v2, v3, color, fill=False)
                     else:
-                        directional_light = scene['lights']['directional']
-                        light_dir = -np.array(directional_light['direction'], dtype=np.float32)
+                        light_dir = -scene.directional_light.direction
                         color_array = np.array(color, dtype=np.float32)
-                        ambient = directional_light.get('ambient', 0.1)
-
+                        ambient = scene.directional_light.ambient
+                        
                         if shading_mode == ShadingMode.GOURAUD and has_vertex_normals:
                             # Compute vertex intensities using vertex normals
                             intensities = triangle_gouraud_shading(vertex_normals, light_dir, ambient)
