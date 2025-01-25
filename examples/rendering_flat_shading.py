@@ -118,7 +118,7 @@ def main():
         },
         'lights': {
             'directional': {
-                'direction': np.array([-1, -1, -1], dtype=float),  # Light coming from top-left-front
+                'direction': np.array([-1, 1, -1], dtype=float),  # Light coming from top-left-front
                 'intensity': 0.7,
                 'ambient': 0.2  # Add ambient light intensity
             }

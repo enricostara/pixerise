@@ -108,7 +108,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     pygame.event.set_grab(True)
     
     def update_display():
-        renderer.render(scene, shading_mode=ShadingMode.WIREFRAME)
+        renderer.render(scene, shading_mode=ShadingMode.GOURAUD)
         surf = pygame.surfarray.make_surface(canvas.color_buffer)
         screen.blit(surf, (0, 0))
         pygame.display.update()
@@ -230,7 +230,7 @@ def main():
         },
         'lights': {
             'directional': {
-                'direction': np.array([-1, -1, -1], dtype=float),  # Light coming from top-left-front
+                'direction': np.array([-1, 1, -1], dtype=float),  # Light coming from top-left-front
                 'intensity': 0.7,
                 'ambient': 0.2
             }

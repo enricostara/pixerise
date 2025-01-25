@@ -326,7 +326,7 @@ class Renderer:
                     continue
                 
                 # Function to project and draw a triangle
-                def project_and_draw_triangle(vertices, vertex_normals):
+                def project_and_draw_triangle(vertices, vertex_normals, shading_mode: ShadingMode):
                     # Project vertices to 2D
                     v1 = project_vertex(vertices[0], self._canvas.width, self._canvas.height,
                                              self._viewport.width, self._viewport.height)
@@ -341,7 +341,14 @@ class Renderer:
                     
                     # Draw triangle
                     if shading_mode == ShadingMode.WIREFRAME:
-                        self.draw_triangle(v1, v2, v3, color, fill=False)
+                        draw_triangle(
+                            int(v1[0]), int(v1[1]), v1[2],
+                            int(v2[0]), int(v2[1]), v2[2],
+                            int(v3[0]), int(v3[1]), v3[2],
+                            self._canvas.color_buffer, self._canvas.depth_buffer,
+                            self._canvas._center[0], self._canvas._center[1],
+                            color[0], color[1], color[2],
+                            self._canvas.width, self._canvas.height)
                     else:
                         light_dir = -scene.directional_light.direction
                         color_array = np.array(color, dtype=np.float32)
@@ -350,10 +357,25 @@ class Renderer:
                         if shading_mode == ShadingMode.GOURAUD and has_vertex_normals:
                             # Compute vertex intensities using vertex normals
                             intensities = triangle_gouraud_shading(vertex_normals, light_dir, ambient)
-                            self.draw_shaded_triangle(v1, v2, v3, color, intensities[0], intensities[1], intensities[2])
+                            draw_shaded_triangle(
+                                int(v1[0]), int(v1[1]), v1[2],
+                                int(v2[0]), int(v2[1]), v2[2],
+                                int(v3[0]), int(v3[1]), v3[2],
+                                self._canvas.color_buffer, self._canvas.depth_buffer,
+                                self._canvas._center[0], self._canvas._center[1],
+                                color[0], color[1], color[2],
+                                intensities[0], intensities[1], intensities[2],
+                                self._canvas.width, self._canvas.height)
                         else:  # FLAT shading
                             flat_shaded_color = triangle_flat_shading(vertex_normals[0], light_dir, color_array, ambient)
-                            self.draw_triangle(v1, v2, v3, flat_shaded_color, fill=True)
+                            draw_flat_triangle(
+                                int(v1[0]), int(v1[1]), v1[2],
+                                int(v2[0]), int(v2[1]), v2[2],
+                                int(v3[0]), int(v3[1]), v3[2],
+                                self._canvas.color_buffer, self._canvas.depth_buffer,
+                                self._canvas._center[0], self._canvas._center[1],
+                                int(flat_shaded_color[0]), int(flat_shaded_color[1]), int(flat_shaded_color[2]),
+                                self._canvas.width, self._canvas.height)
 
                 # Convert triangle indices to numpy array
                 triangles_array = np.array(triangles, dtype=np.int32)
@@ -409,7 +431,7 @@ class Renderer:
                                     break
                             # Project and draw the clipped triangles
                             for i, clipped_tri in enumerate(clipped_triangles):
-                                project_and_draw_triangle(clipped_tri, clipped_normals[i])
+                                project_and_draw_triangle(clipped_tri, clipped_normals[i], shading_mode)
 
                         else:
                             for plane in planes:
@@ -423,8 +445,8 @@ class Renderer:
                                     break
                             # Project and draw the clipped triangles
                             for clipped_tri in clipped_triangles:
-                                project_and_draw_triangle(clipped_tri, triangle_transformed_normals)
+                                project_and_draw_triangle(clipped_tri, triangle_transformed_normals, shading_mode)
 
                     else:
                         # For fully visible instances, still need to check if vertices are behind camera
-                        project_and_draw_triangle(triangle_vertices, triangle_transformed_normals)
+                        project_and_draw_triangle(triangle_vertices, triangle_transformed_normals, shading_mode)
