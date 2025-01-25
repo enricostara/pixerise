@@ -113,6 +113,39 @@ def draw_line(x0: int, y0: int, z0: float, x1: int, y1: int, z1: float,
 
 @njit(cache=True)
 def draw_triangle(x0: int, y0: int, z0: float, x1: int, y1: int, z1: float, x2: int, y2: int, z2: float,
+                 canvas_grid: np.ndarray, depth_buffer: np.ndarray, center_x: int, center_y: int,
+                 color_r: int, color_g: int, color_b: int,
+                 canvas_width: int, canvas_height: int) -> None:
+    """
+    Draw a triangle outline using three line segments.
+    This is a low-level, JIT-compiled implementation optimized for performance.
+    
+    Args:
+        x0, y0, z0: First vertex coordinates and depth
+        x1, y1, z1: Second vertex coordinates and depth
+        x2, y2, z2: Third vertex coordinates and depth
+        canvas_grid: Target numpy array for drawing (shape: [height, width, 3] for RGB)
+        depth_buffer: Depth buffer array of shape (width, height)
+        center_x, center_y: Canvas center coordinates for coordinate system transformation
+        color_r, color_g, color_b: RGB color components (0-255)
+        canvas_width, canvas_height: Dimensions of the canvas
+    """
+    # Draw three lines to form the triangle outline
+    draw_line(x0, y0, z0, x1, y1, z1,
+             canvas_grid, depth_buffer, center_x, center_y,
+             color_r, color_g, color_b,
+             canvas_width, canvas_height)
+    draw_line(x1, y1, z1, x2, y2, z2,
+             canvas_grid, depth_buffer, center_x, center_y,
+             color_r, color_g, color_b,
+             canvas_width, canvas_height)
+    draw_line(x2, y2, z2, x0, y0, z0,
+             canvas_grid, depth_buffer, center_x, center_y,
+             color_r, color_g, color_b,
+             canvas_width, canvas_height)
+
+@njit(cache=True)
+def draw_flat_triangle(x0: int, y0: int, z0: float, x1: int, y1: int, z1: float, x2: int, y2: int, z2: float,
                   canvas_grid: np.ndarray, depth_buffer: np.ndarray, center_x: int, center_y: int,
                   color_r: int, color_g: int, color_b: int,
                   canvas_width: int, canvas_height: int) -> None:

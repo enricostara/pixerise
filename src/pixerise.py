@@ -3,13 +3,13 @@ Core components of the Pixerise rendering engine.
 This module contains the main classes for rendering: Canvas, ViewPort, and Renderer.
 """
 
+from typing import List, Tuple
 import numpy as np
-from kernel.rasterizing_mod import (draw_pixel, draw_line, draw_triangle, draw_shaded_triangle)
+from kernel.rasterizing_mod import draw_line, draw_pixel, draw_flat_triangle, draw_shaded_triangle, draw_triangle
 from kernel.transforming_mod import transform_vertex, transform_vertex_normal, project_vertex
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere, clip_triangle_and_normals)
 from kernel.culling_mod import cull_back_faces
 from kernel.shading_mod import triangle_flat_shading, triangle_gouraud_shading
-from typing import Tuple, Union
 from enum import Enum
 from scene import Scene
 
@@ -187,7 +187,7 @@ class Renderer:
         """Draw a triangle defined by three points. If fill is True, the triangle will be filled,
         otherwise only the outline will be drawn."""
         if fill:
-            draw_triangle(
+            draw_flat_triangle(
                 int(p1[0]), int(p1[1]), p1[2],
                 int(p2[0]), int(p2[1]), p2[2],
                 int(p3[0]), int(p3[1]), p3[2],
@@ -196,10 +196,14 @@ class Renderer:
                 color[0], color[1], color[2],
                 self._canvas.width, self._canvas.height)
         else:
-            # Draw outline using lines
-            self.draw_line(p1, p2, color)
-            self.draw_line(p2, p3,  color)
-            self.draw_line(p3, p1, color)
+            draw_triangle(
+                int(p1[0]), int(p1[1]), p1[2],
+                int(p2[0]), int(p2[1]), p2[2],
+                int(p3[0]), int(p3[1]), p3[2],
+                self._canvas.color_buffer, self._canvas.depth_buffer,
+                self._canvas._center[0], self._canvas._center[1],
+                color[0], color[1], color[2],
+                self._canvas.width, self._canvas.height)
 
     def draw_shaded_triangle(self, p1: Tuple[float, float, float], p2: Tuple[float, float, float], p3: Tuple[float, float, float],
                            color: Tuple[int, int, int],
@@ -314,7 +318,8 @@ class Renderer:
                     if abs(center_distance) < sphere_radius:
                         fully_visible = False
                 
-                # print(f"Instance {group_name} fully visible: {fully_visible}")
+                # if not fully_visible:
+                    # print(f"{group_name} fully visible: {fully_visible}")
 
                 # Skip if instance is completely invisible
                 if fully_invisible:
@@ -354,7 +359,6 @@ class Renderer:
                 triangles_array = np.array(triangles, dtype=np.int32)
                 # Perform backface culling and get normals
                 triangles_array, triangle_normals = cull_back_faces(vertices_array, triangles_array)
-
 
                 # Draw triangles
                 for i, triangle in enumerate(triangles_array):
