@@ -1,11 +1,11 @@
 import pygame
 import numpy as np
 
-from pixerise import ShadingMode, Canvas, ViewPort, Renderer
+from pixerise import ShadingMode, Canvas, ViewPort, Renderer, Scene
 
 
-def display(image: Canvas, scene, renderer):
-    screen = pygame.display.set_mode(image.size, pygame.SCALED)
+def display(canvas: Canvas, scene: Scene, renderer: Renderer):
+    screen = pygame.display.set_mode(canvas.size, pygame.SCALED)
     clock = pygame.time.Clock()
     
     # Initialize mouse state
@@ -14,7 +14,7 @@ def display(image: Canvas, scene, renderer):
     
     def update_display():
         renderer.render(scene, shading_mode=ShadingMode.GOURAUD)
-        surf = pygame.surfarray.make_surface(image.color_buffer)
+        surf = pygame.surfarray.make_surface(canvas.color_buffer)
         screen.blit(surf, (0, 0))
         pygame.display.update()
     
@@ -41,68 +41,58 @@ def display(image: Canvas, scene, renderer):
                 rot_x = -dy * 0.002  # Vertical mouse movement controls X rotation
                 
                 # Update camera rotation
-                current_rot = scene['camera']['transform']['rotation']
-                current_rot[0] += rot_x  # Remove clipping for vertical rotation
-                current_rot[1] = (current_rot[1] + rot_y) % (2 * np.pi)  # Allow full horizontal rotation
-                scene['camera']['transform']['rotation'] = current_rot
-                
-                # Update display
+                camera_rot = np.array(scene.camera.rotation)
+                camera_rot[0] += rot_x  # Remove clipping for vertical rotation
+                camera_rot[1] = (camera_rot[1] + rot_y) % (2 * np.pi)  # Allow full horizontal rotation
+                scene.camera.rotation = camera_rot
                 movement_occurred = True
         
         # Continuous movement
         keys = pygame.key.get_pressed()
-        camera_trans = scene['camera']['transform']['translation']
-        camera_rot = scene['camera']['transform']['rotation']
+        camera_rot = scene.camera.rotation
         
-        # Calculate forward direction based on current rotation
+        # Calculate forward vector based on camera rotation
         forward = np.array([
             -np.sin(camera_rot[1]) * np.cos(camera_rot[0]),
             np.sin(camera_rot[0]),
             -np.cos(camera_rot[1]) * np.cos(camera_rot[0])
         ])
         
-        # Calculate right vector
-        right = np.array([
-            np.cos(camera_rot[1]) * np.cos(camera_rot[0]),
-            0,
-            -np.sin(camera_rot[1]) * np.cos(camera_rot[0])
-        ])
+        # Calculate right vector (cross product of forward and up)
+        right = np.cross(forward, np.array([0, 1, 0]))
+        right = right / np.linalg.norm(right)  # Normalize
         
-        # Move forward with W key
-        if keys[pygame.K_w]:
-            camera_trans -= forward * move_speed
+        # Movement based on keyboard input
+        if keys[pygame.K_w]:  # Forward
+            scene.camera.translation -= forward * move_speed
             movement_occurred = True
-        
-        # Move backward with S key
-        if keys[pygame.K_s]:
-            camera_trans += forward * move_speed
+        if keys[pygame.K_s]:  # Backward
+            scene.camera.translation += forward * move_speed
             movement_occurred = True
-        
-        # Move left with A key
-        if keys[pygame.K_a]:
-            camera_trans -= right * move_speed
+        if keys[pygame.K_a]:  # Left
+            scene.camera.translation -= right * move_speed
             movement_occurred = True
-        
-        # Move right with D key
-        if keys[pygame.K_d]:
-            camera_trans += right * move_speed
+        if keys[pygame.K_d]:  # Right
+            scene.camera.translation += right * move_speed
             movement_occurred = True
 
         # Arrow key controls for rotation
         if keys[pygame.K_UP]:
             camera_rot[0] -= move_speed * 0.2
+            scene.camera.rotation = camera_rot
             movement_occurred = True
         if keys[pygame.K_DOWN]:
             camera_rot[0] += move_speed * 0.2
+            scene.camera.rotation = camera_rot
             movement_occurred = True
         if keys[pygame.K_LEFT]:
             camera_rot[1] += move_speed * 0.2
+            scene.camera.rotation = camera_rot
             movement_occurred = True
         if keys[pygame.K_RIGHT]:
             camera_rot[1] -= move_speed * 0.2
+            scene.camera.rotation = camera_rot
             movement_occurred = True
-
-        scene['camera']['transform']['rotation'] = camera_rot
 
         # Update display only if movement occurred
         if movement_occurred:
@@ -180,7 +170,7 @@ def main():
                     'rotation': np.array([np.pi/6, np.pi/4, 0], dtype=float),  # Rotated for better shading visibility
                     'scale': np.array([.6, .6, .6], dtype=float)
                 },
-                'color': (200, 70, 70)  # Reddish color to show shading variations
+                'color': (220, 70, 70)  # Reddish color to show shading variations
             },
             {
                 'model': 'sphere_flat',  # Changed from cube to sphere
@@ -190,7 +180,7 @@ def main():
                     'rotation': np.array([0, 0, 0], dtype=float),  # Sphere rotation less important
                     'scale': np.array([0.8, 0.8, 0.8], dtype=float)
                 },
-                'color': (70, 200, 70)  # Greenish color
+                'color': (70, 220, 70)  # Greenish color
             },
             {
                 'model': 'sphere',  # Changed from cube to sphere
@@ -200,7 +190,7 @@ def main():
                     'rotation': np.array([0, 0, 0], dtype=float),  # Sphere rotation less important
                     'scale': np.array([0.8, 0.8, 0.8], dtype=float)
                 },
-                'color': (70, 70, 200)  # Blueish color
+                'color': (70, 70, 220)  # Blueish color
             }
         ]
     }
@@ -291,7 +281,7 @@ def main():
     renderer = Renderer(canvas, viewport)
     
     # Display the result with the scene and renderer
-    display(canvas, scene, renderer)
+    display(canvas, Scene.from_dict(scene), renderer)
 
 
 if __name__ == "__main__":
