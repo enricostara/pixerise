@@ -261,8 +261,8 @@ class Scene:
                 scene.instances[name] = Instance.from_dict(instance_data)
         
         # Load directional light
-        if 'directional_light' in data:
-            scene.directional_light = DirectionalLight.from_dict(data['directional_light'])
+        if 'lights' in data and 'directional' in data['lights']:
+            scene.directional_light = DirectionalLight.from_dict(data['lights']['directional'])
         
         return scene
 
