@@ -9,7 +9,7 @@ from kernel.rasterizing_mod import draw_line, draw_flat_triangle, draw_shaded_tr
 from kernel.transforming_mod import transform_vertex, transform_vertex_normal
 from kernel.clipping_mod import clip_triangle, calculate_bounding_sphere, clip_triangle_and_normals
 from kernel.culling_mod import cull_back_faces
-from kernel.rendering_mod import project_and_draw_triangle
+from kernel.rendering_mod import project_and_draw_triangle, process_and_render_triangle
 from enum import Enum
 from scene import Scene
 
@@ -273,28 +273,27 @@ class Renderer:
                 vertices = group.vertices
                 triangles = group.triangles
                 vertex_normals = group.vertex_normals
-                
-                transformed_vertices = []
-                transformed_normals = []  # Store transformed normals
                 has_vertex_normals = len(vertex_normals) == len(vertices)
                 
+                # Pre-allocate numpy arrays for transformed vertices and normals
+                transformed_vertices = np.zeros((len(vertices), 3), dtype=np.float32)
+                transformed_normals = np.zeros((len(vertices), 3), dtype=np.float32)
+                
+                # Transform vertices and normals
                 for i, vertex in enumerate(vertices):
                     # Apply model transform to vertex
                     transformed = transform_vertex(vertex, translation, rotation, scale,
                                                 camera_translation, camera_rotation, True)
-                    transformed_vertices.append(transformed)
+                    transformed_vertices[i] = transformed
                     
                     # Transform normal using rotation only if available
                     if shading_mode == ShadingMode.GOURAUD and has_vertex_normals:
                         normal = vertex_normals[i]
                         transformed_normal = transform_vertex_normal(normal, rotation, camera_rotation, True)
-                        transformed_normals.append(transformed_normal)
-                
-                # Convert transformed vertices to numpy array for bounding sphere calculation
-                vertices_array = np.array(transformed_vertices, dtype=np.float32)
+                        transformed_normals[i] = transformed_normal
                 
                 # Calculate bounding sphere for the entire instance
-                sphere_center, sphere_radius = calculate_bounding_sphere(vertices_array)
+                sphere_center, sphere_radius = calculate_bounding_sphere(transformed_vertices)
                 
                 # Check visibility against each frustum plane
                 fully_visible = True
@@ -324,107 +323,30 @@ class Renderer:
                 triangles_array = np.array(triangles, dtype=np.int32)
                 
                 # Perform backface culling and get normals
-                triangles_array, triangle_normals = cull_back_faces(vertices_array, triangles_array)
+                triangles_array, triangle_normals = cull_back_faces(transformed_vertices, triangles_array)
+
+                # Convert frustum planes to numpy array for JIT function
+                frustum_planes = np.zeros((len(self._viewport.frustum_planes), 4), dtype=np.float32)
+                for i, plane in enumerate(self._viewport.frustum_planes):
+                    frustum_planes[i, :3] = plane[0]  # normal
+                    frustum_planes[i, 3] = plane[1]   # distance
 
                 # Draw triangles
                 for i, triangle in enumerate(triangles_array):
-                    # Get triangle vertices as numpy array
-                    triangle_vertices = np.array([
-                        transformed_vertices[triangle[0]],
-                        transformed_vertices[triangle[1]],
-                        transformed_vertices[triangle[2]]
-                    ], dtype=np.float32)
-
-                    # Get corresponding transformed normals for this triangle
-                    if shading_mode == ShadingMode.GOURAUD and has_vertex_normals:
-                        triangle_transformed_normals = np.array([
-                            transformed_normals[triangle[0]],
-                            transformed_normals[triangle[1]],
-                            transformed_normals[triangle[2]]
-                        ], dtype=np.float32)
-                    else:
-                        # If no vertex normals, use face normal for all vertices
-                        triangle_transformed_normals = np.array([
-                            triangle_normals[i],
-                            triangle_normals[i],
-                            triangle_normals[i]
-                        ], dtype=np.float32)
-
-                    if not fully_visible:
-                        # Clip against each frustum plane
-                        planes = self._viewport.frustum_planes
-                        clipped_triangles = [triangle_vertices]
-                        clipped_normals = [triangle_transformed_normals]
-                        
-                        if shading_mode == ShadingMode.GOURAUD and has_vertex_normals:
-                            for plane in planes:
-                                next_triangles = []
-                                next_normals = []
-                                for tri_idx, tri in enumerate(clipped_triangles):
-                                    # Clip triangle against current plane
-                                    result_triangles, result_normals, num_triangles = clip_triangle_and_normals(
-                                        tri, clipped_normals[tri_idx], plane[0], plane[1]
-                                    )
-                                    # Add resulting triangles and their normals
-                                    for j in range(num_triangles):
-                                        next_triangles.append(result_triangles[j])
-                                        next_normals.append(result_normals[j])
-                                clipped_triangles = next_triangles
-                                clipped_normals = next_normals
-                                if not clipped_triangles:  # Triangle completely clipped away
-                                    break
-                            # Project and draw the clipped triangles
-                            for i, clipped_tri in enumerate(clipped_triangles):
-                                # Convert clipped triangles to ndarrays
-                                clipped_tri_array = np.array(clipped_tri, dtype=np.float32)
-                                clipped_normal_array = np.array(clipped_normals[i], dtype=np.float32)
-                                # Direct kernel call for each clipped triangle
-                                project_and_draw_triangle(
-                                    clipped_tri_array, clipped_normal_array, shading_mode.value,
-                                    self._canvas.width, self._canvas.height,
-                                    self._viewport.width, self._viewport.height,
-                                    self._canvas.color_buffer, self._canvas.depth_buffer,
-                                    self._canvas._center[0], self._canvas._center[1],
-                                    color,
-                                    -scene.directional_light.direction,
-                                    scene.directional_light.ambient,
-                                    has_vertex_normals)
-
-                        else:
-                            for plane in planes:
-                                next_triangles = []
-                                for tri in clipped_triangles:
-                                    clipped, num_triangles = clip_triangle(tri, plane[0], plane[1])
-                                    for j in range(num_triangles):
-                                        next_triangles.append(clipped[j])
-                                clipped_triangles = next_triangles
-                                if not clipped_triangles:  # Triangle completely clipped away
-                                    break
-                            # Project and draw the clipped triangles
-                            for clipped_tri in clipped_triangles:
-                                # Convert clipped triangle to ndarray
-                                clipped_tri_array = np.array(clipped_tri, dtype=np.float32)
-                                # Direct kernel call for each clipped triangle
-                                project_and_draw_triangle(
-                                    clipped_tri_array, triangle_transformed_normals, shading_mode.value,
-                                    self._canvas.width, self._canvas.height,
-                                    self._viewport.width, self._viewport.height,
-                                    self._canvas.color_buffer, self._canvas.depth_buffer,
-                                    self._canvas._center[0], self._canvas._center[1],
-                                    color,
-                                    -scene.directional_light.direction,
-                                    scene.directional_light.ambient,
-                                    has_vertex_normals)
-
-                    else:
-                        # For fully visible instances, direct kernel call
-                        project_and_draw_triangle(
-                            triangle_vertices, triangle_transformed_normals, shading_mode.value,
-                            self._canvas.width, self._canvas.height,
-                            self._viewport.width, self._viewport.height,
-                            self._canvas.color_buffer, self._canvas.depth_buffer,
-                            self._canvas._center[0], self._canvas._center[1],
-                            color,
-                            -scene.directional_light.direction,
-                            scene.directional_light.ambient,
-                            has_vertex_normals)
+                    process_and_render_triangle(
+                        triangle,
+                        transformed_vertices,
+                        triangle_normals,
+                        transformed_normals,
+                        i,
+                        shading_mode.value,
+                        has_vertex_normals,
+                        fully_visible,
+                        frustum_planes,
+                        self._canvas.width, self._canvas.height,
+                        self._viewport.width, self._viewport.height,
+                        self._canvas.color_buffer, self._canvas.depth_buffer,
+                        self._canvas._center[0], self._canvas._center[1],
+                        color,
+                        -scene.directional_light.direction,
+                        scene.directional_light.ambient)
