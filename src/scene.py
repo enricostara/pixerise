@@ -91,7 +91,7 @@ class Instance:
     translation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
     rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
     scale: np.ndarray = field(default_factory=lambda: np.ones(3, dtype=np.float32))
-    color: Tuple[int, int, int] = (255, 255, 255)
+    color: np.ndarray = field(default_factory=lambda: np.array([1.0, 1.0, 1.0], dtype=np.float32))
 
     def set_translation(self, x: float, y: float, z: float) -> None:
         """Set the translation of this instance."""
@@ -118,7 +118,7 @@ class Instance:
             if 'scale' in transform:
                 instance.scale = np.array(transform['scale'], dtype=np.float32)
         if 'color' in data:
-            instance.color = tuple(data['color'])
+            instance.color = np.array(data['color'], dtype=np.float32)
         return instance
 
     def to_dict(self) -> dict:
@@ -130,7 +130,7 @@ class Instance:
                 'rotation': self.rotation.tolist(),
                 'scale': self.scale.tolist()
             },
-            'color': self.color
+            'color': self.color.tolist()
         }
 
 

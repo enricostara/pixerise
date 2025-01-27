@@ -3,7 +3,7 @@ from numba import njit
 
 
 @njit(cache=True)
-def cull_back_faces(vertices: np.ndarray, triangle_indices: np.ndarray):
+def cull_back_faces(vertices: np.ndarray, triangle_indices: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Cull back-facing triangles based on view direction.
     
     This function implements back-face culling, a fundamental optimization in 3D graphics

@@ -262,7 +262,7 @@ class Renderer:
                 continue
 
             # Get instance transform and color
-            color = instance.color
+            color = instance.color  # Now a float32 array
             
             # Get transform components
             translation = instance.translation
@@ -325,29 +325,9 @@ class Renderer:
                 if fully_invisible:
                     continue
                 
-                # Function to project and draw a triangle
-                def project_and_draw_triangle(vertices, vertex_normals, shading_mode: ShadingMode):
-                    # Convert vertices and normals to numpy arrays for JIT compilation
-                    vertices_array = np.array([vertices[0], vertices[1], vertices[2]], dtype=np.float32)
-                    normals_array = np.array([vertex_normals[0], vertex_normals[1], vertex_normals[2]], dtype=np.float32)
-                    
-                    # Convert shading mode to string for JIT compilation
-                    shading_mode_str = shading_mode.value
-                    
-                    # Call JIT-compiled kernel
-                    project_and_draw_triangle_kernel(
-                        vertices_array, normals_array, shading_mode_str,
-                        self._canvas.width, self._canvas.height,
-                        self._viewport.width, self._viewport.height,
-                        self._canvas.color_buffer, self._canvas.depth_buffer,
-                        self._canvas._center[0], self._canvas._center[1],
-                        np.array(color, dtype=np.float32),
-                        -scene.directional_light.direction,
-                        scene.directional_light.ambient,
-                        has_vertex_normals)
-
                 # Convert triangle indices to numpy array
                 triangles_array = np.array(triangles, dtype=np.int32)
+                
                 # Perform backface culling and get normals
                 triangles_array, triangle_normals = cull_back_faces(vertices_array, triangles_array)
 
@@ -400,7 +380,20 @@ class Renderer:
                                     break
                             # Project and draw the clipped triangles
                             for i, clipped_tri in enumerate(clipped_triangles):
-                                project_and_draw_triangle(clipped_tri, clipped_normals[i], shading_mode)
+                                # Convert clipped triangles to ndarrays
+                                clipped_tri_array = np.array(clipped_tri, dtype=np.float32)
+                                clipped_normal_array = np.array(clipped_normals[i], dtype=np.float32)
+                                # Direct kernel call for each clipped triangle
+                                project_and_draw_triangle_kernel(
+                                    clipped_tri_array, clipped_normal_array, shading_mode.value,
+                                    self._canvas.width, self._canvas.height,
+                                    self._viewport.width, self._viewport.height,
+                                    self._canvas.color_buffer, self._canvas.depth_buffer,
+                                    self._canvas._center[0], self._canvas._center[1],
+                                    color,
+                                    -scene.directional_light.direction,
+                                    scene.directional_light.ambient,
+                                    has_vertex_normals)
 
                         else:
                             for plane in planes:
@@ -414,8 +407,29 @@ class Renderer:
                                     break
                             # Project and draw the clipped triangles
                             for clipped_tri in clipped_triangles:
-                                project_and_draw_triangle(clipped_tri, triangle_transformed_normals, shading_mode)
+                                # Convert clipped triangle to ndarray
+                                clipped_tri_array = np.array(clipped_tri, dtype=np.float32)
+                                # Direct kernel call for each clipped triangle
+                                project_and_draw_triangle_kernel(
+                                    clipped_tri_array, triangle_transformed_normals, shading_mode.value,
+                                    self._canvas.width, self._canvas.height,
+                                    self._viewport.width, self._viewport.height,
+                                    self._canvas.color_buffer, self._canvas.depth_buffer,
+                                    self._canvas._center[0], self._canvas._center[1],
+                                    color,
+                                    -scene.directional_light.direction,
+                                    scene.directional_light.ambient,
+                                    has_vertex_normals)
 
                     else:
-                        # For fully visible instances, still need to check if vertices are behind camera
-                        project_and_draw_triangle(triangle_vertices, triangle_transformed_normals, shading_mode)
+                        # For fully visible instances, direct kernel call
+                        project_and_draw_triangle_kernel(
+                            triangle_vertices, triangle_transformed_normals, shading_mode.value,
+                            self._canvas.width, self._canvas.height,
+                            self._viewport.width, self._viewport.height,
+                            self._canvas.color_buffer, self._canvas.depth_buffer,
+                            self._canvas._center[0], self._canvas._center[1],
+                            color,
+                            -scene.directional_light.direction,
+                            scene.directional_light.ambient,
+                            has_vertex_normals)

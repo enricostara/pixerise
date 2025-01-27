@@ -93,16 +93,18 @@ def test_instance():
     assert np.array_equal(instance.translation, np.zeros(3))
     assert np.array_equal(instance.rotation, np.zeros(3))
     assert np.array_equal(instance.scale, np.ones(3))
-    assert instance.color == (255, 255, 255)
+    assert np.array_equal(instance.color, np.array([1.0, 1.0, 1.0], dtype=np.float32))
     
     # Test setters
     instance.set_translation(1, 2, 3)
     instance.set_rotation(np.pi/2, 0, np.pi/4)
     instance.set_scale(2, 2, 2)
+    instance.color = np.array([0.5, 0.7, 1.0], dtype=np.float32)
     
     assert np.array_equal(instance.translation, np.array([1, 2, 3], dtype=np.float32))
     assert np.array_equal(instance.rotation, np.array([np.pi/2, 0, np.pi/4], dtype=np.float32))
     assert np.array_equal(instance.scale, np.array([2, 2, 2], dtype=np.float32))
+    assert np.array_equal(instance.color, np.array([0.5, 0.7, 1.0], dtype=np.float32))
     
     # Test to_dict and from_dict
     data = instance.to_dict()
@@ -110,12 +112,14 @@ def test_instance():
     assert data['transform']['translation'] == [1, 2, 3]
     assert np.allclose(data['transform']['rotation'], [np.pi/2, 0, np.pi/4])
     assert data['transform']['scale'] == [2, 2, 2]
+    assert np.allclose(data['color'], [0.5, 0.7, 1.0])
     
     new_instance = Instance.from_dict(data)
     assert new_instance.model == instance.model
     assert np.array_equal(new_instance.translation, instance.translation)
     assert np.array_equal(new_instance.rotation, instance.rotation)
     assert np.array_equal(new_instance.scale, instance.scale)
+    assert np.array_equal(new_instance.color, instance.color)
 
 
 def test_camera():
