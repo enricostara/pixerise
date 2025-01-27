@@ -3,13 +3,13 @@ Core components of the Pixerise rendering engine.
 This module contains the main classes for rendering: Canvas, ViewPort, and Renderer.
 """
 
-from typing import List, Tuple
+from typing import Tuple
 import numpy as np
-from kernel.rasterizing_mod import draw_line, draw_pixel, draw_flat_triangle, draw_shaded_triangle, draw_triangle
-from kernel.transforming_mod import transform_vertex, transform_vertex_normal, project_vertex, project_and_draw_triangle_kernel
-from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere, clip_triangle_and_normals)
+from kernel.rasterizing_mod import draw_line, draw_flat_triangle, draw_shaded_triangle, draw_triangle
+from kernel.transforming_mod import transform_vertex, transform_vertex_normal
+from kernel.clipping_mod import clip_triangle, calculate_bounding_sphere, clip_triangle_and_normals
 from kernel.culling_mod import cull_back_faces
-from kernel.shading_mod import triangle_flat_shading, triangle_gouraud_shading
+from kernel.rendering_mod import project_and_draw_triangle
 from enum import Enum
 from scene import Scene
 
@@ -229,11 +229,6 @@ class Renderer:
             - Triangles completely outside the canvas or with zero intensity are skipped
             - Z-coordinates are used for depth testing to ensure correct visibility
         """
-        # Clamp intensities to valid range [0.0, 1.0] to ensure correct color modulation
-        i1 = max(0.0, min(1.0, intensity1))
-        i2 = max(0.0, min(1.0, intensity2))
-        i3 = max(0.0, min(1.0, intensity3))
-        
         # Delegate to the optimized JIT-compiled implementation
         draw_shaded_triangle(
             int(p1[0]), int(p1[1]), p1[2],  # Convert x,y to integers, pass z as float
@@ -242,7 +237,7 @@ class Renderer:
             self._canvas.color_buffer, self._canvas.depth_buffer,  # Target canvas buffers
             self._canvas._center[0], self._canvas._center[1],  # Canvas center for coordinate transformation
             color[0], color[1], color[2],  # RGB components
-            i1, i2, i3,  # Clamped intensity values
+            intensity1, intensity2, intensity3,  # Clamped intensity values
             self._canvas.width, self._canvas.height)  # Canvas dimensions
 
     def render(self, scene: Scene, shading_mode: ShadingMode = ShadingMode.WIREFRAME):
@@ -384,7 +379,7 @@ class Renderer:
                                 clipped_tri_array = np.array(clipped_tri, dtype=np.float32)
                                 clipped_normal_array = np.array(clipped_normals[i], dtype=np.float32)
                                 # Direct kernel call for each clipped triangle
-                                project_and_draw_triangle_kernel(
+                                project_and_draw_triangle(
                                     clipped_tri_array, clipped_normal_array, shading_mode.value,
                                     self._canvas.width, self._canvas.height,
                                     self._viewport.width, self._viewport.height,
@@ -410,7 +405,7 @@ class Renderer:
                                 # Convert clipped triangle to ndarray
                                 clipped_tri_array = np.array(clipped_tri, dtype=np.float32)
                                 # Direct kernel call for each clipped triangle
-                                project_and_draw_triangle_kernel(
+                                project_and_draw_triangle(
                                     clipped_tri_array, triangle_transformed_normals, shading_mode.value,
                                     self._canvas.width, self._canvas.height,
                                     self._viewport.width, self._viewport.height,
@@ -423,7 +418,7 @@ class Renderer:
 
                     else:
                         # For fully visible instances, direct kernel call
-                        project_and_draw_triangle_kernel(
+                        project_and_draw_triangle(
                             triangle_vertices, triangle_transformed_normals, shading_mode.value,
                             self._canvas.width, self._canvas.height,
                             self._viewport.width, self._viewport.height,
