@@ -318,6 +318,11 @@ def draw_shaded_triangle(x0: int, y0: int, z0: float, x1: int, y1: int, z1: floa
     if max(i0, i1, i2) <= 0.001 or (color_r == 0 and color_g == 0 and color_b == 0):
         return
 
+    # Clamp intensities to valid range [0.0, 1.0] to ensure correct color modulation
+    i0 = max(0.0, min(1.0, i0))
+    i1 = max(0.0, min(1.0, i1))
+    i2 = max(0.0, min(1.0, i2))
+
     # Transform from world space to screen space coordinates:
     # - Add center_x to shift from [-width/2, width/2] to [0, width]
     # - Subtract from center_y to flip Y axis (screen Y grows downward)

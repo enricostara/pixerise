@@ -108,7 +108,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     pygame.event.set_grab(True)
     
     def update_display():
-        renderer.render(scene, shading_mode=ShadingMode.GOURAUD)
+        renderer.render(scene, shading_mode=ShadingMode.WIREFRAME)
         surf = pygame.surfarray.make_surface(canvas.color_buffer)
         screen.blit(surf, (0, 0))
         pygame.display.update()
