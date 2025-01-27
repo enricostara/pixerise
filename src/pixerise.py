@@ -6,7 +6,7 @@ This module contains the main classes for rendering: Canvas, ViewPort, and Rende
 from typing import List, Tuple
 import numpy as np
 from kernel.rasterizing_mod import draw_line, draw_pixel, draw_flat_triangle, draw_shaded_triangle, draw_triangle
-from kernel.transforming_mod import transform_vertex, transform_vertex_normal, project_vertex
+from kernel.transforming_mod import transform_vertex, transform_vertex_normal, project_vertex, project_and_draw_triangle_kernel
 from kernel.clipping_mod import (clip_triangle, calculate_bounding_sphere, clip_triangle_and_normals)
 from kernel.culling_mod import cull_back_faces
 from kernel.shading_mod import triangle_flat_shading, triangle_gouraud_shading
@@ -327,55 +327,24 @@ class Renderer:
                 
                 # Function to project and draw a triangle
                 def project_and_draw_triangle(vertices, vertex_normals, shading_mode: ShadingMode):
-                    # Project vertices to 2D
-                    v1 = project_vertex(vertices[0], self._canvas.width, self._canvas.height,
-                                             self._viewport.width, self._viewport.height)
-                    v2 = project_vertex(vertices[1], self._canvas.width, self._canvas.height,
-                                             self._viewport.width, self._viewport.height)
-                    v3 = project_vertex(vertices[2], self._canvas.width, self._canvas.height,
-                                             self._viewport.width, self._viewport.height)
+                    # Convert vertices and normals to numpy arrays for JIT compilation
+                    vertices_array = np.array([vertices[0], vertices[1], vertices[2]], dtype=np.float32)
+                    normals_array = np.array([vertex_normals[0], vertex_normals[1], vertex_normals[2]], dtype=np.float32)
                     
-                    # Skip if any vertex is behind camera
-                    if v1 is None or v2 is None or v3 is None:
-                        return
+                    # Convert shading mode to string for JIT compilation
+                    shading_mode_str = shading_mode.value
                     
-                    # Draw triangle
-                    if shading_mode == ShadingMode.WIREFRAME:
-                        draw_triangle(
-                            int(v1[0]), int(v1[1]), v1[2],
-                            int(v2[0]), int(v2[1]), v2[2],
-                            int(v3[0]), int(v3[1]), v3[2],
-                            self._canvas.color_buffer, self._canvas.depth_buffer,
-                            self._canvas._center[0], self._canvas._center[1],
-                            color[0], color[1], color[2],
-                            self._canvas.width, self._canvas.height)
-                    else:
-                        light_dir = -scene.directional_light.direction
-                        color_array = np.array(color, dtype=np.float32)
-                        ambient = scene.directional_light.ambient
-                        
-                        if shading_mode == ShadingMode.GOURAUD and has_vertex_normals:
-                            # Compute vertex intensities using vertex normals
-                            intensities = triangle_gouraud_shading(vertex_normals, light_dir, ambient)
-                            draw_shaded_triangle(
-                                int(v1[0]), int(v1[1]), v1[2],
-                                int(v2[0]), int(v2[1]), v2[2],
-                                int(v3[0]), int(v3[1]), v3[2],
-                                self._canvas.color_buffer, self._canvas.depth_buffer,
-                                self._canvas._center[0], self._canvas._center[1],
-                                color[0], color[1], color[2],
-                                intensities[0], intensities[1], intensities[2],
-                                self._canvas.width, self._canvas.height)
-                        else:  # FLAT shading
-                            flat_shaded_color = triangle_flat_shading(vertex_normals[0], light_dir, color_array, ambient)
-                            draw_flat_triangle(
-                                int(v1[0]), int(v1[1]), v1[2],
-                                int(v2[0]), int(v2[1]), v2[2],
-                                int(v3[0]), int(v3[1]), v3[2],
-                                self._canvas.color_buffer, self._canvas.depth_buffer,
-                                self._canvas._center[0], self._canvas._center[1],
-                                int(flat_shaded_color[0]), int(flat_shaded_color[1]), int(flat_shaded_color[2]),
-                                self._canvas.width, self._canvas.height)
+                    # Call JIT-compiled kernel
+                    project_and_draw_triangle_kernel(
+                        vertices_array, normals_array, shading_mode_str,
+                        self._canvas.width, self._canvas.height,
+                        self._viewport.width, self._viewport.height,
+                        self._canvas.color_buffer, self._canvas.depth_buffer,
+                        self._canvas._center[0], self._canvas._center[1],
+                        np.array(color, dtype=np.float32),
+                        -scene.directional_light.direction,
+                        scene.directional_light.ambient,
+                        has_vertex_normals)
 
                 # Convert triangle indices to numpy array
                 triangles_array = np.array(triangles, dtype=np.int32)
