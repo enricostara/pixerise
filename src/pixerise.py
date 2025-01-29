@@ -296,7 +296,7 @@ class Renderer:
                     # Transform normal using rotation only if available
                     if shading_mode == ShadingMode.GOURAUD and has_vertex_normals:
                         normal = vertex_normals[i]
-                        transformed_normal = transform_vertex_normal(normal, rotation, camera_rotation, True)
+                        transformed_normal = transform_vertex_normal(normal, -rotation, camera_rotation, True)
                         transformed_normals[i] = transformed_normal
                 
                 # Calculate bounding sphere for the entire instance
