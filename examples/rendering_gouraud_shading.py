@@ -23,14 +23,23 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     
     # Movement speed
     move_speed = 0.1
+    rotation_speed = 0.01  # Speed of rotation
+    wheel_speed = 0.1  # Speed for mouse wheel movement
+    wheel_momentum = 0.95  # How much wheel velocity is retained (0-1)
 
     # Track if any movement occurred
     movement_occurred = False
     
+    # Initialize rotation angles for objects
+    cube_rotation = 0.0
+    sphere_rotation = 0.0
+    
+    # Initialize wheel velocity
+    wheel_velocity = 0.0
+    
     while True:
         for event in pygame.event.get():
-            if (event.type == pygame.QUIT or
-                    event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 return
             
             # Handle mouse movement
@@ -46,52 +55,78 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                 camera_rot[1] = (camera_rot[1] + rot_y) % (2 * np.pi)  # Allow full horizontal rotation
                 scene.camera.rotation = camera_rot
                 movement_occurred = True
+
+            # Handle mouse wheel for forward/backward movement
+            elif event.type == pygame.MOUSEWHEEL:
+                # Add to current wheel velocity
+                wheel_velocity += event.y * wheel_speed
         
         # Continuous movement
         keys = pygame.key.get_pressed()
-        camera_rot = scene.camera.rotation
         
-        # Calculate forward vector based on camera rotation
-        forward = np.array([
-            -np.sin(camera_rot[1]) * np.cos(camera_rot[0]),
-            np.sin(camera_rot[0]),
-            -np.cos(camera_rot[1]) * np.cos(camera_rot[0])
-        ])
+        # Apply wheel momentum for smooth movement
+        if abs(wheel_velocity) > 0.0001:  # Small threshold to stop tiny movements
+            # Calculate forward vector based on camera rotation
+            camera_rot = np.array(scene.camera.rotation)
+            forward = np.array([
+                np.sin(camera_rot[1]),
+                0,
+                np.cos(camera_rot[1])
+            ])
+            # Move based on current wheel velocity
+            scene.camera.translation += forward * wheel_velocity
+            # Apply momentum (gradually reduce velocity)
+            wheel_velocity *= wheel_momentum
+            movement_occurred = True
+        else:
+            wheel_velocity = 0.0  # Reset to exactly zero when very small
         
-        # Calculate right vector (cross product of forward and up)
-        right = np.cross(forward, np.array([0, 1, 0]))
-        right = right / np.linalg.norm(right)  # Normalize
-        
-        # Movement based on keyboard input
-        if keys[pygame.K_w]:  # Forward
-            scene.camera.translation -= forward * move_speed
+        if any([keys[key] for key in [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_q, pygame.K_e]]):
             movement_occurred = True
-        if keys[pygame.K_s]:  # Backward
-            scene.camera.translation += forward * move_speed
-            movement_occurred = True
-        if keys[pygame.K_a]:  # Left
-            scene.camera.translation -= right * move_speed
-            movement_occurred = True
-        if keys[pygame.K_d]:  # Right
-            scene.camera.translation += right * move_speed
-            movement_occurred = True
+            camera_pos = np.array(scene.camera.translation)
+            camera_rot = np.array(scene.camera.rotation)
+            
+            # Calculate forward and right vectors
+            forward = np.array([
+                np.sin(camera_rot[1]),
+                0,
+                np.cos(camera_rot[1])
+            ])
+            right = np.array([
+                np.cos(camera_rot[1]),
+                0,
+                -np.sin(camera_rot[1])
+            ])
+            
+            # Update camera position based on key presses
+            if keys[pygame.K_w]: camera_pos += forward * move_speed
+            if keys[pygame.K_s]: camera_pos -= forward * move_speed
+            if keys[pygame.K_a]: camera_pos -= right * move_speed
+            if keys[pygame.K_d]: camera_pos += right * move_speed
+            if keys[pygame.K_q]: camera_pos[1] -= move_speed  # Move down
+            if keys[pygame.K_e]: camera_pos[1] += move_speed  # Move up
+            
+            scene.camera.translation = camera_pos
 
-        # Arrow key controls for rotation
-        if keys[pygame.K_UP]:
-            camera_rot[0] -= move_speed * 0.2
-            scene.camera.rotation = camera_rot
-            movement_occurred = True
-        if keys[pygame.K_DOWN]:
-            camera_rot[0] += move_speed * 0.2
-            scene.camera.rotation = camera_rot
-            movement_occurred = True
-        if keys[pygame.K_LEFT]:
-            camera_rot[1] += move_speed * 0.2
-            scene.camera.rotation = camera_rot
-            movement_occurred = True
-        if keys[pygame.K_RIGHT]:
-            camera_rot[1] -= move_speed * 0.2
-            scene.camera.rotation = camera_rot
+        # Update object rotations
+        cube_rotation += rotation_speed
+        sphere_rotation += rotation_speed * 0.7  # Slower rotation for spheres
+        
+        # Update instance rotations
+        cube = scene.get_instance('left')
+        middle_sphere = scene.get_instance('middle')
+        right_sphere = scene.get_instance('right')
+        
+        if cube and middle_sphere and right_sphere:
+            # Cube: complex rotation around multiple axes
+            cube.rotation = np.array([np.pi/6 + cube_rotation/2, np.pi/4 + cube_rotation, cube_rotation/3], dtype=float)
+            
+            # Middle sphere (flat): gentle wobble
+            middle_sphere.rotation = np.array([np.sin(sphere_rotation/2) * 0.2, sphere_rotation, 0], dtype=float)
+            
+            # Right sphere (smooth): slow steady rotation
+            right_sphere.rotation = np.array([0, sphere_rotation * 0.5, 0], dtype=float)
+            
             movement_occurred = True
 
         # Update display only if movement occurred
@@ -166,31 +201,31 @@ def main():
                 'model': 'cube',
                 'name': 'left',
                 'transform': {
-                    'translation': np.array([0, 1, 8], dtype=float),
+                    'translation': np.array([-2, 1, 6], dtype=float),
                     'rotation': np.array([np.pi/6, np.pi/4, 0], dtype=float),  # Rotated for better shading visibility
                     'scale': np.array([.6, .6, .6], dtype=float)
                 },
-                'color': (220, 70, 70)  # Reddish color to show shading variations
+                'color': (220, 60, 60)  # Reddish color to show shading variations
             },
             {
                 'model': 'sphere_flat',  # Changed from cube to sphere
                 'name': 'middle',
                 'transform': {
-                    'translation': np.array([2, 1, 8], dtype=float),
+                    'translation': np.array([0, 1, 6], dtype=float),
                     'rotation': np.array([0, 0, 0], dtype=float),  # Sphere rotation less important
                     'scale': np.array([0.8, 0.8, 0.8], dtype=float)
                 },
-                'color': (70, 220, 70)  # Greenish color
+                'color': (60, 220, 60)  # Greenish color
             },
             {
                 'model': 'sphere',  # Changed from cube to sphere
                 'name': 'right',
                 'transform': {
-                    'translation': np.array([4, 1, 8], dtype=float),
+                    'translation': np.array([2, 1, 6], dtype=float),
                     'rotation': np.array([0, 0, 0], dtype=float),  # Sphere rotation less important
                     'scale': np.array([0.8, 0.8, 0.8], dtype=float)
                 },
-                'color': (70, 70, 220)  # Blueish color
+                'color': (60, 60, 220)  # Blueish color
             }
         ]
     }
