@@ -108,7 +108,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     pygame.event.set_grab(True)
     
     def update_display():
-        renderer.render(scene, shading_mode=ShadingMode.WIREFRAME)
+        renderer.render(scene, shading_mode=ShadingMode.FLAT)
         surf = pygame.surfarray.make_surface(canvas.color_buffer)
         screen.blit(surf, (0, 0))
         pygame.display.update()
@@ -118,14 +118,19 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     
     # Movement speed
     move_speed = 0.1
+    wheel_speed = 0.1  # Speed for mouse wheel movement
+    wheel_momentum = 0.95  # How much wheel velocity is retained (0-1)
+    rotation_speed = 0.005  # Speed of tank rotation
 
     # Track if any movement occurred
     movement_occurred = False
     
+    # Initialize wheel velocity
+    wheel_velocity = 0.0
+    
     while True:
         for event in pygame.event.get():
-            if (event.type == pygame.QUIT or
-                    event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 return
             
             # Handle mouse movement
@@ -140,65 +145,72 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                 camera_rot[0] += rot_x  # Remove clipping for vertical rotation
                 camera_rot[1] = (camera_rot[1] + rot_y) % (2 * np.pi)  # Allow full horizontal rotation
                 scene.camera.rotation = camera_rot
-                
-                # Update display
                 movement_occurred = True
+
+            # Handle mouse wheel for forward/backward movement
+            elif event.type == pygame.MOUSEWHEEL:
+                # Add to current wheel velocity
+                wheel_velocity += event.y * wheel_speed
         
         # Continuous movement
         keys = pygame.key.get_pressed()
-        camera_rot = scene.camera.rotation
         
-        # Calculate forward direction based on current rotation
-        forward = np.array([
-            -np.sin(camera_rot[1]) * np.cos(camera_rot[0]),
-            np.sin(camera_rot[0]),
-            -np.cos(camera_rot[1]) * np.cos(camera_rot[0])
-        ])
+        # Apply wheel momentum for smooth movement
+        if abs(wheel_velocity) > 0.0001:  # Small threshold to stop tiny movements
+            # Calculate forward vector based on camera rotation
+            camera_rot = np.array(scene.camera.rotation)
+            forward = np.array([
+                np.sin(camera_rot[1]),
+                0,
+                np.cos(camera_rot[1])
+            ])
+            # Move based on current wheel velocity
+            scene.camera.translation += forward * wheel_velocity
+            # Apply momentum (gradually reduce velocity)
+            wheel_velocity *= wheel_momentum
+            movement_occurred = True
+        else:
+            wheel_velocity = 0.0  # Reset to exactly zero when very small
         
-        # Calculate right vector
-        right = np.array([
-            np.cos(camera_rot[1]) * np.cos(camera_rot[0]),
-            0,
-            -np.sin(camera_rot[1]) * np.cos(camera_rot[0])
-        ])
+        if any([keys[key] for key in [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_q, pygame.K_e]]):
+            movement_occurred = True
+            camera_pos = np.array(scene.camera.translation)
+            camera_rot = np.array(scene.camera.rotation)
+            
+            # Calculate forward and right vectors
+            forward = np.array([
+                np.sin(camera_rot[1]),
+                0,
+                np.cos(camera_rot[1])
+            ])
+            right = np.array([
+                np.cos(camera_rot[1]),
+                0,
+                -np.sin(camera_rot[1])
+            ])
+            
+            # Apply movement based on keys
+            if keys[pygame.K_w]:
+                camera_pos += forward * move_speed
+            if keys[pygame.K_s]:
+                camera_pos -= forward * move_speed
+            if keys[pygame.K_a]:
+                camera_pos -= right * move_speed
+            if keys[pygame.K_d]:
+                camera_pos += right * move_speed
+            if keys[pygame.K_q]:  # Move down
+                camera_pos[1] -= move_speed
+            if keys[pygame.K_e]:  # Move up
+                camera_pos[1] += move_speed
+            
+            scene.camera.translation = camera_pos
         
-        # Move forward with W key
-        if keys[pygame.K_w]:
-            scene.camera.translation -= forward * move_speed
-            movement_occurred = True
-        
-        # Move backward with S key
-        if keys[pygame.K_s]:
-            scene.camera.translation += forward * move_speed
-            movement_occurred = True
-        
-        # Move left with A key
-        if keys[pygame.K_a]:
-            scene.camera.translation -= right * move_speed
-            movement_occurred = True
-        
-        # Move right with D key
-        if keys[pygame.K_d]:
-            scene.camera.translation += right * move_speed
-            movement_occurred = True
-
-        # Arrow key controls for rotation
-        if keys[pygame.K_UP]:
-            camera_rot[0] -= move_speed * 0.2
-            scene.camera.rotation = camera_rot
-            movement_occurred = True
-        if keys[pygame.K_DOWN]:
-            camera_rot[0] += move_speed * 0.2
-            scene.camera.rotation = camera_rot
-            movement_occurred = True
-        if keys[pygame.K_LEFT]:
-            camera_rot[1] += move_speed * 0.2
-            scene.camera.rotation = camera_rot
-            movement_occurred = True
-        if keys[pygame.K_RIGHT]:
-            camera_rot[1] -= move_speed * 0.2
-            scene.camera.rotation = camera_rot
-            movement_occurred = True
+        # Rotate the tank model
+        tank_instance = scene.instances['tank']
+        tank_rot = tank_instance.rotation
+        tank_rot[1] = (tank_rot[1] + rotation_speed) % (2 * np.pi)  # Rotate around Y axis
+        tank_instance.rotation = tank_rot
+        movement_occurred = True
 
         # Update display only if movement occurred
         if movement_occurred:
@@ -231,8 +243,8 @@ def main():
         'lights': {
             'directional': {
                 'direction': np.array([-1, 1, -1], dtype=float),  # Light coming from top-left-front
-                'intensity': 0.7,
-                'ambient': 0.2
+                'intensity': 0.8,  # Increased intensity for better visibility
+                'ambient': 0.3  # Increased ambient for better shadow detail
             }
         },
         'instances': [
@@ -244,7 +256,7 @@ def main():
                     'rotation': np.array([0, np.pi, 0], dtype=float),  # Rotate to face camera
                     'scale': np.array([scale_factor, scale_factor, scale_factor], dtype=float)
                 },
-                'color': (180, 180, 180)  # Gray color for the tank
+                'color': (200, 200, 200)  # Lighter gray for better contrast
             }
         ]
     }
