@@ -23,15 +23,24 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     
     # Movement speed
     move_speed = 0.1
+    rotation_speed = 0.01  # Speed of cube rotation
+    wheel_speed = 0.1  # Speed for mouse wheel movement
+    wheel_momentum = 0.95  # How much wheel velocity is retained (0-1)
 
     # Track if any movement occurred
     movement_occurred = False
     
+    # Initialize rotation angles for cubes
+    left_cube_rotation = 0.0
+    right_cube_rotation = 0.0
+    
+    # Initialize wheel velocity
+    wheel_velocity = 0.0
+    
     while True:
 
         for event in pygame.event.get():
-            if (event.type == pygame.QUIT or
-                    event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 return
             
             # Handle mouse movement
@@ -47,54 +56,74 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                 camera_rot[1] = (camera_rot[1] + rot_y) % (2 * np.pi)  # Allow full horizontal rotation
                 scene.camera.rotation = camera_rot
                 movement_occurred = True
+
+            # Handle mouse wheel for forward/backward movement
+            elif event.type == pygame.MOUSEWHEEL:
+                # Add to current wheel velocity
+                wheel_velocity += event.y * wheel_speed
         
         # Continuous movement
         keys = pygame.key.get_pressed()
-        camera_rot = scene.camera.rotation
         
-        # Calculate forward vector based on camera rotation
-        forward = np.array([
-            -np.sin(camera_rot[1]) * np.cos(camera_rot[0]),
-            np.sin(camera_rot[0]),
-            -np.cos(camera_rot[1]) * np.cos(camera_rot[0])
-        ])
+        # Apply wheel momentum for smooth movement
+        if abs(wheel_velocity) > 0.0001:  # Small threshold to stop tiny movements
+            # Calculate forward vector based on camera rotation
+            camera_rot = np.array(scene.camera.rotation)
+            forward = np.array([
+                np.sin(camera_rot[1]),
+                0,
+                np.cos(camera_rot[1])
+            ])
+            # Move based on current wheel velocity
+            scene.camera.translation += forward * wheel_velocity
+            # Apply momentum (gradually reduce velocity)
+            wheel_velocity *= wheel_momentum
+            movement_occurred = True
+        else:
+            wheel_velocity = 0.0  # Reset to exactly zero when very small
         
-        # Calculate right vector (cross product of forward and up)
-        right = np.cross(forward, np.array([0, 1, 0]))
-        right = right / np.linalg.norm(right)  # Normalize
-        
-        # Movement based on keyboard input
-        if keys[pygame.K_w]:  # Forward
-            scene.camera.translation -= forward * move_speed
+        if any([keys[key] for key in [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_q, pygame.K_e]]):
             movement_occurred = True
-        
-        # Move backward with S key
-        if keys[pygame.K_s]:
-            scene.camera.translation += forward * move_speed
-            movement_occurred = True
-        if keys[pygame.K_a]:  # Left
-            scene.camera.translation -= right * move_speed
-            movement_occurred = True
-        if keys[pygame.K_d]:  # Right
-            scene.camera.translation += right * move_speed
-            movement_occurred = True
+            camera_pos = np.array(scene.camera.translation)
+            camera_rot = np.array(scene.camera.rotation)
+            
+            # Calculate forward and right vectors
+            forward = np.array([
+                np.sin(camera_rot[1]),
+                0,
+                np.cos(camera_rot[1])
+            ])
+            right = np.array([
+                np.cos(camera_rot[1]),
+                0,
+                -np.sin(camera_rot[1])
+            ])
+            
+            # Update camera position based on key presses
+            if keys[pygame.K_w]: camera_pos += forward * move_speed
+            if keys[pygame.K_s]: camera_pos -= forward * move_speed
+            if keys[pygame.K_a]: camera_pos -= right * move_speed
+            if keys[pygame.K_d]: camera_pos += right * move_speed
+            if keys[pygame.K_q]: camera_pos[1] -= move_speed  # Move down
+            if keys[pygame.K_e]: camera_pos[1] += move_speed  # Move up
+            
+            scene.camera.translation = camera_pos
 
-        # Arrow key controls for rotation
-        if keys[pygame.K_UP]:
-            camera_rot[0] -= move_speed * 0.2
-            scene.camera.rotation = camera_rot
-            movement_occurred = True
-        if keys[pygame.K_DOWN]:
-            camera_rot[0] += move_speed * 0.2
-            scene.camera.rotation = camera_rot
-            movement_occurred = True
-        if keys[pygame.K_LEFT]:
-            camera_rot[1] += move_speed * 0.2
-            scene.camera.rotation = camera_rot
-            movement_occurred = True
-        if keys[pygame.K_RIGHT]:
-            camera_rot[1] -= move_speed * 0.2
-            scene.camera.rotation = camera_rot
+        # Update cube rotations
+        left_cube_rotation += rotation_speed
+        right_cube_rotation += rotation_speed * 1.5  # Right cube rotates faster
+        
+        # Update cube instance rotations
+        left_instance = scene.get_instance('left')
+        right_instance = scene.get_instance('right')
+        
+        if left_instance and right_instance:
+            # Left cube: rotate around Y axis
+            left_instance.rotation = np.array([0, left_cube_rotation, 0], dtype=float)
+            
+            # Right cube: rotate around both Y and X axes
+            right_instance.rotation = np.array([right_cube_rotation, np.pi/4 + right_cube_rotation, 0], dtype=float)
+            
             movement_occurred = True
 
         # Update display only if movement occurred
