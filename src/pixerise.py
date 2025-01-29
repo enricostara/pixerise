@@ -268,6 +268,13 @@ class Renderer:
             camera_translation = scene.camera.translation
             camera_rotation = scene.camera.rotation
             
+            # Transform light direction into camera space
+            light_dir = transform_vertex_normal(
+                -scene.directional_light.direction, 
+                np.zeros(3, dtype=np.float32),
+                camera_rotation,
+                True)
+            
             # Transform vertices for each model group
             for group in model.groups.values():
                 vertices = group.vertices
@@ -346,6 +353,6 @@ class Renderer:
                     self._canvas.color_buffer, self._canvas.depth_buffer,
                     self._canvas._center[0], self._canvas._center[1],
                     color,
-                    -scene.directional_light.direction,
+                    light_dir,
                     scene.directional_light.ambient
                 )

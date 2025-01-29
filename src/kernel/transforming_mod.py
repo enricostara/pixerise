@@ -130,7 +130,7 @@ def transform_vertex(vertex: np.ndarray,
     
     # Return the transformed vertex as a new array
     # This ensures the original vertex array is not modified
-    return np.array([x, y, z])
+    return np.array([x, y, z], dtype=np.float32)
 
 
 @njit(cache=True)
@@ -221,7 +221,7 @@ def transform_vertex_normal(normal: np.ndarray,
         y /= length
         z /= length
     
-    return np.array([x, y, z])
+    return np.array([x, y, z], dtype=np.float32)
 
 
 @njit(cache=True)
