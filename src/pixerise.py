@@ -9,7 +9,7 @@ from kernel.rasterizing_mod import draw_line, draw_flat_triangle, draw_shaded_tr
 from kernel.transforming_mod import transform_vertex, transform_vertex_normal
 from kernel.clipping_mod import calculate_bounding_sphere
 from kernel.culling_mod import cull_back_faces
-from kernel.rendering_mod import process_triangles_batch
+from kernel.rendering_mod import process_and_draw_triangles
 from enum import Enum
 from scene import Scene
 
@@ -332,7 +332,7 @@ class Renderer:
                     frustum_planes[i, 3] = plane[1]   # distance
 
                 # Process all triangles in a batch using JIT-compiled function
-                process_triangles_batch(
+                process_and_draw_triangles(
                     triangles_array,
                     transformed_vertices,
                     triangle_normals,
