@@ -41,13 +41,13 @@ def test_model():
     model = Model()
     
     # Test adding a group
-    vertices = [[0, 0, 0], [1, 0, 0], [0, 1, 0]]
-    triangles = [[0, 1, 2]]
+    vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=np.float32)
+    triangles = np.array([[0, 1, 2]], dtype=np.int32)
     model.add_group('test_group', vertices, triangles)
     
     assert 'test_group' in model.groups
-    assert np.array_equal(model.groups['test_group'].vertices, np.array(vertices, dtype=np.float32))
-    assert np.array_equal(model.groups['test_group'].triangles, np.array(triangles, dtype=np.int32))
+    assert np.array_equal(model.groups['test_group'].vertices, vertices)
+    assert np.array_equal(model.groups['test_group'].triangles, triangles)
     
     # Test to_dict with single default group
     model = Model()
@@ -67,8 +67,8 @@ def test_model():
     
     # Test from_dict with flat structure
     flat_data = {
-        'vertices': vertices,
-        'triangles': triangles
+        'vertices': vertices.tolist(),
+        'triangles': triangles.tolist()
     }
     model = Model.from_dict(flat_data)
     assert 'default' in model.groups
@@ -76,8 +76,8 @@ def test_model():
     # Test from_dict with groups structure
     grouped_data = {
         'groups': {
-            'group1': {'vertices': vertices, 'triangles': triangles},
-            'group2': {'vertices': vertices, 'triangles': triangles}
+            'group1': {'vertices': vertices.tolist(), 'triangles': triangles.tolist()},
+            'group2': {'vertices': vertices.tolist(), 'triangles': triangles.tolist()}
         }
     }
     model = Model.from_dict(grouped_data)
@@ -177,7 +177,7 @@ def test_scene():
     
     # Test adding and getting models
     model = Model()
-    model.add_group('default', [[0, 0, 0], [1, 0, 0], [0, 1, 0]], [[0, 1, 2]])
+    model.add_group('default', np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=np.float32), np.array([[0, 1, 2]], dtype=np.int32))
     scene.add_model('test_model', model)
     
     assert scene.get_model('test_model') == model

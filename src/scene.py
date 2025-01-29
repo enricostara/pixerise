@@ -30,13 +30,20 @@ class Model:
     """A 3D model containing one or more groups of geometry."""
     groups: Dict[str, ModelInnerGroup] = field(default_factory=dict)
 
-    def add_group(self, name: str, vertices: List[List[float]], triangles: List[List[int]], 
-                 vertex_normals: Optional[List[List[float]]] = None) -> None:
-        """Add a new group to the model."""
+    def add_group(self, name: str, vertices: np.ndarray, triangles: np.ndarray, 
+                 vertex_normals: Optional[np.ndarray] = None) -> None:
+        """Add a new group to the model.
+        
+        Args:
+            name: Name of the group
+            vertices: Numpy array of shape (N, 3) containing vertex coordinates
+            triangles: Numpy array of shape (M, 3) containing triangle indices
+            vertex_normals: Optional numpy array of shape (N, 3) containing vertex normals
+        """
         self.groups[name] = ModelInnerGroup(
-            vertices=np.array(vertices, dtype=np.float32),
-            triangles=np.array(triangles, dtype=np.int32),
-            vertex_normals=np.array(vertex_normals, dtype=np.float32) if vertex_normals else None
+            vertices=vertices.astype(np.float32),
+            triangles=triangles.astype(np.int32),
+            vertex_normals=vertex_normals.astype(np.float32) if vertex_normals is not None else None
         )
 
     @classmethod

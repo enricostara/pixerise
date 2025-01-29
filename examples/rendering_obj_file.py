@@ -91,9 +91,9 @@ def load_obj_file(file_path):
         if len(group_data['triangles']) > 0:  # Only keep groups with geometry
             model.add_group(
                 group_name,
-                group_data['vertices'],
-                group_data['triangles'],
-                group_data['vertex_normals'] if group_data['vertex_normals'] else None
+                np.array(group_data['vertices'], dtype=np.float32),
+                np.array(group_data['triangles'], dtype=np.int32),
+                -np.array(group_data['vertex_normals'], dtype=np.float32) if group_data['vertex_normals'] else None
             )
     
     return model
