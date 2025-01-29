@@ -5,7 +5,6 @@ These functions are optimized using Numba's JIT compilation for better performan
 
 import numpy as np
 from numba import njit
-from typing import List, Tuple
 
 from .rasterizing_mod import (draw_triangle, draw_flat_triangle, draw_shaded_triangle)
 from .shading_mod import triangle_flat_shading, triangle_gouraud_shading
@@ -249,3 +248,61 @@ def project_and_draw_triangle(vertices: np.ndarray,
                              center_x, center_y,
                              int(flat_shaded_color[0]), int(flat_shaded_color[1]), int(flat_shaded_color[2]),
                              canvas_width, canvas_height)
+
+
+@njit(cache=True)
+def process_triangles_batch(triangles_array: np.ndarray,
+                          transformed_vertices: np.ndarray,
+                          triangle_normals: np.ndarray,
+                          transformed_normals: np.ndarray,
+                          shading_mode: str,
+                          has_vertex_normals: bool,
+                          fully_visible: bool,
+                          frustum_planes: np.ndarray,
+                          canvas_width: int, canvas_height: int,
+                          viewport_width: float, viewport_height: float,
+                          canvas_buffer: np.ndarray, depth_buffer: np.ndarray,
+                          center_x: int, center_y: int,
+                          color: np.ndarray,
+                          light_dir: np.ndarray,
+                          ambient: float) -> None:
+    """
+    JIT-compiled function to process and render a batch of triangles.
+    
+    Args:
+        triangles_array: Array of shape (N, 3) containing vertex indices for N triangles
+        transformed_vertices: Array of all transformed vertices
+        triangle_normals: Array of face normals
+        transformed_normals: Array of all transformed vertex normals
+        shading_mode: String indicating shading mode ('wireframe', 'flat', or 'gouraud')
+        has_vertex_normals: Whether vertex normals are available
+        fully_visible: Whether triangles are fully visible or need clipping
+        frustum_planes: Array of shape (N, 4) containing plane equations (normal + distance)
+        canvas_width, canvas_height: Canvas dimensions
+        viewport_width, viewport_height: Viewport dimensions
+        canvas_buffer: RGB color buffer
+        depth_buffer: Depth buffer
+        center_x, center_y: Canvas center coordinates
+        color: RGB color array
+        light_dir: Directional light vector
+        ambient: Ambient light intensity
+    """
+    for i in range(len(triangles_array)):
+        process_and_render_triangle(
+            triangles_array[i],
+            transformed_vertices,
+            triangle_normals,
+            transformed_normals,
+            i,
+            shading_mode,
+            has_vertex_normals,
+            fully_visible,
+            frustum_planes,
+            canvas_width, canvas_height,
+            viewport_width, viewport_height,
+            canvas_buffer, depth_buffer,
+            center_x, center_y,
+            color,
+            light_dir,
+            ambient
+        )

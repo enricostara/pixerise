@@ -7,9 +7,9 @@ from typing import Tuple
 import numpy as np
 from kernel.rasterizing_mod import draw_line, draw_flat_triangle, draw_shaded_triangle, draw_triangle
 from kernel.transforming_mod import transform_vertex, transform_vertex_normal
-from kernel.clipping_mod import clip_triangle, calculate_bounding_sphere, clip_triangle_and_normals
+from kernel.clipping_mod import calculate_bounding_sphere
 from kernel.culling_mod import cull_back_faces
-from kernel.rendering_mod import project_and_draw_triangle, process_and_render_triangle
+from kernel.rendering_mod import process_triangles_batch
 from enum import Enum
 from scene import Scene
 
@@ -331,22 +331,21 @@ class Renderer:
                     frustum_planes[i, :3] = plane[0]  # normal
                     frustum_planes[i, 3] = plane[1]   # distance
 
-                # Draw triangles
-                for i, triangle in enumerate(triangles_array):
-                    process_and_render_triangle(
-                        triangle,
-                        transformed_vertices,
-                        triangle_normals,
-                        transformed_normals,
-                        i,
-                        shading_mode.value,
-                        has_vertex_normals,
-                        fully_visible,
-                        frustum_planes,
-                        self._canvas.width, self._canvas.height,
-                        self._viewport.width, self._viewport.height,
-                        self._canvas.color_buffer, self._canvas.depth_buffer,
-                        self._canvas._center[0], self._canvas._center[1],
-                        color,
-                        -scene.directional_light.direction,
-                        scene.directional_light.ambient)
+                # Process all triangles in a batch using JIT-compiled function
+                process_triangles_batch(
+                    triangles_array,
+                    transformed_vertices,
+                    triangle_normals,
+                    transformed_normals,
+                    shading_mode.value,
+                    has_vertex_normals,
+                    fully_visible,
+                    frustum_planes,
+                    self._canvas.width, self._canvas.height,
+                    self._viewport.width, self._viewport.height,
+                    self._canvas.color_buffer, self._canvas.depth_buffer,
+                    self._canvas._center[0], self._canvas._center[1],
+                    color,
+                    -scene.directional_light.direction,
+                    scene.directional_light.ambient
+                )
