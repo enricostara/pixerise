@@ -129,8 +129,12 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     pygame.mouse.set_visible(False)
     pygame.event.set_grab(True)
     
+    # Initialize shading mode
+    shading_modes = [ShadingMode.WIREFRAME, ShadingMode.FLAT, ShadingMode.GOURAUD, ShadingMode.FLAT]
+    current_mode_index = 0
+    
     def update_display():
-        renderer.render(scene, shading_mode=ShadingMode.FLAT)
+        renderer.render(scene, shading_mode=shading_modes[current_mode_index])
         surf = pygame.surfarray.make_surface(canvas.color_buffer)
         screen.blit(surf, (0, 0))
         pygame.display.update()
@@ -142,7 +146,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     move_speed = 0.1
     wheel_speed = 0.1  # Speed for mouse wheel movement
     wheel_momentum = 0.95  # How much wheel velocity is retained (0-1)
-    rotation_speed = 0.005  # Speed of tank rotation
+    rotation_speed = 0.007  # Speed of tank rotation
 
     # Track if any movement occurred
     movement_occurred = False
@@ -154,6 +158,11 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 return
+            
+            # Handle shading mode switching with spacebar
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                current_mode_index = (current_mode_index + 1) % len(shading_modes)
+                movement_occurred = True
             
             # Handle mouse movement
             if event.type == pygame.MOUSEMOTION:
@@ -239,7 +248,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
             update_display()
         
         clock.tick(60)
-        pygame.display.set_caption(str(clock.get_fps())[0:2])
+        pygame.display.set_caption(f"{shading_modes[current_mode_index].value} - {str(clock.get_fps())[0:2]} fps - press SPACE to toggle shading mode")
 
 
 def main():
@@ -258,8 +267,8 @@ def main():
     scene_dict = {
         'camera': {
             'transform': {
-                'translation': np.array([4.4,  1.25, -3.8], dtype=float),  # Position camera above and back
-                'rotation': np.array([0.2, 5.45, 0], dtype=float)  # Slight downward tilt
+                'translation': np.array([0,  1, -5], dtype=float),  # Position camera above and back
+                'rotation': np.array([0.2, 0, 0], dtype=float)  # Slight downward tilt
             }
         },
         'lights': {
