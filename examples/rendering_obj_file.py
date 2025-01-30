@@ -16,7 +16,7 @@ def load_obj_file(file_path):
     - Groups (g) and objects (o)
     
     Returns:
-        Model: A Model object containing the loaded geometry
+        Model: A Model object containing the loaded geometry, centered at origin
     """
     vertices = []
     vertex_normals = []
@@ -87,14 +87,36 @@ def load_obj_file(file_path):
     
     # Create Model object and add groups
     model: Model = Model()
-    for group_name, group_data in groups.items():
-        if len(group_data['triangles']) > 0:  # Only keep groups with geometry
-            model.add_group(
-                group_name,
-                np.array(group_data['vertices'], dtype=np.float32),
-                np.array(group_data['triangles'], dtype=np.int32),
-                -np.array(group_data['vertex_normals'], dtype=np.float32) if group_data['vertex_normals'] else None
-            )
+    
+    # Calculate overall bounding box to center the model
+    all_vertices = []
+    for group_data in groups.values():
+        if len(group_data['vertices']) > 0:
+            all_vertices.extend(group_data['vertices'])
+    
+    if all_vertices:
+        # Convert to numpy array for efficient computation
+        vertices_array = np.array(all_vertices, dtype=np.float32)
+        
+        # Calculate bounding box
+        min_coords = np.min(vertices_array, axis=0)
+        max_coords = np.max(vertices_array, axis=0)
+        
+        # Calculate center offset
+        center_offset = (min_coords + max_coords) / 2
+        
+        # Add centered groups to model
+        for group_name, group_data in groups.items():
+            if len(group_data['triangles']) > 0:  # Only keep groups with geometry
+                # Center vertices by subtracting center_offset
+                centered_vertices = np.array(group_data['vertices'], dtype=np.float32) - center_offset
+                
+                model.add_group(
+                    group_name,
+                    centered_vertices,
+                    np.array(group_data['triangles'], dtype=np.int32),
+                    -np.array(group_data['vertex_normals'], dtype=np.float32) if group_data['vertex_normals'] else None
+                )
     
     return model
 
