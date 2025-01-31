@@ -168,7 +168,48 @@ class ViewPort:
 
 
 class Renderer:
-    """Main renderer class that handles rendering of 3D scenes."""
+    """A high-performance 3D renderer using NumPy and Numba JIT compilation.
+    
+    The Renderer class implements a complete 3D rendering pipeline with the following features:
+    - Multiple shading modes (Wireframe, Flat, Gouraud)
+    - View frustum culling with bounding spheres
+    - Backface culling for performance optimization
+    - Directional lighting with ambient and diffuse components
+    - Efficient batch processing of vertices and normals
+    - JIT-compiled core functions for maximum performance
+    
+    The rendering pipeline follows these main steps:
+    1. Scene Setup:
+       - Process scene graph with models, instances, camera, and lights
+       - Configure viewport and canvas for output
+    
+    2. Geometry Processing:
+       - Transform vertices from model to world space
+       - Apply camera transformations to reach camera space
+       - Perform view frustum culling using bounding spheres
+    
+    3. Rasterization:
+       - Project visible triangles to screen space
+       - Apply backface culling
+       - Rasterize triangles with the selected shading mode
+    
+    4. Shading:
+       - Calculate lighting based on surface normals and light direction
+       - Apply shading model (flat or smooth)
+       - Handle depth testing and pixel output
+    
+    Performance Optimizations:
+    - Pre-computed frustum planes in optimized format
+    - Batch processing of vertex transformations
+    - JIT-compiled core rendering functions
+    - Early culling of invisible geometry
+    - Efficient memory layout for vertex data
+    
+    Attributes:
+        _canvas (Canvas): Target canvas for rendering output
+        _viewport (ViewPort): Viewport configuration and frustum planes
+        _background_color (Tuple[int, int, int]): RGB color for canvas clear
+    """
     
     def __init__(self, canvas: Canvas, viewport: ViewPort, background_color=(32, 32, 32)):
         self._canvas = canvas
@@ -249,11 +290,26 @@ class Renderer:
             self._canvas.width, self._canvas.height)  # Canvas dimensions
 
     def render(self, scene: Scene, shading_mode: ShadingMode = ShadingMode.WIREFRAME):
-        """Render a scene containing models and their instances.
+        """Render a 3D scene using the specified shading mode.
+        
+        This method performs the complete rendering pipeline for a 3D scene:
+        1. Transforms vertices and normals from model to camera space
+        2. Performs view frustum culling using bounding spheres
+        3. Applies backface culling to optimize rendering
+        4. Projects visible triangles to screen space
+        5. Applies the specified shading mode with directional lighting
+        
+        The rendering process is optimized using JIT-compiled functions for:
+        - Batch processing of vertex and normal transformations
+        - Efficient view frustum culling with pre-computed planes
+        - Fast triangle processing and rasterization
         
         Args:
-            scene (Scene): Scene object containing models and camera information
-            shading_mode (ShadingMode): Rendering mode to use (FLAT, GOURAUD, or WIREFRAME)
+            scene (Scene): Scene object containing models, instances, camera, and lighting
+            shading_mode (ShadingMode): Rendering mode to use. Options are:
+                - WIREFRAME: Only render triangle edges
+                - FLAT: Single color per triangle with basic lighting
+                - GOURAUD: Smooth shading with per-vertex lighting interpolation
         """
         # Clear canvas
         self._canvas.clear(tuple(self._background_color))
