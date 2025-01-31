@@ -91,15 +91,15 @@ class ViewPort:
         - Near plane (at the specified plane distance)
     
     Each frustum plane is represented by its normal vector (pointing inward) and distance
-    from origin, stored in the format (normal_vector, distance).
+    from origin, stored in a numpy array format for efficient JIT processing.
     
     Attributes:
         _width (float): Width of the viewport
         _height (float): Height of the viewport
         _plane_distance (float): Distance to the near plane
         _canvas (Canvas): Reference to the target canvas
-        frustum_planes (List[Tuple[np.ndarray, float]]): List of frustum planes,
-            each defined by (normal_vector, distance)
+        frustum_planes (np.ndarray): Array of shape (N, 4) containing frustum planes,
+            where each row is [nx, ny, nz, d] representing the plane equation nx*x + ny*y + nz*z + d = 0
     """
 
     def __init__(self, size: Tuple[float, float], plane_distance: float, canvas: Canvas):
@@ -127,6 +127,9 @@ class ViewPort:
             - X-axis points right
             - Y-axis points up
             - Z-axis points away from the viewer (into the screen)
+            
+        The planes are stored in a numpy array format for efficient JIT processing,
+        where each row is [nx, ny, nz, d] representing the plane equation nx*x + ny*y + nz*z + d = 0
         """
         # Calculate half-dimensions at the near plane for plane equations
         half_width = self.width / 2
@@ -147,16 +150,21 @@ class ViewPort:
         self._bottom_plane /= np.linalg.norm(self._bottom_plane)
         self._near_plane /= np.linalg.norm(self._near_plane)
 
-        # Store frustum planes as (normal, distance) pairs
-        # Distance is 0 for side planes (they pass through origin)
-        # Near plane distance is negative as it's measured from origin
-        self.frustum_planes = [
+        # Create a numpy array to store all frustum planes in the format [nx, ny, nz, d]
+        self.frustum_planes = np.zeros((5, 4), dtype=np.float32)
+        
+        # Store the planes in the optimized format
+        planes = [
             (self._left_plane, 0),
             (self._right_plane, 0),
             (self._top_plane, 0),
             (self._bottom_plane, 0),
             (self._near_plane, -self.plane_distance)
         ]
+        
+        for i, (normal, distance) in enumerate(planes):
+            self.frustum_planes[i, :3] = normal
+            self.frustum_planes[i, 3] = distance
 
 
 class Renderer:
@@ -257,12 +265,6 @@ class Renderer:
             scene.camera.rotation,
             True)
 
-        # Convert frustum planes to numpy array for JIT function
-        frustum_planes = np.zeros((len(self._viewport.frustum_planes), 4), dtype=np.float32)
-        for i, plane in enumerate(self._viewport.frustum_planes):
-            frustum_planes[i, :3] = plane[0]  # normal
-            frustum_planes[i, 3] = plane[1]   # distance
-
         # Render each instance
         for instance in scene.instances.values():
             model = scene.get_model(instance.model)
@@ -292,7 +294,7 @@ class Renderer:
                 fully_visible = True
                 fully_invisible = False
                 
-                for plane, plane_d in self._viewport.frustum_planes:
+                for plane, plane_d in zip(self._viewport.frustum_planes[:, :3], self._viewport.frustum_planes[:, 3]):
                     # Calculate signed distance from sphere center to plane
                     center_distance = np.dot(plane, sphere_center) + plane_d
                     
@@ -305,9 +307,6 @@ class Renderer:
                     if abs(center_distance) < sphere_radius:
                         fully_visible = False
                 
-                # if not fully_visible:
-                    # print(f"{group_name} fully visible: {fully_visible}")
-
                 # Skip if instance is completely invisible
                 if fully_invisible:
                     continue
@@ -327,7 +326,7 @@ class Renderer:
                     shading_mode.value,
                     has_vertex_normals,
                     fully_visible,
-                    frustum_planes,
+                    self._viewport.frustum_planes,
                     self._canvas.width, self._canvas.height,
                     self._viewport.width, self._viewport.height,
                     self._canvas.color_buffer, self._canvas.depth_buffer,
