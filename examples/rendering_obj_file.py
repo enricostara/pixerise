@@ -145,7 +145,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     # Movement speed
     move_speed = 0.1
     wheel_speed = 0.1  # Speed for mouse wheel movement
-    wheel_momentum = 0.95  # How much wheel velocity is retained (0-1)
+    wheel_momentum = 0.9  # How much wheel velocity is retained (0-1)
     rotation_speed = 0.007  # Speed of tank rotation
 
     # Track if any movement occurred

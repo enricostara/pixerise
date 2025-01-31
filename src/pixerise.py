@@ -6,7 +6,7 @@ This module contains the main classes for rendering: Canvas, ViewPort, and Rende
 from typing import Tuple
 import numpy as np
 from kernel.rasterizing_mod import draw_line, draw_flat_triangle, draw_shaded_triangle, draw_triangle
-from kernel.transforming_mod import transform_vertex, transform_vertex_normal
+from kernel.transforming_mod import transform_vertex_normal, transform_vertices_and_normals
 from kernel.clipping_mod import calculate_bounding_sphere
 from kernel.culling_mod import cull_back_faces
 from kernel.rendering_mod import process_and_draw_triangles
@@ -250,30 +250,24 @@ class Renderer:
         # Clear canvas
         self._canvas.clear(tuple(self._background_color))
 
+        # Transform light direction into camera space
+        light_dir = transform_vertex_normal(
+            -scene.directional_light.direction, 
+            np.zeros(3, dtype=np.float32),
+            scene.camera.rotation,
+            True)
+
+        # Convert frustum planes to numpy array for JIT function
+        frustum_planes = np.zeros((len(self._viewport.frustum_planes), 4), dtype=np.float32)
+        for i, plane in enumerate(self._viewport.frustum_planes):
+            frustum_planes[i, :3] = plane[0]  # normal
+            frustum_planes[i, 3] = plane[1]   # distance
+
         # Render each instance
         for instance in scene.instances.values():
             model = scene.get_model(instance.model)
             if model is None:
                 continue
-
-            # Get instance transform and color
-            color = instance.color  # Now a float32 array
-            
-            # Get transform components
-            translation = instance.translation
-            rotation = instance.rotation
-            scale = instance.scale
-            
-            # Get camera transform
-            camera_translation = scene.camera.translation
-            camera_rotation = scene.camera.rotation
-            
-            # Transform light direction into camera space
-            light_dir = transform_vertex_normal(
-                -scene.directional_light.direction, 
-                np.zeros(3, dtype=np.float32),
-                camera_rotation,
-                True)
             
             # Transform vertices for each model group
             for group in model.groups.values():
@@ -282,22 +276,14 @@ class Renderer:
                 vertex_normals = group.vertex_normals
                 has_vertex_normals = len(vertex_normals) == len(vertices)
                 
-                # Pre-allocate numpy arrays for transformed vertices and normals
-                transformed_vertices = np.zeros((len(vertices), 3), dtype=np.float32)
-                transformed_normals = np.zeros((len(vertices), 3), dtype=np.float32)
-                
-                # Transform vertices and normals
-                for i, vertex in enumerate(vertices):
-                    # Apply model transform to vertex
-                    transformed = transform_vertex(vertex, translation, rotation, scale,
-                                                camera_translation, camera_rotation, True)
-                    transformed_vertices[i] = transformed
-                    
-                    # Transform normal using rotation only if available
-                    if shading_mode == ShadingMode.GOURAUD and has_vertex_normals:
-                        normal = vertex_normals[i]
-                        transformed_normal = transform_vertex_normal(normal, -rotation, camera_rotation, True)
-                        transformed_normals[i] = transformed_normal
+                # Pad vertex normals with zeros if they are None
+                vertex_normals = np.zeros((0, 3), dtype=np.float32) if vertex_normals is None or len(vertex_normals) == 0 else vertex_normals
+
+                # Transform vertices and normals using the new JIT-compiled function
+                transformed_vertices, transformed_normals = transform_vertices_and_normals(
+                    vertices, vertex_normals, instance.translation, instance.rotation, instance.scale,
+                    scene.camera.translation, scene.camera.rotation, shading_mode.value, has_vertex_normals
+                )
                 
                 # Calculate bounding sphere for the entire instance
                 sphere_center, sphere_radius = calculate_bounding_sphere(transformed_vertices)
@@ -332,12 +318,6 @@ class Renderer:
                 # Perform backface culling and get normals
                 triangles_array, triangle_normals = cull_back_faces(transformed_vertices, triangles_array)
 
-                # Convert frustum planes to numpy array for JIT function
-                frustum_planes = np.zeros((len(self._viewport.frustum_planes), 4), dtype=np.float32)
-                for i, plane in enumerate(self._viewport.frustum_planes):
-                    frustum_planes[i, :3] = plane[0]  # normal
-                    frustum_planes[i, 3] = plane[1]   # distance
-
                 # Process all triangles in a batch using JIT-compiled function
                 process_and_draw_triangles(
                     triangles_array,
@@ -352,7 +332,7 @@ class Renderer:
                     self._viewport.width, self._viewport.height,
                     self._canvas.color_buffer, self._canvas.depth_buffer,
                     self._canvas._center[0], self._canvas._center[1],
-                    color,
+                    instance.color,
                     light_dir,
                     scene.directional_light.ambient
                 )
