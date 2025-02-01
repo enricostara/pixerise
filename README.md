@@ -204,11 +204,16 @@ pdm run pytest
 ```
 
 ### Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests
-5. Submit a pull request
+We welcome contributions! Here's how you can help:
+
+1. Open an issue first to discuss your proposed changes
+2. Fork the repository
+3. Create your feature branch (`git checkout -b feature/amazing-feature`)
+4. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+This way we can ensure your contribution aligns with the project's goals and avoid duplicate efforts.
 
 ## License
 
@@ -217,9 +222,9 @@ pdm run pytest
 ## Acknowledgments
 
 Special thanks to:
-- [Gabriel Gambetta](https://github.com/ggambetta) and his excellent book [Computer Graphics from Scratch](https://gabrielgambetta.com/computer-graphics-from-scratch), which inspired many of the rendering techniques used in this project
-- [Windsurf](https://github.com/codeium/windsurf), the amazing agentic IDE that made this project feasible
-- The NumPy and Numba teams for their excellent libraries
+- [Gabriel Gambetta](https://github.com/ggambetta) and his amazing book [Computer Graphics from Scratch](https://gabrielgambetta.com/computer-graphics-from-scratch), which inspired many of the rendering techniques used in this project
+- [Windsurf](https://github.com/codeium/windsurf), the excellent agentic IDE that made this project feasible
+- The NumPy and Numba teams for their awesome libraries
 
 
 ## What's Next?
