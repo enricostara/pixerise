@@ -45,26 +45,83 @@ pdm install
 ## Quick Start
 
 ```python
-from pixerise import Canvas, ViewPort, Renderer, Scene, Model
-import numpy as np
+import pygame
+from pixerise import Canvas, ViewPort, Renderer
+from scene import Scene
 
-# Create a simple triangle scene
-vertices = np.array([[0,0,0], [1,0,0], [0,1,0]], dtype=np.float32)
-triangles = np.array([[0,1,2]], dtype=np.int32)
+# Initialize Pygame
+pygame.init()
+screen = pygame.display.set_mode((800, 600))
+pygame.display.set_caption("Pixerise Quick Start")
 
 # Initialize rendering components
 canvas = Canvas((800, 600))
 viewport = ViewPort((1.6, 1.2), 1, canvas)
 renderer = Renderer(canvas, viewport)
 
-# Set up scene
-scene = Scene()
-model = Model()
-model.add_group("default", vertices, triangles)
-scene.add_model("triangle", model)
+# Define scene structure
+scene_dict = {
+    'camera': {
+            'transform': {
+                'translation': [0, 0, -3],  
+                'rotation': [0, 0, 0] 
+            }
+        },
+    "models": {
+        "triangle": {
+            "vertices": [
+                [0, 1, 0],               # top vertex
+                [-0.866, -0.5, 0],       # bottom left vertex
+                [0.866, -0.5, 0]         # bottom right vertex
+            ],
+            "triangles": [[0,1,2]]
+        }
+    },
+    "instances": [
+        {
+            "model": "triangle",
+            "name": "a_triangle",
+            "color": [0, 255, 0],
+            'transform': {
+                'translation': [0, 0, 0],
+                'rotation': [0, 0, 0],
+                'scale': [1, 1, 1]
+            }
+        }
+    ]
+}
 
-# Render the scene
-renderer.render(scene)
+# Create scene from dictionary
+scene = Scene.from_dict(scene_dict)
+
+# Main loop
+running = True
+clock = pygame.time.Clock()
+while running:
+    clock.tick(60)  # Limit to 60 FPS
+    
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                running = False
+    
+    # Update triangle rotation
+    scene.get_instance("a_triangle").rotation -= [0, 0, .01]
+    
+    # Render the scene
+    renderer.render(scene)
+    
+    # Display the rendered image
+    surf = pygame.surfarray.make_surface(canvas.color_buffer)
+    screen.blit(surf, (0, 0))
+    pygame.display.update()
+
+pygame.mouse.set_visible(True)
+pygame.event.set_grab(False)
+pygame.quit()
+
 ```
 
 ## Examples
