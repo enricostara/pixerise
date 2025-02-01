@@ -223,7 +223,7 @@ This way we can ensure your contribution aligns with the project's goals and avo
 
 Special thanks to:
 - [Gabriel Gambetta](https://github.com/ggambetta) and his amazing book [Computer Graphics from Scratch](https://gabrielgambetta.com/computer-graphics-from-scratch), which inspired many of the rendering techniques used in this project
-- [Windsurf](https://github.com/codeium/windsurf), the excellent agentic IDE that made this project feasible
+- [Windsurf](https://codeium.com/windsurf), the excellent agentic IDE that made this project feasible in a few months by working after dinner
 - The NumPy and Numba teams for their awesome libraries
 
 
