@@ -157,8 +157,6 @@ while running:
     screen.blit(surf, (0, 0))
     pygame.display.update()
 
-pygame.mouse.set_visible(True)
-pygame.event.set_grab(False)
 pygame.quit()
 
 ```
