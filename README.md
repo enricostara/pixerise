@@ -2,6 +2,8 @@
 
 A high-performance 3D software renderer implemented in Python, optimized with NumPy and Numba JIT compilation.
 
+![Tank Model Rendering Demo](tank.gif)
+
 ## Overview
 
 Pixerise is a pure Python 3D rendering engine that focuses on CPU-based rendering, making it ideal for educational purposes, embedded systems, and applications where GPU acceleration is not available or desired.
