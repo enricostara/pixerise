@@ -332,7 +332,7 @@ class Renderer:
                 vertices = group.vertices
                 triangles = group.triangles
                 vertex_normals = group.vertex_normals
-                has_vertex_normals = len(vertex_normals) == len(vertices)
+                has_vertex_normals = vertex_normals is not None and len(vertex_normals) == len(vertices)
                 
                 # Pad vertex normals with zeros if they are None
                 vertex_normals = np.zeros((0, 3), dtype=np.float32) if vertex_normals is None or len(vertex_normals) == 0 else vertex_normals

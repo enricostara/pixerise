@@ -193,16 +193,100 @@ class Instance:
     
     Attributes:
         model (str): Name of the model this instance references
-        translation (np.ndarray): 3D vector specifying position
-        rotation (np.ndarray): 3D vector specifying rotation in radians (X, Y, Z)
-        scale (np.ndarray): 3D vector specifying scale in each axis
-        color (np.ndarray): RGB color values as floats in range [0, 1]
+        _translation (np.ndarray): 3D vector specifying position
+        _rotation (np.ndarray): 3D vector specifying rotation in radians (X, Y, Z)
+        _scale (np.ndarray): 3D vector specifying scale in each axis
+        _color (np.ndarray): RGB color values as floats in range [0, 1]
     """
     model: str
-    translation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
-    rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
-    scale: np.ndarray = field(default_factory=lambda: np.ones(3, dtype=np.float32))
-    color: np.ndarray = field(default_factory=lambda: np.array([1.0, 1.0, 1.0], dtype=np.float32))
+    _translation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
+    _rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
+    _scale: np.ndarray = field(default_factory=lambda: np.ones(3, dtype=np.float32))
+    _color: np.ndarray = field(default_factory=lambda: np.array([1.0, 1.0, 1.0], dtype=np.float32))
+
+    # Properties
+    @property
+    def translation(self) -> np.ndarray:
+        """Get the instance's translation vector.
+
+        Returns:
+            np.ndarray: 3D translation vector [x, y, z]
+        """
+        return self._translation
+
+    @translation.setter
+    def translation(self, value: np.ndarray) -> None:
+        """Set the instance's translation vector.
+
+        Args:
+            value (np.ndarray): 3D translation vector [x, y, z]
+        """
+        self._translation = np.array(value, dtype=np.float32)
+
+    @property
+    def rotation(self) -> np.ndarray:
+        """Get the instance's rotation vector in radians.
+
+        Returns:
+            np.ndarray: 3D rotation vector [x, y, z] in radians
+        """
+        return self._rotation
+
+    @rotation.setter
+    def rotation(self, value: np.ndarray) -> None:
+        """Set the instance's rotation vector.
+
+        Args:
+            value (np.ndarray): 3D rotation vector [x, y, z] in radians
+        """
+        self._rotation = np.array(value, dtype=np.float32)
+
+    @property
+    def scale(self) -> np.ndarray:
+        """Get the instance's scale vector.
+
+        Returns:
+            np.ndarray: 3D scale vector [x, y, z]
+        """
+        return self._scale
+
+    @scale.setter
+    def scale(self, value: np.ndarray) -> None:
+        """Set the instance's scale vector.
+
+        Args:
+            value (np.ndarray): 3D scale vector [x, y, z]
+        """
+        self._scale = np.array(value, dtype=np.float32)
+
+    @property
+    def color(self) -> np.ndarray:
+        """Get the instance's color.
+
+        Returns:
+            np.ndarray: RGB color values as floats in range [0, 1]
+        """
+        return self._color
+
+    @color.setter
+    def color(self, value: np.ndarray) -> None:
+        """Set the instance's color.
+
+        Args:
+            value (np.ndarray): RGB color values as floats in range [0, 1]
+        """
+        self._color = np.array(value, dtype=np.float32)
+
+    # Setters
+    def set_color(self, r: float, g: float, b: float) -> None:
+        """Set the color of this instance.
+
+        Args:
+            r (float): Red component in range [0, 255]
+            g (float): Green component in range [0, 255]
+            b (float): Blue component in range [0, 255]
+        """
+        self._color = np.array([r/255, g/255, b/255], dtype=np.float32)
 
     def set_translation(self, x: float, y: float, z: float) -> None:
         """Set the translation of this instance.
@@ -212,7 +296,7 @@ class Instance:
             y (float): Y-coordinate in world space
             z (float): Z-coordinate in world space
         """
-        self.translation = np.array([x, y, z], dtype=np.float32)
+        self._translation = np.array([x, y, z], dtype=np.float32)
 
     def set_rotation(self, x: float, y: float, z: float) -> None:
         """Set the rotation of this instance in radians.
@@ -222,7 +306,7 @@ class Instance:
             y (float): Rotation around Y-axis in radians
             z (float): Rotation around Z-axis in radians
         """
-        self.rotation = np.array([x, y, z], dtype=np.float32)
+        self._rotation = np.array([x, y, z], dtype=np.float32)
 
     def set_scale(self, x: float, y: float, z: float) -> None:
         """Set the scale of this instance.
@@ -232,7 +316,7 @@ class Instance:
             y (float): Scale factor along Y-axis
             z (float): Scale factor along Z-axis
         """
-        self.scale = np.array([x, y, z], dtype=np.float32)
+        self._scale = np.array([x, y, z], dtype=np.float32)
 
     @classmethod
     def from_dict(cls, data: dict) -> 'Instance':
@@ -249,13 +333,13 @@ class Instance:
         if 'transform' in data:
             transform = data['transform']
             if 'translation' in transform:
-                instance.translation = np.array(transform['translation'], dtype=np.float32)
+                instance._translation = np.array(transform['translation'], dtype=np.float32)
             if 'rotation' in transform:
-                instance.rotation = np.array(transform['rotation'], dtype=np.float32)
+                instance._rotation = np.array(transform['rotation'], dtype=np.float32)
             if 'scale' in transform:
-                instance.scale = np.array(transform['scale'], dtype=np.float32)
+                instance._scale = np.array(transform['scale'], dtype=np.float32)
         if 'color' in data:
-            instance.color = np.array(data['color'], dtype=np.float32)
+            instance._color = np.array(data['color'], dtype=np.float32)
         return instance
 
     def to_dict(self) -> dict:
@@ -268,11 +352,11 @@ class Instance:
         return {
             'model': self.model,
             'transform': {
-                'translation': self.translation.tolist(),
-                'rotation': self.rotation.tolist(),
-                'scale': self.scale.tolist()
+                'translation': self._translation.tolist(),
+                'rotation': self._rotation.tolist(),
+                'scale': self._scale.tolist()
             },
-            'color': self.color.tolist()
+            'color': self._color.tolist()
         }
 
 
