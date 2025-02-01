@@ -37,8 +37,45 @@ Pixerise is a pure Python 3D rendering engine that focuses on CPU-based renderin
 
 ## Installation
 
+### 1. Install PDM (Python Dependency Manager)
+
+PDM is required to manage project dependencies. Here's how to install it on different platforms:
+
+#### Windows
+Using pip:
 ```bash
-# Install using PDM (recommended)
+pip install pdm
+```
+Or using winget:
+```bash
+winget install pdm
+```
+
+#### macOS
+Using Homebrew:
+```bash
+brew install pdm
+```
+Or using pip:
+```bash
+pip install pdm
+```
+
+#### Linux
+Using pip:
+```bash
+pip install pdm
+```
+Or on Ubuntu/Debian:
+```bash
+curl -sSL https://pdm.fming.dev/install-pdm.py | python3 -
+```
+
+### 2. Install Pixerise
+Clone the repository and install dependencies:
+```bash
+git clone https://github.com/enricostara/pixerise.git
+cd pixerise
 pdm install
 ```
 
