@@ -172,7 +172,7 @@ The `examples` directory contains several demonstrations:
 - `rendering_gouraud_shading.py`: Smooth shading using vertex normals
 - `rendering_obj_file.py`: Loading and rendering 3D models from an OBJ file with interactive controls
 
-Run any example using:
+Run the tank example using:
 ```bash
 pdm run python examples/rendering_obj_file.py
 ```
