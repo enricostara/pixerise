@@ -128,6 +128,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     # Initialize mouse state
     pygame.mouse.set_visible(False)
     pygame.event.set_grab(True)
+    mouse_locked = True
     
     # Initialize shading mode
     shading_modes = [ShadingMode.WIREFRAME, ShadingMode.FLAT, ShadingMode.GOURAUD, ShadingMode.FLAT]
@@ -164,8 +165,14 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                 current_mode_index = (current_mode_index + 1) % len(shading_modes)
                 movement_occurred = True
             
-            # Handle mouse movement
-            if event.type == pygame.MOUSEMOTION:
+            # Handle mouse toggle with backspace
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_BACKSPACE:
+                mouse_locked = not mouse_locked
+                pygame.mouse.set_visible(not mouse_locked)
+                pygame.event.set_grab(mouse_locked)
+                
+            # Only handle mouse movement when locked
+            elif event.type == pygame.MOUSEMOTION and mouse_locked:
                 dx, dy = event.rel
                 # Convert mouse movement to rotation (scale down the movement)
                 rot_y = -dx * 0.002  # Horizontal mouse movement controls Y rotation
