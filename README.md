@@ -6,7 +6,7 @@ A high-performance 3D software renderer implemented in Python, optimized with Nu
 
 ## Overview
 
-Pixerise is a pure Python 3D rendering engine that focuses on CPU-based rendering, making it ideal for educational purposes, embedded systems, and applications where GPU acceleration is not available or desired.
+Pixerise is a Python 3D rendering engine that focuses on CPU-based rendering, making it ideal for educational purposes, embedded systems, and applications where GPU acceleration is not available or desired.
 
 ## Features
 
