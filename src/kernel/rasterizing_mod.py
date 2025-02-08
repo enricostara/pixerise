@@ -221,19 +221,20 @@ def draw_flat_triangle(x0: int, y0: int, z0: float, x1: int, y1: int, z1: float,
     z_step_right = dz2 / max(1, dy2) if dy2 > 0 else 0.0
 
     # Fill the upper triangle section
-    for y in range(y0, max(y0 + 1, y1)):
+    for y in range(y0, y1):  # Changed to be top-inclusive, bottom-exclusive
         start_x = x_left >> 16
         end_x = x_right >> 16
         
         if start_x > end_x:
             start_x, end_x = end_x, start_x
             z_scan = z_right
-            z_step = (z_left - z_right) / max(1, end_x - start_x + 1)
+            z_step = (z_left - z_right) / max(1, end_x - start_x)  # Removed +1 to make right-exclusive
         else:
             z_scan = z_left
-            z_step = (z_right - z_left) / max(1, end_x - start_x + 1)
+            z_step = (z_right - z_left) / max(1, end_x - start_x)  # Removed +1 to make right-exclusive
         
-        for x in range(start_x, end_x + 1):
+        # Changed to be left-inclusive, right-exclusive
+        for x in range(start_x, end_x):
             draw_pixel(canvas_grid, depth_buffer, x, y, z_scan, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
             z_scan += z_step
         
@@ -253,19 +254,20 @@ def draw_flat_triangle(x0: int, y0: int, z0: float, x1: int, y1: int, z1: float,
     z_step_left = dz3 / max(1, dy3) if dy3 > 0 else 0.0
 
     # Fill the lower triangle section
-    for y in range(y1, max(y1 + 1, y2 + 1)):
+    for y in range(y1, y2):  # Changed to be top-inclusive, bottom-exclusive
         start_x = x_left >> 16
         end_x = x_right >> 16
         
         if start_x > end_x:
             start_x, end_x = end_x, start_x
             z_scan = z_right
-            z_step = (z_left - z_right) / max(1, end_x - start_x + 1)
+            z_step = (z_left - z_right) / max(1, end_x - start_x)  # Removed +1 to make right-exclusive
         else:
             z_scan = z_left
-            z_step = (z_right - z_left) / max(1, end_x - start_x + 1)
+            z_step = (z_right - z_left) / max(1, end_x - start_x)  # Removed +1 to make right-exclusive
         
-        for x in range(start_x, end_x + 1):
+        # Changed to be left-inclusive, right-exclusive
+        for x in range(start_x, end_x):
             draw_pixel(canvas_grid, depth_buffer, x, y, z_scan, center_x, center_y, color_r, color_g, color_b, canvas_width, canvas_height)
             z_scan += z_step
         
@@ -390,7 +392,7 @@ def draw_shaded_triangle(x0: int, y0: int, z0: float, x1: int, y1: int, z1: floa
     # Fill the upper triangle section (from y0 to y1):
     # - Always draw at least one scanline even for zero-height sections
     # - This handles degenerate cases where vertices have same y-coordinate
-    for y in range(y0, max(y0 + 1, y1)):
+    for y in range(y0, y1):  # Changed to be top-inclusive, bottom-exclusive
         # Convert fixed-point x-coordinates back to integers for this scanline
         start_x = x_left >> 16
         end_x = x_right >> 16
@@ -416,7 +418,7 @@ def draw_shaded_triangle(x0: int, y0: int, z0: float, x1: int, y1: int, z1: floa
         # Draw the scanline pixels with interpolated intensity:
         # - Skip pixels with near-zero intensity for efficiency
         # - Multiply base color by intensity for final pixel color
-        for x in range(start_x, end_x + 1):
+        for x in range(start_x, end_x):
             if i_curr > 0.001:
                 r = int(color_r * i_curr)
                 g = int(color_g * i_curr)
@@ -451,7 +453,7 @@ def draw_shaded_triangle(x0: int, y0: int, z0: float, x1: int, y1: int, z1: floa
     # Fill the lower triangle section (from y1 to y2):
     # - Implementation mirrors the upper triangle section
     # - Always draw at least one scanline for zero-height sections
-    for y in range(y1, max(y1 + 1, y2 + 1)):
+    for y in range(y1, y2):  # Changed to be top-inclusive, bottom-exclusive
         start_x = x_left >> 16
         end_x = x_right >> 16
         
@@ -466,7 +468,7 @@ def draw_shaded_triangle(x0: int, y0: int, z0: float, x1: int, y1: int, z1: floa
             z_step = (z_right - z_left) / max(1, end_x - start_x + 1)
         
         i_step = (i_end - i_curr) / max(1, end_x - start_x + 1)
-        for x in range(start_x, end_x + 1):
+        for x in range(start_x, end_x):
             if i_curr > 0.001:
                 r = int(color_r * i_curr)
                 g = int(color_g * i_curr)
