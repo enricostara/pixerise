@@ -278,15 +278,15 @@ class Instance:
         self._color = np.array(value, dtype=np.float32)
 
     # Setters
-    def set_color(self, r: float, g: float, b: float) -> None:
+    def set_color(self, r: int, g: int, b: int) -> None:
         """Set the color of this instance.
 
         Args:
-            r (float): Red component in range [0, 255]
-            g (float): Green component in range [0, 255]
-            b (float): Blue component in range [0, 255]
+            r (int): Red component in range [0, 255]
+            g (int): Green component in range [0, 255]
+            b (int): Blue component in range [0, 255]
         """
-        self._color = np.array([r/255, g/255, b/255], dtype=np.float32)
+        self._color = np.array([r, g, b], dtype=np.float32)
 
     def set_translation(self, x: float, y: float, z: float) -> None:
         """Set the translation of this instance.
