@@ -292,6 +292,18 @@ class Renderer:
     def cast_ray(self, screen_x: int, screen_y: int, scene: Scene) -> Optional[Tuple[str, str]]:
         """Cast a ray from the camera through a screen point and find the first hit triangle.
         
+        The ray casting process involves several coordinate space transformations:
+        1. Screen Space -> Viewport Space: Convert pixel coordinates to normalized viewport coordinates
+        2. Viewport Space -> View Space: Create ray direction in camera's local space
+        3. View Space -> World Space: Transform ray using camera's rotation
+        4. World Space -> Model Space: Transform ray for each model instance
+        
+        For each triangle in the scene:
+        1. Transform ray to model space
+        2. Perform backface culling using triangle normal
+        3. Use Möller–Trumbore algorithm for ray-triangle intersection
+        4. Track closest intersection point
+        
         Args:
             screen_x: X coordinate in screen space (pixels from left)
             screen_y: Y coordinate in screen space (pixels from top)
@@ -301,83 +313,118 @@ class Renderer:
             Optional tuple of (instance_name, group_name) of the first hit triangle,
             or None if no triangle was hit
         """
-        # Convert screen coordinates to viewport space
+        EPSILON = 1e-6
+        # Step 1: Convert screen coordinates to viewport space
+        # - Subtract center to get coordinates relative to viewport center
+        # - Scale by viewport/canvas ratio to get viewport space coordinates
         viewport_x = (screen_x - self._canvas._center[0]) * (self._viewport.width / self._canvas.width)
         viewport_y = (self._canvas._center[1] - screen_y) * (self._viewport.height / self._canvas.height)
+        # Note: Y is flipped because screen Y increases downward but viewport Y increases upward
         
-        # Create ray in view space (camera at origin looking down -Z)
-        ray_origin = np.zeros(3, dtype=np.float32)  # Camera position in view space
+        # Step 2: Create ray in view space (camera's local space)
+        # - X,Y components come from viewport coordinates
+        # - Z component is negative viewport plane distance (ray points into screen)
+        # - Normalize to get unit direction vector
         ray_dir = np.array([viewport_x, viewport_y, -self._viewport.plane_distance], dtype=np.float32)
         ray_dir /= np.linalg.norm(ray_dir)  # Normalize direction
         
-        # Transform ray to world space
+        # Step 3: Transform ray to world space
+        # - Transform direction vector using camera's rotation matrix
+        # - Origin is at camera's world position
         ray_dir_world = transform_vertex_normal(ray_dir, np.zeros(3), scene.camera.rotation, True)
         ray_origin_world = scene.camera.translation.copy()
         
+        # Track closest intersection for proper depth ordering
         closest_t = np.inf
         hit_instance = None
         hit_group = None
         
-        # Test against all instances in the scene
+        # Step 4: Test intersection with all instances in scene
         for instance_name, instance in scene.instances.items():
             model = scene.get_model(instance.model)
             if model is None:
                 continue
                 
-            # Transform ray to model space for intersection testing
-            ray_dir_model = transform_vertex_normal(ray_dir_world, np.zeros(3), instance.rotation, True)
-            ray_origin_model = transform_vertex_normal(ray_origin_world - instance.translation, np.zeros(3), instance.rotation, False)
+            # Step 5: Transform ray to model space for each instance
+            # - First translate ray origin to model space
+            # - Then apply inverse rotation (use has_camera=False since we're going from world to model)
+            # - Finally apply inverse scale
+            ray_origin_model = ray_origin_world - instance.translation
+            ray_origin_model = transform_vertex_normal(ray_origin_model, instance.rotation, np.zeros(3), False)
             ray_origin_model /= instance.scale
-            ray_dir_model /= instance.scale
             
-            # Test against each group in the model
+            # Transform direction using same rotation (no translation for direction vectors)
+            # For directions, we need to use the inverse transpose of the transformation matrix
+            # to maintain perpendicularity
+            ray_dir_model = transform_vertex_normal(ray_dir_world, instance.rotation, np.zeros(3), False)
+            ray_dir_model /= instance.scale  # Scale by model's scale factor
+            ray_dir_model /= np.linalg.norm(ray_dir_model)  # Normalize after scaling
+            
+            print(f"\nInstance {instance_name}:")
+            print(f"  Ray origin (model): {ray_origin_model}")
+            print(f"  Ray direction (model): {ray_dir_model}")
+            
+            # Step 6: Test against each geometry group in the model
             for group_name, group in model.groups.items():
                 vertices = group.vertices
                 triangles = group.triangles
                 
-                # Test each triangle in the group
+                # Step 7: Test each triangle in the group
                 for triangle in triangles:
+                    # Get triangle vertices
                     v0 = vertices[triangle[0]]
                     v1 = vertices[triangle[1]]
                     v2 = vertices[triangle[2]]
                     
-                    # Calculate triangle normal and early out if facing away
+                    # Step 8: Calculate triangle normal for backface culling
                     edge1 = v1 - v0
                     edge2 = v2 - v0
                     normal = np.cross(edge1, edge2)
                     normal /= np.linalg.norm(normal)
                     
-                    # Skip backfaces
-                    if np.dot(normal, ray_dir_model) >= 0:
+                    # Skip backfaces - if normal points same direction as ray
+                    dot = np.dot(normal, ray_dir_model)
+                    print(f"    Triangle {triangle}: normal={normal}, dot={dot}")
+                    if dot >= -EPSILON:  # Use small epsilon to handle floating point errors
+                        print("      Backface culled")
                         continue
                     
-                    # Möller–Trumbore intersection algorithm
+                    # Step 9: Möller–Trumbore intersection algorithm
                     h = np.cross(ray_dir_model, edge2)
                     a = np.dot(edge1, h)
                     
-                    if abs(a) < 1e-6:  # Ray parallel to triangle
+                    if abs(a) < EPSILON:  # Ray parallel to triangle
+                        print("      Ray parallel to triangle")
                         continue
                         
                     f = 1.0 / a
                     s = ray_origin_model - v0
+                    h = np.cross(s, edge1)
+                    
+                    # Calculate barycentric coordinates and intersection distance
                     u = f * np.dot(s, h)
+                    v = f * np.dot(ray_dir_model, h)
+                    t = f * np.dot(edge2, h)
                     
-                    if u < 0.0 or u > 1.0:
+                    # Check if intersection point is inside triangle using barycentric coordinates
+                    # If u < 0 or v < 0 or u + v > 1, hit point is outside triangle
+                    if u < -EPSILON or v < -EPSILON or u + v > 1 + EPSILON:
+                        if u < -EPSILON:
+                            print(f"      Barycentric u out of bounds: {u}")
+                        elif v < -EPSILON:
+                            print(f"      Barycentric v out of bounds: v={v}")
+                        elif u + v > 1 + EPSILON:
+                            print(f"      Sum of barycentric coordinates too large: u+v={u + v}")
                         continue
                         
-                    q = np.cross(s, edge1)
-                    v = f * np.dot(ray_dir_model, q)
-                    
-                    if v < 0.0 or u + v > 1.0:
-                        continue
-                        
-                    t = f * np.dot(edge2, q)
-                    
-                    if t > 1e-6 and t < closest_t:  # Ray intersection
+                    # Check if this is the closest intersection so far
+                    if t < closest_t:
+                        print(f"      HIT! t={t}")
                         closest_t = t
                         hit_instance = instance_name
                         hit_group = group_name
         
+        # Return hit information or None if no intersection found
         return (hit_instance, hit_group) if hit_instance is not None else None
 
     def render(self, scene: Scene, shading_mode: ShadingMode = ShadingMode.WIREFRAME):

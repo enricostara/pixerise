@@ -56,7 +56,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     update_display()
     
     # Movement speed
-    rotation_speed = 0.02
+    rotation_speed = 0.00
     
     # Track selected cube
     selected_cube = None
@@ -70,6 +70,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # Left click
                 # Get hit cube
                 mouse_pos = pygame.mouse.get_pos()
+                print(mouse_pos)
                 hit = renderer.cast_ray(mouse_pos[0], mouse_pos[1], scene)
                 
                 # Reset previous selection
@@ -97,7 +98,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
 def main():
     # Create canvas and viewport
     canvas = Canvas((800, 600))
-    viewport = ViewPort((1.6, 1.2), 1, canvas)  # Pass canvas to ViewPort
+    viewport = ViewPort((3.0, 2.25), 1, canvas)  # Adjusted viewport size for better perspective
     renderer = Renderer(canvas, viewport)
     
     # Create scene
@@ -109,7 +110,7 @@ def main():
     
     # Create grid of cubes
     grid_size = 3
-    spacing = 2.5
+    spacing = 1.5  # Reduced spacing between cubes
     
     for i in range(grid_size):
         for j in range(grid_size):
@@ -118,14 +119,15 @@ def main():
             
             instance = Instance(model="cube")
             instance.set_translation(x, 0, z)
-            instance.set_scale(0.8, 0.8, 0.8)
+            instance.set_scale(1, 1, 1)
+            # instance.set_scale(0.8, 0.8, 0.8)
             instance.set_color(255, 255, 255)
             
             scene.add_instance(f"cube_{i}_{j}", instance)
     
     # Set up camera
-    scene.camera.translation = np.array([0, 5, -5], dtype=np.float32)
-    scene.camera.rotation = np.array([0.8, 0, 0], dtype=np.float32)
+    scene.camera.translation = np.array([0, 1, -6], dtype=np.float32)  # Adjusted camera position
+    scene.camera.rotation = np.array([0.15, 0, 0], dtype=np.float32)  # Slight downward tilt
     
     # Start display
     display(canvas, scene, renderer)
