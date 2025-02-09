@@ -3,7 +3,7 @@ Core components of the Pixerise rendering engine.
 This module contains the main classes for rendering: Canvas, ViewPort, and Renderer.
 """
 
-from typing import Tuple
+from typing import Tuple, Optional
 import numpy as np
 from kernel.rasterizing_mod import draw_line, draw_flat_triangle, draw_shaded_triangle, draw_triangle
 from kernel.transforming_mod import transform_vertex_normal, transform_vertices_and_normals
@@ -288,6 +288,97 @@ class Renderer:
             color[0], color[1], color[2],  # RGB components
             intensity1, intensity2, intensity3,  # Clamped intensity values
             self._canvas.width, self._canvas.height)  # Canvas dimensions
+
+    def cast_ray(self, screen_x: int, screen_y: int, scene: Scene) -> Optional[Tuple[str, str]]:
+        """Cast a ray from the camera through a screen point and find the first hit triangle.
+        
+        Args:
+            screen_x: X coordinate in screen space (pixels from left)
+            screen_y: Y coordinate in screen space (pixels from top)
+            scene: Scene containing models and instances to test against
+            
+        Returns:
+            Optional tuple of (instance_name, group_name) of the first hit triangle,
+            or None if no triangle was hit
+        """
+        # Convert screen coordinates to viewport space
+        viewport_x = (screen_x - self._canvas._center[0]) * (self._viewport.width / self._canvas.width)
+        viewport_y = (self._canvas._center[1] - screen_y) * (self._viewport.height / self._canvas.height)
+        
+        # Create ray in view space (camera at origin looking down -Z)
+        ray_origin = np.zeros(3, dtype=np.float32)  # Camera position in view space
+        ray_dir = np.array([viewport_x, viewport_y, -self._viewport.plane_distance], dtype=np.float32)
+        ray_dir /= np.linalg.norm(ray_dir)  # Normalize direction
+        
+        # Transform ray to world space
+        ray_dir_world = transform_vertex_normal(ray_dir, np.zeros(3), scene.camera.rotation, True)
+        ray_origin_world = scene.camera.translation.copy()
+        
+        closest_t = np.inf
+        hit_instance = None
+        hit_group = None
+        
+        # Test against all instances in the scene
+        for instance_name, instance in scene.instances.items():
+            model = scene.get_model(instance.model)
+            if model is None:
+                continue
+                
+            # Transform ray to model space for intersection testing
+            ray_dir_model = transform_vertex_normal(ray_dir_world, np.zeros(3), instance.rotation, True)
+            ray_origin_model = transform_vertex_normal(ray_origin_world - instance.translation, np.zeros(3), instance.rotation, False)
+            ray_origin_model /= instance.scale
+            ray_dir_model /= instance.scale
+            
+            # Test against each group in the model
+            for group_name, group in model.groups.items():
+                vertices = group.vertices
+                triangles = group.triangles
+                
+                # Test each triangle in the group
+                for triangle in triangles:
+                    v0 = vertices[triangle[0]]
+                    v1 = vertices[triangle[1]]
+                    v2 = vertices[triangle[2]]
+                    
+                    # Calculate triangle normal and early out if facing away
+                    edge1 = v1 - v0
+                    edge2 = v2 - v0
+                    normal = np.cross(edge1, edge2)
+                    normal /= np.linalg.norm(normal)
+                    
+                    # Skip backfaces
+                    if np.dot(normal, ray_dir_model) >= 0:
+                        continue
+                    
+                    # Möller–Trumbore intersection algorithm
+                    h = np.cross(ray_dir_model, edge2)
+                    a = np.dot(edge1, h)
+                    
+                    if abs(a) < 1e-6:  # Ray parallel to triangle
+                        continue
+                        
+                    f = 1.0 / a
+                    s = ray_origin_model - v0
+                    u = f * np.dot(s, h)
+                    
+                    if u < 0.0 or u > 1.0:
+                        continue
+                        
+                    q = np.cross(s, edge1)
+                    v = f * np.dot(ray_dir_model, q)
+                    
+                    if v < 0.0 or u + v > 1.0:
+                        continue
+                        
+                    t = f * np.dot(edge2, q)
+                    
+                    if t > 1e-6 and t < closest_t:  # Ray intersection
+                        closest_t = t
+                        hit_instance = instance_name
+                        hit_group = group_name
+        
+        return (hit_instance, hit_group) if hit_instance is not None else None
 
     def render(self, scene: Scene, shading_mode: ShadingMode = ShadingMode.WIREFRAME):
         """Render a 3D scene using the specified shading mode.
