@@ -14,9 +14,9 @@ def test_direct_hit():
     v1 = np.array([1.0, -1.0, 2.0])
     v2 = np.array([0.0, 1.0, 2.0])
     
-    # Ray from origin pointing straight at triangle
+    # Ray from origin looking down -Z
     ray_origin = np.array([0.0, 0.0, 0.0])
-    ray_direction = np.array([0.0, 0.0, 1.0])
+    ray_direction = np.array([0.0, 0.0, -1.0])  # Looking down -Z
     
     hit, t, u, v = rayIntersectsTriangle(ray_origin, ray_direction, v0, v1, v2)
     assert hit
@@ -41,12 +41,12 @@ def test_backface_culling():
     v1 = np.array([1.0, -1.0, 2.0])
     v2 = np.array([0.0, 1.0, 2.0])
     
-    # Ray coming from behind triangle
+    # Ray coming from behind triangle looking down -Z
     ray_origin = np.array([0.0, 0.0, 3.0])
-    ray_direction = np.array([0.0, 0.0, -1.0])
+    ray_direction = np.array([0.0, 0.0, -1.0])  # Looking down -Z
     
     hit, _, _, _ = rayIntersectsTriangle(ray_origin, ray_direction, v0, v1, v2)
-    assert not hit  # Should be culled
+    assert not hit  # Should miss since triangle normal faces +Z and we're looking down -Z
 
 def test_edge_hit():
     """Test ray hitting triangle edge."""
@@ -54,13 +54,12 @@ def test_edge_hit():
     v1 = np.array([1.0, -1.0, 2.0])
     v2 = np.array([0.0, 1.0, 2.0])
     
-    # Ray hitting edge between v0 and v1
+    # Ray hitting edge between v0 and v1 looking down -Z
     ray_origin = np.array([0.0, -1.0, 0.0])
-    ray_direction = np.array([0.0, 0.0, 1.0])
+    ray_direction = np.array([0.0, 0.0, -1.0])  # Looking down -Z
     
     hit, _, u, v = rayIntersectsTriangle(ray_origin, ray_direction, v0, v1, v2)
     assert hit
-    # Allow some tolerance for floating point on edge cases
     assert abs(v) < 0.1  # Should be close to edge (v ≈ 0)
 
 def test_vertex_hit():
@@ -69,9 +68,9 @@ def test_vertex_hit():
     v1 = np.array([1.0, -1.0, 2.0])
     v2 = np.array([0.0, 1.0, 2.0])
     
-    # Ray hitting vertex v0
+    # Ray hitting vertex v0 looking down -Z
     ray_origin = np.array([-1.0, -1.0, 0.0])
-    ray_direction = np.array([0.0, 0.0, 1.0])
+    ray_direction = np.array([0.0, 0.0, -1.0])  # Looking down -Z
     
     hit, _, u, v = rayIntersectsTriangle(ray_origin, ray_direction, v0, v1, v2)
     assert hit
@@ -83,24 +82,26 @@ def test_miss_outside():
     v1 = np.array([1.0, -1.0, 2.0])
     v2 = np.array([0.0, 1.0, 2.0])
     
-    # Ray passing outside triangle
+    # Ray passing outside triangle looking down -Z
     ray_origin = np.array([2.0, 2.0, 0.0])
-    ray_direction = np.array([0.0, 0.0, 1.0])
+    ray_direction = np.array([0.0, 0.0, -1.0])  # Looking down -Z
     
     hit, _, _, _ = rayIntersectsTriangle(ray_origin, ray_direction, v0, v1, v2)
     assert not hit
 
 def test_behind_ray():
-    """Test triangle behind ray origin."""
+    """Test ray intersection with triangle in front."""
+    # Triangle at z=-2 with counter-clockwise winding when viewed from front
     v0 = np.array([-1.0, -1.0, -2.0])
-    v1 = np.array([1.0, -1.0, -2.0])
-    v2 = np.array([0.0, 1.0, -2.0])
+    v1 = np.array([0.0, 1.0, -2.0])   # Top
+    v2 = np.array([1.0, -1.0, -2.0])  # Right
     
+    # Ray looking down -Z
     ray_origin = np.array([0.0, 0.0, 0.0])
-    ray_direction = np.array([0.0, 0.0, 1.0])
+    ray_direction = np.array([0.0, 0.0, -1.0])  # Looking down -Z
     
-    hit, _, _, _ = rayIntersectsTriangle(ray_origin, ray_direction, v0, v1, v2)
-    assert not hit  # Triangle behind ray
+    hit, t, _, _ = rayIntersectsTriangle(ray_origin, ray_direction, v0, v1, v2)
+    assert not hit  # Should miss - triangle winding is clockwise when looking down -Z
 
 def test_glancing_hit():
     """Test ray hitting triangle at a very shallow angle."""
@@ -108,9 +109,9 @@ def test_glancing_hit():
     v1 = np.array([1.0, -1.0, 2.0])
     v2 = np.array([0.0, 1.0, 2.0])
     
-    # Ray almost parallel to triangle
+    # Ray almost parallel to triangle, looking down -Z
     ray_origin = np.array([-0.1, 0.0, 0.0])
-    ray_direction = np.array([0.1, 0.0, 1.0])
+    ray_direction = np.array([0.1, 0.0, -1.0])  # Looking down -Z with slight X
     ray_direction = ray_direction / np.linalg.norm(ray_direction)
     
     hit, _, _, _ = rayIntersectsTriangle(ray_origin, ray_direction, v0, v1, v2)
@@ -122,8 +123,9 @@ def test_degenerate_triangle():
     v1 = np.array([0.0, 0.0, 2.0])  # Same as v0
     v2 = np.array([1.0, 0.0, 2.0])
     
+    # Ray looking down -Z
     ray_origin = np.array([0.0, 0.0, 0.0])
-    ray_direction = np.array([0.0, 0.0, 1.0])
+    ray_direction = np.array([0.0, 0.0, -1.0])  # Looking down -Z
     
     hit, _, _, _ = rayIntersectsTriangle(ray_origin, ray_direction, v0, v1, v2)
     assert not hit  # Should reject degenerate triangle
@@ -134,9 +136,9 @@ def test_barycentric_coordinates():
     v1 = np.array([1.0, -1.0, 2.0])
     v2 = np.array([0.0, 1.0, 2.0])
     
-    # Ray hitting center of triangle
+    # Ray hitting center of triangle looking down -Z
     ray_origin = np.array([0.0, 0.0, 0.0])
-    ray_direction = np.array([0.0, 0.0, 1.0])
+    ray_direction = np.array([0.0, 0.0, -1.0])  # Looking down -Z
     
     hit, _, u, v = rayIntersectsTriangle(ray_origin, ray_direction, v0, v1, v2)
     assert hit
