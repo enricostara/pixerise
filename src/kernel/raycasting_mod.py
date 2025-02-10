@@ -44,32 +44,45 @@ def rayIntersectsTriangle(
     h = np.cross(ray_direction, edge2)
     a = np.dot(edge1, h)
     
+    print("Determinant a =", a)
+    
     # If determinant is near zero, ray is parallel to triangle
-    # If determinant is negative, triangle is back-facing
-    if abs(a) <= EPSILON or a >= -EPSILON:
+    if a < EPSILON and a > -EPSILON:
+        print("  Ray parallel to triangle (determinant near zero)")
         return False, 0.0, 0.0, 0.0
         
     f = 1.0 / a
     s = ray_origin - v0
     u = f * np.dot(s, h)
     
+    print("  Barycentric u =", u)
+    
     # Test bounds for U
     if u < -EPSILON or u > 1.0 + EPSILON:
+        print("  u out of bounds")
         return False, 0.0, 0.0, 0.0
         
     # Prepare to test V parameter
     q = np.cross(s, edge1)
     v = f * np.dot(ray_direction, q)
     
+    print("  Barycentric v =", v)
+    
     # Test bounds for V and U+V
     if v < -EPSILON or u + v > 1.0 + EPSILON:
+        print("  v out of bounds or u+v > 1")
         return False, 0.0, 0.0, 0.0
         
     # Calculate t - ray intersection distance
     t = f * np.dot(edge2, q)
     
+    print("  Intersection distance t =", t)
+    
     # Ensure intersection is in front of ray origin
     if t <= EPSILON:
+        print("  Intersection behind ray origin")
         return False, 0.0, 0.0, 0.0
         
+    intersect_point = ray_origin + ray_direction * t   
+    print("  Intersection at", intersect_point[0], intersect_point[1], intersect_point[2]) 
     return True, t, u, v
