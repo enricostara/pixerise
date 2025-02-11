@@ -316,79 +316,44 @@ class Renderer:
             screen_y < 0 or screen_y >= self._canvas.height):
             print(f"Screen coordinates ({screen_x}, {screen_y}) outside canvas bounds")
             return None
-            
-        # Step 1: Convert screen coordinates to viewport space
-        viewport_x = (screen_x - self._canvas._center[0]) * (self._viewport.width / self._canvas.width)
-        viewport_y = (self._canvas._center[1] - screen_y) * (self._viewport.height / self._canvas.height)
         
-        print(f"\nCasting ray through screen point ({screen_x}, {screen_y})")
-        print(f"Canvas center: {self._canvas._center}")
-        print(f"Viewport size: {self._viewport.width} x {self._viewport.height}")
-        print(f"Viewport coordinates: ({viewport_x:.3f}, {viewport_y:.3f})")
+        # Convert screen coordinates to viewport space
+        # X coordinate needs to be inverted to match viewport orientation
+        viewport_x = ((self._canvas.width - screen_x) / self._canvas.width) * 2 - 1
+        viewport_y = (screen_y / self._canvas.height) * 2 - 1
         
-        # Step 2: Create ray in camera space
-        ray_dir = np.array([viewport_x, viewport_y, -self._viewport.plane_distance], dtype=np.float32)
+        # Create ray direction in camera space
+        ray_dir = np.array([viewport_x * (self._viewport.width / 2),
+                           viewport_y * (self._viewport.height / 2),
+                           -1.0], dtype=np.float32)
         ray_dir /= np.linalg.norm(ray_dir)  # Normalize direction
-        ray_origin = np.zeros(3, dtype=np.float32)  # Ray starts at camera (0,0,0)
         
-        # Check if ray is within viewport bounds
-        margin = 0.01  # 1% margin to prevent edge cases
-        max_angle_x = np.arctan2(self._viewport.width / 2 * (1 - margin), self._viewport.plane_distance)
-        max_angle_y = np.arctan2(self._viewport.height / 2 * (1 - margin), self._viewport.plane_distance)
+        # Ray origin is camera position (0,0,0 in camera space)
+        ray_origin = np.zeros(3, dtype=np.float32)
         
-        ray_angle_x = np.arctan2(abs(viewport_x), self._viewport.plane_distance)
-        ray_angle_y = np.arctan2(abs(viewport_y), self._viewport.plane_distance)
-        
-        print(f"Ray angles: x={np.degrees(ray_angle_x):.1f}°, y={np.degrees(ray_angle_y):.1f}°")
-        print(f"Max angles: x={np.degrees(max_angle_x):.1f}°, y={np.degrees(max_angle_y):.1f}°")
-        
-        if ray_angle_x > max_angle_x or ray_angle_y > max_angle_y:
-            print(f"Ray angles ({np.degrees(ray_angle_x):.1f}°, {np.degrees(ray_angle_y):.1f}°) exceed maximum ({np.degrees(max_angle_x):.1f}°, {np.degrees(max_angle_y):.1f}°)")
-            return None
-        
-        print(f"Ray origin (camera space): {ray_origin}")
-        print(f"Ray direction (camera space): {ray_dir}")
-        
-        # Step 3: Test intersection with each instance's triangles in camera space
+        # Track closest hit
         closest_hit = None
-        closest_t = float('inf')
+        closest_t = np.inf
         
+        # Test all instances in scene
         for instance_name, instance in scene.instances.items():
-            print(f"\nTesting instance {instance_name}")
             model = scene.models[instance.model]
             
+            # Transform vertices to camera space
             for group_name, group in model.groups.items():
-                print(f"\nTesting group {group_name}")
-                print(f"Number of triangles: {len(group.triangles)}")
+                vertices = group.vertices
                 
-                for i, triangle in enumerate(group.triangles):
-                    # Transform triangle vertices to camera space using transform_vertex
-                    v0 = transform_vertex(group.vertices[triangle[0]], 
-                                       instance.translation, instance.rotation, instance.scale,
-                                       scene.camera.translation, scene.camera.rotation, True)
-                    v1 = transform_vertex(group.vertices[triangle[1]], 
-                                       instance.translation, instance.rotation, instance.scale,
-                                       scene.camera.translation, scene.camera.rotation, True)
-                    v2 = transform_vertex(group.vertices[triangle[2]], 
-                                       instance.translation, instance.rotation, instance.scale,
-                                       scene.camera.translation, scene.camera.rotation, True)
+                # Test each triangle
+                for triangle in group.triangles:
+                    v0 = transform_vertex(vertices[triangle[0]], instance.translation, instance.rotation, instance.scale, scene.camera.translation, scene.camera.rotation, True)
+                    v1 = transform_vertex(vertices[triangle[1]], instance.translation, instance.rotation, instance.scale, scene.camera.translation, scene.camera.rotation, True)
+                    v2 = transform_vertex(vertices[triangle[2]], instance.translation, instance.rotation, instance.scale, scene.camera.translation, scene.camera.rotation, True)
                     
-                    print(f"\nTriangle {i}:")
-                    print(f"v0: {v0}")
-                    print(f"v1: {v1}")
-                    print(f"v2: {v2}")
-                    
-                    # Test ray intersection in camera space
-                    hit, t, u, v = rayIntersectsTriangle(ray_origin, ray_dir, v0, v1, v2)
-                    
+                    hit, t, _, _ = rayIntersectsTriangle(ray_origin, ray_dir, v0, v1, v2)
                     if hit and t < closest_t:
-                        closest_t = t
                         closest_hit = (instance_name, group_name)
-                        print(f"  Hit triangle {i} at t={t:.3f} (u={u:.3f}, v={v:.3f})")
+                        closest_t = t
         
-        if closest_hit:
-            print(f"\nFinal hit: {closest_hit[0]} in group {closest_hit[1]} at t={closest_t:.3f}")
-            
         return closest_hit
 
     def render(self, scene: Scene, shading_mode: ShadingMode = ShadingMode.WIREFRAME):
