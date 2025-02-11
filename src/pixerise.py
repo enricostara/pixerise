@@ -12,7 +12,7 @@ from kernel.culling_mod import cull_back_faces
 from kernel.rendering_mod import process_and_draw_triangles
 from enum import Enum
 from scene import Scene
-from kernel.raycasting_mod import rayIntersectsTriangle
+from kernel.raycasting_mod import check_ray_triangles_intersection
 
 class ShadingMode(Enum):
     """Enum defining different shading modes for 3D rendering.
@@ -339,20 +339,14 @@ class Renderer:
         for instance_name, instance in scene.instances.items():
             model = scene.models[instance.model]
             
-            # Transform vertices to camera space
+            # Test each group
             for group_name, group in model.groups.items():
-                vertices = group.vertices
-                
-                # Test each triangle
-                for triangle in group.triangles:
-                    v0 = transform_vertex(vertices[triangle[0]], instance.translation, instance.rotation, instance.scale, scene.camera.translation, scene.camera.rotation, True)
-                    v1 = transform_vertex(vertices[triangle[1]], instance.translation, instance.rotation, instance.scale, scene.camera.translation, scene.camera.rotation, True)
-                    v2 = transform_vertex(vertices[triangle[2]], instance.translation, instance.rotation, instance.scale, scene.camera.translation, scene.camera.rotation, True)
-                    
-                    hit, t, _, _ = rayIntersectsTriangle(ray_origin, ray_dir, v0, v1, v2)
-                    if hit and t < closest_t:
-                        closest_hit = (instance_name, group_name)
-                        closest_t = t
+                hit, t = check_ray_triangles_intersection(ray_origin, ray_dir, group.vertices, group.triangles,
+                             instance.translation, instance.rotation, instance.scale,
+                             scene.camera.translation, scene.camera.rotation)
+                if hit and t < closest_t:
+                    closest_hit = (instance_name, group_name)
+                    closest_t = t
         
         return closest_hit
 

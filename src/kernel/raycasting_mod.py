@@ -5,11 +5,12 @@ Implements efficient ray-triangle intersection testing using the Möller–Trumb
 
 import numpy as np
 from numba import njit
+from kernel.transforming_mod import transform_vertex
 
 EPSILON = 1e-7
 
 @njit(cache=True)
-def rayIntersectsTriangle(
+def check_ray_triangle_intersection(
     ray_origin: np.ndarray,    # Origin of ray in camera space
     ray_direction: np.ndarray, # Direction of ray in camera space (normalized)
     v0: np.ndarray,           # First vertex of triangle in camera space
@@ -84,3 +85,43 @@ def rayIntersectsTriangle(
     
        
     return True, t, u, v
+
+@njit(cache=True)
+def check_ray_triangles_intersection(ray_origin: np.ndarray, ray_dir: np.ndarray, vertices: np.ndarray, triangles: np.ndarray,
+                 instance_translation: np.ndarray, instance_rotation: np.ndarray, instance_scale: np.ndarray,
+                 camera_translation: np.ndarray, camera_rotation: np.ndarray) -> tuple[bool, float]:
+    """Test ray intersection against all triangles in a group.
+    
+    Args:
+        ray_origin: Origin of ray in camera space
+        ray_dir: Direction of ray in camera space (normalized)
+        vertices: Array of shape (N, 3) containing vertex positions
+        triangles: Array of shape (M, 3) containing triangle vertex indices
+        instance_translation: Instance translation vector
+        instance_rotation: Instance rotation vector
+        instance_scale: Instance scale vector
+        camera_translation: Camera translation vector
+        camera_rotation: Camera rotation vector
+        
+    Returns:
+        Tuple of (hit, t) where:
+        - hit: True if ray intersects any triangle
+        - t: Distance to closest intersection
+    """
+    closest_t = np.inf
+    hit = False
+    
+    for triangle in triangles:
+        v0 = transform_vertex(vertices[triangle[0]], instance_translation, instance_rotation, instance_scale,
+                            camera_translation, camera_rotation, True)
+        v1 = transform_vertex(vertices[triangle[1]], instance_translation, instance_rotation, instance_scale,
+                            camera_translation, camera_rotation, True)
+        v2 = transform_vertex(vertices[triangle[2]], instance_translation, instance_rotation, instance_scale,
+                            camera_translation, camera_rotation, True)
+        
+        triangle_hit, t, _, _ = check_ray_triangle_intersection(ray_origin, ray_dir, v0, v1, v2)
+        if triangle_hit and t < closest_t:
+            hit = True
+            closest_t = t
+    
+    return hit, closest_t
