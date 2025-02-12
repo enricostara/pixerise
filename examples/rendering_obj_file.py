@@ -134,6 +134,9 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     shading_modes = [ShadingMode.WIREFRAME, ShadingMode.FLAT, ShadingMode.GOURAUD, ShadingMode.FLAT]
     current_mode_index = 0
     
+    # Track selected group
+    selected_group = None
+    
     def update_display():
         renderer.render(scene, shading_mode=shading_modes[current_mode_index])
         surf = pygame.surfarray.make_surface(canvas.color_buffer)
@@ -170,7 +173,31 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                 mouse_locked = not mouse_locked
                 pygame.mouse.set_visible(not mouse_locked)
                 pygame.event.set_grab(mouse_locked)
+            
+            # Handle mouse clicks when not locked
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not mouse_locked:  # Left click
+                # Get mouse position
+                mouse_pos = pygame.mouse.get_pos()
                 
+                # Cast ray and get hit
+                hit = renderer.cast_ray(mouse_pos[0], mouse_pos[1], scene)
+                                
+                # Update new selection
+                if hit:
+                    instance_name, group_name = hit
+                    print(f"Selected group: {group_name} in instance {instance_name}")
+                    instance = scene.instances[instance_name]
+                    instance.color = (255, 0, 0)  # Set to red
+                    selected_group = (instance_name, group_name)
+                else:
+                    # Reset previous selection's color when clicking empty space
+                    if selected_group:
+                        instance_name, _ = selected_group
+                        instance = scene.instances[instance_name]
+                        instance.color = (200, 200, 200)  # Reset to original gray color
+                    selected_group = None
+                movement_occurred = True
+            
             # Only handle mouse movement when locked
             elif event.type == pygame.MOUSEMOTION and mouse_locked:
                 dx, dy = event.rel
@@ -186,7 +213,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                 movement_occurred = True
 
             # Handle mouse wheel for forward/backward movement
-            elif event.type == pygame.MOUSEWHEEL:
+            elif event.type == pygame.MOUSEWHEEL and mouse_locked:
                 # Add to current wheel velocity
                 wheel_velocity += event.y * wheel_speed
         
@@ -194,7 +221,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
         keys = pygame.key.get_pressed()
         
         # Apply wheel momentum for smooth movement
-        if abs(wheel_velocity) > 0.0001:  # Small threshold to stop tiny movements
+        if mouse_locked and abs(wheel_velocity) > 0.0001:  # Small threshold to stop tiny movements
             # Calculate forward vector based on camera rotation
             camera_rot = np.array(scene.camera.rotation)
             forward = np.array([
@@ -210,7 +237,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
         else:
             wheel_velocity = 0.0  # Reset to exactly zero when very small
         
-        if any([keys[key] for key in [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_q, pygame.K_e]]):
+        if mouse_locked and any([keys[key] for key in [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_q, pygame.K_e]]):
             movement_occurred = True
             camera_pos = np.array(scene.camera.translation)
             camera_rot = np.array(scene.camera.rotation)
@@ -253,6 +280,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
         # Update display only if movement occurred
         if movement_occurred:
             update_display()
+            movement_occurred = False
         
         clock.tick(60)
         pygame.display.set_caption(f"{shading_modes[current_mode_index].value} - {str(clock.get_fps())[0:2]} fps - press SPACE to toggle shading mode")
