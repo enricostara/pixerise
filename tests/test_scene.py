@@ -93,18 +93,18 @@ def test_instance():
     assert np.array_equal(instance.translation, np.zeros(3))
     assert np.array_equal(instance.rotation, np.zeros(3))
     assert np.array_equal(instance.scale, np.ones(3))
-    assert np.array_equal(instance.color, np.array([1.0, 1.0, 1.0], dtype=np.float32))
+    assert np.array_equal(instance.color, np.array([200, 200, 200], dtype=np.int32))  # Default gray color
     
     # Test setters
     instance.set_translation(1, 2, 3)
     instance.set_rotation(np.pi/2, 0, np.pi/4)
     instance.set_scale(2, 2, 2)
-    instance.color = np.array([0.5, 0.7, 1.0], dtype=np.float32)
+    instance.color = [128, 179, 255]  # Light blue color as RGB integers
     
     assert np.array_equal(instance.translation, np.array([1, 2, 3], dtype=np.float32))
     assert np.array_equal(instance.rotation, np.array([np.pi/2, 0, np.pi/4], dtype=np.float32))
     assert np.array_equal(instance.scale, np.array([2, 2, 2], dtype=np.float32))
-    assert np.array_equal(instance.color, np.array([0.5, 0.7, 1.0], dtype=np.float32))
+    assert np.array_equal(instance.color, np.array([128, 179, 255], dtype=np.int32))
     
     # Test to_dict and from_dict
     data = instance.to_dict()
@@ -112,7 +112,7 @@ def test_instance():
     assert data['transform']['translation'] == [1, 2, 3]
     assert np.allclose(data['transform']['rotation'], [np.pi/2, 0, np.pi/4])
     assert data['transform']['scale'] == [2, 2, 2]
-    assert np.allclose(data['color'], [0.5, 0.7, 1.0])
+    assert data['color'] == [128, 179, 255]  # Color as RGB integers
     
     new_instance = Instance.from_dict(data)
     assert new_instance.model == instance.model
@@ -224,7 +224,7 @@ def test_scene():
                     'rotation': [0, 0, 0],
                     'scale': [1, 1, 1]
                 },
-                'color': (255, 0, 0)
+                'color': [255, 0, 0]  # Color as RGB integers
             }
         ],
         'lights': {

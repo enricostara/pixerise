@@ -38,14 +38,14 @@ Example:
     instance = Instance(
         model="triangle",
         translation=np.array([0,0,-5], dtype=np.float32),
-        color=np.array([255,0,0], dtype=np.float32)
+        color=np.array([255,0,0], dtype=np.int32)
     )
     scene.add_instance("triangle1", instance)
     ```
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Union
 import numpy as np
 
 
@@ -196,13 +196,13 @@ class Instance:
         _translation (np.ndarray): 3D vector specifying position
         _rotation (np.ndarray): 3D vector specifying rotation in radians (X, Y, Z)
         _scale (np.ndarray): 3D vector specifying scale in each axis
-        _color (np.ndarray): RGB color values as floats in range [0, 1]
+        _color (np.ndarray): RGB color values as integers in range [0, 255]
     """
     model: str
     _translation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
     _rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
     _scale: np.ndarray = field(default_factory=lambda: np.ones(3, dtype=np.float32))
-    _color: np.ndarray = field(default_factory=lambda: np.array([1.0, 1.0, 1.0], dtype=np.float32))
+    _color: np.ndarray = field(default_factory=lambda: np.array([200, 200, 200], dtype=np.int32))  # Default gray color
 
     # Properties
     @property
@@ -264,20 +264,22 @@ class Instance:
         """Get the instance's color.
 
         Returns:
-            np.ndarray: RGB color values as floats in range [0, 1]
+            np.ndarray: RGB color values as integers in range [0, 255]
         """
         return self._color
 
     @color.setter
-    def color(self, value: np.ndarray) -> None:
+    def color(self, value: Union[np.ndarray, Tuple[int, int, int], List[int]]) -> None:
         """Set the instance's color.
 
         Args:
-            value (np.ndarray): RGB color values as floats in range [0, 1]
+            value: RGB color values as integers in range [0, 255]. Can be numpy array, tuple, or list.
         """
-        self._color = np.array(value, dtype=np.float32)
+        if isinstance(value, (tuple, list)):
+            self._color = np.array(value, dtype=np.int32)
+        else:
+            self._color = value.astype(np.int32)
 
-    # Setters
     def set_color(self, r: int, g: int, b: int) -> None:
         """Set the color of this instance.
 
@@ -286,7 +288,7 @@ class Instance:
             g (int): Green component in range [0, 255]
             b (int): Blue component in range [0, 255]
         """
-        self._color = np.array([r, g, b], dtype=np.float32)
+        self._color = np.array([r, g, b], dtype=np.int32)
 
     def set_translation(self, x: float, y: float, z: float) -> None:
         """Set the translation of this instance.
@@ -339,7 +341,7 @@ class Instance:
             if 'scale' in transform:
                 instance._scale = np.array(transform['scale'], dtype=np.float32)
         if 'color' in data:
-            instance._color = np.array(data['color'], dtype=np.float32)
+            instance._color = np.array(data['color'], dtype=np.int32)
         return instance
 
     def to_dict(self) -> dict:

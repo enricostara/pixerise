@@ -187,14 +187,14 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                     instance_name, group_name = hit
                     print(f"Selected group: {group_name} in instance {instance_name}")
                     instance = scene.instances[instance_name]
-                    instance.color = (255, 0, 0)  # Set to red
+                    instance.color = [255, 0, 0]  # Red color as integer RGB values
                     selected_group = (instance_name, group_name)
                 else:
                     # Reset previous selection's color when clicking empty space
                     if selected_group:
                         instance_name, _ = selected_group
                         instance = scene.instances[instance_name]
-                        instance.color = (200, 200, 200)  # Reset to original gray color
+                        instance.color = [200, 200, 200]  # Reset to gray color as integer RGB values
                     selected_group = None
                 movement_occurred = True
             
@@ -322,7 +322,7 @@ def main():
                     'rotation': np.array([0, np.pi, 0], dtype=float),  # Rotate to face camera
                     'scale': np.array([scale_factor, scale_factor, scale_factor], dtype=float)
                 },
-                'color': (200, 200, 200)  # Lighter gray for better contrast
+                'color': [200, 200, 200]  # Gray color as integer RGB values
             }
         ]
     }
