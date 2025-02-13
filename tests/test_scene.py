@@ -125,29 +125,33 @@ def test_instance():
 
 
 def test_camera():
-    """Test Camera creation and manipulation."""
-    # Test default creation
+    """Test Camera initialization and serialization."""
+    # Test initialization
     camera = Camera()
-    assert np.array_equal(camera.translation, np.zeros(3))
-    assert np.array_equal(camera.rotation, np.zeros(3))
+    assert np.allclose(camera.translation, np.zeros(3, dtype=np.float32))
+    assert np.allclose(camera.rotation, np.zeros(3, dtype=np.float32))
 
-    # Test setters
-    camera.set_translation(1, 2, 3)
-    camera.set_rotation(np.pi / 2, 0, np.pi / 4)
+    # Test property setters
+    camera.translation = [1, 2, 3]
+    camera.rotation = [0.1, 0.2, 0.3]
+    assert np.allclose(camera.translation, np.array([1, 2, 3], dtype=np.float32))
+    assert np.allclose(camera.rotation, np.array([0.1, 0.2, 0.3], dtype=np.float32))
 
-    assert np.array_equal(camera.translation, np.array([1, 2, 3], dtype=np.float32))
-    assert np.array_equal(
-        camera.rotation, np.array([np.pi / 2, 0, np.pi / 4], dtype=np.float32)
-    )
+    # Test set methods
+    camera.set_translation(4, 5, 6)
+    camera.set_rotation(0.4, 0.5, 0.6)
+    assert np.allclose(camera.translation, np.array([4, 5, 6], dtype=np.float32))
+    assert np.allclose(camera.rotation, np.array([0.4, 0.5, 0.6], dtype=np.float32))
 
-    # Test to_dict and from_dict
-    data = camera.to_dict()
-    assert data["transform"]["translation"] == [1, 2, 3]
-    assert np.allclose(data["transform"]["rotation"], [np.pi / 2, 0, np.pi / 4])
+    # Test serialization
+    camera_data = camera.to_dict()
+    assert np.allclose(camera_data["transform"]["translation"], [4, 5, 6])
+    assert np.allclose(camera_data["transform"]["rotation"], [0.4, 0.5, 0.6])
 
-    new_camera = Camera.from_dict(data)
-    assert np.array_equal(new_camera.translation, camera.translation)
-    assert np.array_equal(new_camera.rotation, camera.rotation)
+    # Test deserialization
+    new_camera = Camera.from_dict(camera_data)
+    assert np.allclose(new_camera.translation, np.array([4, 5, 6], dtype=np.float32))
+    assert np.allclose(new_camera.rotation, np.array([0.4, 0.5, 0.6], dtype=np.float32))
 
 
 def test_directional_light():

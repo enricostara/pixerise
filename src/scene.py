@@ -394,27 +394,63 @@ class Camera:
     The camera uses a right-handed coordinate system where:
     - X-axis points right
     - Y-axis points up
-    - Z-axis points away from the view direction
+    - Z-axis points away from the viewer (into the screen)
 
     Attributes:
-        translation (np.ndarray): 3D vector specifying camera position
-        rotation (np.ndarray): 3D vector specifying camera rotation in radians
+        _translation (np.ndarray): 3D vector specifying camera position
+        _rotation (np.ndarray): 3D vector specifying camera rotation in radians
     """
 
-    translation: np.ndarray = field(
+    _translation: np.ndarray = field(
         default_factory=lambda: np.zeros(3, dtype=np.float32)
     )
-    rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
+    _rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
+
+    @property
+    def translation(self) -> np.ndarray:
+        """Get the camera's translation vector [x, y, z] in world space.
+
+        Returns:
+            np.ndarray: 3D vector [x, y, z] in world space
+        """
+        return self._translation
+
+    @translation.setter
+    def translation(self, value: np.ndarray) -> None:
+        """Set the camera's translation vector [x, y, z] in world space.
+
+        Args:
+            value (np.ndarray): 3D vector [x, y, z] in world space
+        """
+        self._translation = np.array(value, dtype=np.float32)
+
+    @property
+    def rotation(self) -> np.ndarray:
+        """Get the camera's rotation vector [x, y, z] in radians.
+
+        Returns:
+            np.ndarray: 3D vector [x, y, z] in radians
+        """
+        return self._rotation
+
+    @rotation.setter
+    def rotation(self, value: np.ndarray) -> None:
+        """Set the camera's rotation vector [x, y, z] in radians.
+
+        Args:
+            value (np.ndarray): 3D vector [x, y, z] in radians
+        """
+        self._rotation = np.array(value, dtype=np.float32)
 
     def set_translation(self, x: float, y: float, z: float) -> None:
-        """Set the camera's position in world space.
+        """Set the camera's position.
 
         Args:
             x (float): X-coordinate in world space
             y (float): Y-coordinate in world space
             z (float): Z-coordinate in world space
         """
-        self.translation = np.array([x, y, z], dtype=np.float32)
+        self._translation = np.array([x, y, z], dtype=np.float32)
 
     def set_rotation(self, x: float, y: float, z: float) -> None:
         """Set the camera's rotation in radians.
@@ -424,7 +460,7 @@ class Camera:
             y (float): Yaw (rotation around Y-axis) in radians
             z (float): Roll (rotation around Z-axis) in radians
         """
-        self.rotation = np.array([x, y, z], dtype=np.float32)
+        self._rotation = np.array([x, y, z], dtype=np.float32)
 
     @classmethod
     def from_dict(cls, data: dict) -> "Camera":
@@ -438,10 +474,10 @@ class Camera:
         """
         transform = data.get("transform", {})
         return cls(
-            translation=np.array(
+            _translation=np.array(
                 transform.get("translation", [0, 0, 0]), dtype=np.float32
             ),
-            rotation=np.array(transform.get("rotation", [0, 0, 0]), dtype=np.float32),
+            _rotation=np.array(transform.get("rotation", [0, 0, 0]), dtype=np.float32),
         )
 
     def to_dict(self) -> dict:
@@ -452,8 +488,8 @@ class Camera:
         """
         return {
             "transform": {
-                "translation": self.translation.tolist(),
-                "rotation": self.rotation.tolist(),
+                "translation": self._translation.tolist(),
+                "rotation": self._rotation.tolist(),
             }
         }
 
@@ -467,8 +503,8 @@ class DirectionalLight:
     ambient light intensity.
 
     Attributes:
-        direction (np.ndarray): 3D vector specifying light direction
-        ambient (float): Ambient light intensity in range [0, 1]
+        _direction (np.ndarray): 3D vector specifying light direction
+        _ambient (float): Ambient light intensity in range [0, 1]
     """
 
     _direction: np.ndarray  # 3D vector
