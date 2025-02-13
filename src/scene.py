@@ -24,7 +24,7 @@ Example:
     ```python
     # Create a scene with a model and instance
     scene = Scene()
-    
+
     # Add a model with vertices and triangles
     model = Model()
     model.add_group(
@@ -33,7 +33,7 @@ Example:
         triangles=np.array([[0,1,2]], dtype=np.int32)
     )
     scene.add_model("triangle", model)
-    
+
     # Create an instance of the model
     instance = Instance(
         model="triangle",
@@ -52,60 +52,69 @@ import numpy as np
 @dataclass(slots=True)
 class ModelInnerGroup:
     """A group within a model containing geometry data.
-    
+
     Groups allow models to be organized into logical components, each with its own
     geometry data. This is useful for complex models where different parts may need
     different materials or may need to be manipulated independently.
-    
+
     Attributes:
         vertices (np.ndarray): Array of shape (N, 3) containing vertex positions
         triangles (np.ndarray): Array of shape (M, 3) containing vertex indices
         vertex_normals (Optional[np.ndarray]): Array of shape (N, 3) containing vertex normals
             If None, flat shading will be used for this group
     """
+
     vertices: np.ndarray
     triangles: np.ndarray
     vertex_normals: Optional[np.ndarray] = None
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'ModelInnerGroup':
+    def from_dict(cls, data: dict) -> "ModelInnerGroup":
         """Create a ModelGroup from a dictionary representation.
-        
+
         Args:
             data (dict): Dictionary containing 'vertices', 'triangles', and optionally
                 'vertex_normals' arrays
-        
+
         Returns:
             ModelInnerGroup: New instance with the specified geometry data
         """
         return cls(
-            vertices=np.array(data.get('vertices', []), dtype=np.float32),
-            triangles=np.array(data.get('triangles', []), dtype=np.int32),
-            vertex_normals=np.array(data.get('vertex_normals', []), dtype=np.float32) if 'vertex_normals' in data else None
+            vertices=np.array(data.get("vertices", []), dtype=np.float32),
+            triangles=np.array(data.get("triangles", []), dtype=np.int32),
+            vertex_normals=np.array(data.get("vertex_normals", []), dtype=np.float32)
+            if "vertex_normals" in data
+            else None,
         )
 
 
 @dataclass(slots=True)
 class Model:
     """A 3D model containing one or more groups of geometry.
-    
+
     Models are reusable geometry definitions that can be instantiated multiple times
     in a scene. Each model can contain multiple groups, allowing for organized
     geometry with different materials or properties.
-    
+
     The geometry data is stored efficiently using NumPy arrays, and the model
     supports both flat shading (without normals) and smooth shading (with vertex
     normals).
-    
+
     Attributes:
         groups (Dict[str, ModelInnerGroup]): Named groups containing geometry data
     """
+
     groups: Dict[str, ModelInnerGroup] = field(default_factory=dict)
 
-    def add_group(self, name: str, vertices: np.ndarray, triangles: np.ndarray, 
-                 vertex_normals: Optional[np.ndarray] = None) -> None:
+    def add_group(
+        self,
+        name: str,
+        vertices: np.ndarray,
+        triangles: np.ndarray,
+        vertex_normals: Optional[np.ndarray] = None,
+    ) -> None:
         """Add a new geometry group to the model.
-        
+
         Args:
             name (str): Unique identifier for the group
             vertices (np.ndarray): Array of shape (N, 3) containing vertex positions
@@ -117,65 +126,71 @@ class Model:
         self.groups[name] = ModelInnerGroup(
             vertices=vertices.astype(np.float32),
             triangles=triangles.astype(np.int32),
-            vertex_normals=vertex_normals.astype(np.float32) if vertex_normals is not None else None
+            vertex_normals=vertex_normals.astype(np.float32)
+            if vertex_normals is not None
+            else None,
         )
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Model':
+    def from_dict(cls, data: dict) -> "Model":
         """Create a Model from a dictionary representation.
-        
+
         The dictionary can either contain a flat structure with direct geometry data
         (which will be placed in a 'default' group) or a nested structure with
         multiple named groups.
-        
+
         Args:
             data (dict): Dictionary containing model data
-        
+
         Returns:
             Model: New model instance with the specified geometry
         """
         model = cls()
-        groups = data.get('groups')
-        
+        groups = data.get("groups")
+
         # If no groups are defined, create a default group with model data
         if not groups:
             groups = {
-                'default': {
-                    'vertices': data.get('vertices', []),
-                    'triangles': data.get('triangles', []),
-                    'vertex_normals': data.get('vertex_normals', [])
+                "default": {
+                    "vertices": data.get("vertices", []),
+                    "triangles": data.get("triangles", []),
+                    "vertex_normals": data.get("vertex_normals", []),
                 }
             }
-        
+
         for name, group_data in groups.items():
             model.groups[name] = ModelInnerGroup.from_dict(group_data)
-        
+
         return model
 
     def to_dict(self) -> dict:
         """Convert the Model to a dictionary representation.
-        
+
         Returns:
             dict: Dictionary containing model data. If the model has only a default
                 group, returns a flat structure. Otherwise, returns a nested structure
                 with named groups.
         """
-        if len(self.groups) == 1 and 'default' in self.groups:
+        if len(self.groups) == 1 and "default" in self.groups:
             # If there's only a default group, use flat structure
-            group = self.groups['default']
+            group = self.groups["default"]
             return {
-                'vertices': group.vertices.tolist(),
-                'triangles': group.triangles.tolist(),
-                'vertex_normals': group.vertex_normals.tolist() if group.vertex_normals is not None else None
+                "vertices": group.vertices.tolist(),
+                "triangles": group.triangles.tolist(),
+                "vertex_normals": group.vertex_normals.tolist()
+                if group.vertex_normals is not None
+                else None,
             }
         else:
             # Otherwise, use groups structure
             return {
-                'groups': {
+                "groups": {
                     name: {
-                        'vertices': group.vertices.tolist(),
-                        'triangles': group.triangles.tolist(),
-                        'vertex_normals': group.vertex_normals.tolist() if group.vertex_normals is not None else None
+                        "vertices": group.vertices.tolist(),
+                        "triangles": group.triangles.tolist(),
+                        "vertex_normals": group.vertex_normals.tolist()
+                        if group.vertex_normals is not None
+                        else None,
                     }
                     for name, group in self.groups.items()
                 }
@@ -185,12 +200,12 @@ class Model:
 @dataclass(slots=True)
 class Instance:
     """An instance of a model with transformation and color properties.
-    
+
     Instances represent concrete occurrences of models in the scene, each with its
     own position, orientation, scale, and color. Multiple instances can reference
     the same model, allowing for efficient memory usage when the same geometry
     appears multiple times in the scene.
-    
+
     Attributes:
         model (str): Name of the model this instance references
         _translation (np.ndarray): 3D vector specifying position
@@ -198,11 +213,16 @@ class Instance:
         _scale (np.ndarray): 3D vector specifying scale in each axis
         _color (np.ndarray): RGB color values as integers in range [0, 255]
     """
+
     model: str
-    _translation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
+    _translation: np.ndarray = field(
+        default_factory=lambda: np.zeros(3, dtype=np.float32)
+    )
     _rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
     _scale: np.ndarray = field(default_factory=lambda: np.ones(3, dtype=np.float32))
-    _color: np.ndarray = field(default_factory=lambda: np.array([200, 200, 200], dtype=np.int32))  # Default gray color
+    _color: np.ndarray = field(
+        default_factory=lambda: np.array([200, 200, 200], dtype=np.int32)
+    )  # Default gray color
 
     # Properties
     @property
@@ -292,7 +312,7 @@ class Instance:
 
     def set_translation(self, x: float, y: float, z: float) -> None:
         """Set the translation of this instance.
-        
+
         Args:
             x (float): X-coordinate in world space
             y (float): Y-coordinate in world space
@@ -302,7 +322,7 @@ class Instance:
 
     def set_rotation(self, x: float, y: float, z: float) -> None:
         """Set the rotation of this instance in radians.
-        
+
         Args:
             x (float): Rotation around X-axis in radians
             y (float): Rotation around Y-axis in radians
@@ -312,7 +332,7 @@ class Instance:
 
     def set_scale(self, x: float, y: float, z: float) -> None:
         """Set the scale of this instance.
-        
+
         Args:
             x (float): Scale factor along X-axis
             y (float): Scale factor along Y-axis
@@ -321,69 +341,74 @@ class Instance:
         self._scale = np.array([x, y, z], dtype=np.float32)
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Instance':
+    def from_dict(cls, data: dict) -> "Instance":
         """Create an Instance from a dictionary representation.
-        
+
         Args:
             data (dict): Dictionary containing instance data with model reference
                 and optional transform and color information
-        
+
         Returns:
             Instance: New instance with the specified properties
         """
-        instance = cls(model=data['model'])
-        if 'transform' in data:
-            transform = data['transform']
-            if 'translation' in transform:
-                instance._translation = np.array(transform['translation'], dtype=np.float32)
-            if 'rotation' in transform:
-                instance._rotation = np.array(transform['rotation'], dtype=np.float32)
-            if 'scale' in transform:
-                instance._scale = np.array(transform['scale'], dtype=np.float32)
-        if 'color' in data:
-            instance._color = np.array(data['color'], dtype=np.int32)
+        instance = cls(model=data["model"])
+        if "transform" in data:
+            transform = data["transform"]
+            if "translation" in transform:
+                instance._translation = np.array(
+                    transform["translation"], dtype=np.float32
+                )
+            if "rotation" in transform:
+                instance._rotation = np.array(transform["rotation"], dtype=np.float32)
+            if "scale" in transform:
+                instance._scale = np.array(transform["scale"], dtype=np.float32)
+        if "color" in data:
+            instance._color = np.array(data["color"], dtype=np.int32)
         return instance
 
     def to_dict(self) -> dict:
         """Convert the Instance to a dictionary representation.
-        
+
         Returns:
             dict: Dictionary containing the instance's model reference,
                 transformation data, and color information
         """
         return {
-            'model': self.model,
-            'transform': {
-                'translation': self._translation.tolist(),
-                'rotation': self._rotation.tolist(),
-                'scale': self._scale.tolist()
+            "model": self.model,
+            "transform": {
+                "translation": self._translation.tolist(),
+                "rotation": self._rotation.tolist(),
+                "scale": self._scale.tolist(),
             },
-            'color': self._color.tolist()
+            "color": self._color.tolist(),
         }
 
 
 @dataclass(slots=True)
 class Camera:
     """Camera settings for the scene.
-    
+
     The camera defines the viewpoint from which the scene is rendered. It supports
     positioning and orientation through translation and rotation transforms.
-    
+
     The camera uses a right-handed coordinate system where:
     - X-axis points right
     - Y-axis points up
     - Z-axis points away from the view direction
-    
+
     Attributes:
         translation (np.ndarray): 3D vector specifying camera position
         rotation (np.ndarray): 3D vector specifying camera rotation in radians
     """
-    translation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
+
+    translation: np.ndarray = field(
+        default_factory=lambda: np.zeros(3, dtype=np.float32)
+    )
     rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
 
     def set_translation(self, x: float, y: float, z: float) -> None:
         """Set the camera's position in world space.
-        
+
         Args:
             x (float): X-coordinate in world space
             y (float): Y-coordinate in world space
@@ -393,7 +418,7 @@ class Camera:
 
     def set_rotation(self, x: float, y: float, z: float) -> None:
         """Set the camera's rotation in radians.
-        
+
         Args:
             x (float): Pitch (rotation around X-axis) in radians
             y (float): Yaw (rotation around Y-axis) in radians
@@ -402,31 +427,33 @@ class Camera:
         self.rotation = np.array([x, y, z], dtype=np.float32)
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Camera':
+    def from_dict(cls, data: dict) -> "Camera":
         """Create a Camera from a dictionary representation.
-        
+
         Args:
             data (dict): Dictionary containing camera transform data
-        
+
         Returns:
             Camera: New camera instance with the specified position and orientation
         """
-        transform = data.get('transform', {})
+        transform = data.get("transform", {})
         return cls(
-            translation=np.array(transform.get('translation', [0, 0, 0]), dtype=np.float32),
-            rotation=np.array(transform.get('rotation', [0, 0, 0]), dtype=np.float32)
+            translation=np.array(
+                transform.get("translation", [0, 0, 0]), dtype=np.float32
+            ),
+            rotation=np.array(transform.get("rotation", [0, 0, 0]), dtype=np.float32),
         )
 
     def to_dict(self) -> dict:
         """Convert the Camera to a dictionary representation.
-        
+
         Returns:
             dict: Dictionary containing the camera's transformation data
         """
         return {
-            'transform': {
-                'translation': self.translation.tolist(),
-                'rotation': self.rotation.tolist()
+            "transform": {
+                "translation": self.translation.tolist(),
+                "rotation": self.rotation.tolist(),
             }
         }
 
@@ -434,168 +461,173 @@ class Camera:
 @dataclass(slots=True)
 class DirectionalLight:
     """A directional light in the scene.
-    
+
     Directional lights simulate light sources that are infinitely far away,
     producing parallel light rays. They are defined by a direction vector and
     ambient light intensity.
-    
+
     Attributes:
         direction (np.ndarray): 3D vector specifying light direction
         ambient (float): Ambient light intensity in range [0, 1]
     """
+
     direction: np.ndarray  # 3D vector
     ambient: float = 0.1
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'DirectionalLight':
+    def from_dict(cls, data: dict) -> "DirectionalLight":
         """Create a DirectionalLight from a dictionary representation.
-        
+
         Args:
             data (dict): Dictionary containing light direction and ambient intensity
-        
+
         Returns:
             DirectionalLight: New light instance with the specified properties
         """
         return cls(
-            direction=np.array(data['direction'], dtype=np.float32),
-            ambient=data.get('ambient', 0.1)
+            direction=np.array(data["direction"], dtype=np.float32),
+            ambient=data.get("ambient", 0.1),
         )
 
     def to_dict(self) -> dict:
         """Convert the DirectionalLight to a dictionary representation.
-        
+
         Returns:
             dict: Dictionary containing the light's direction and ambient intensity
         """
-        return {
-            'direction': self.direction.tolist(),
-            'ambient': self.ambient
-        }
+        return {"direction": self.direction.tolist(), "ambient": self.ambient}
 
 
 @dataclass(slots=True)
 class Scene:
     """A 3D scene containing models, instances, camera settings, and lights.
-    
+
     The Scene class is the top-level container for all elements in a 3D scene.
     It manages:
     - A collection of reusable 3D models
     - Multiple instances of those models with unique transforms
     - Camera position and orientation
     - Lighting configuration
-    
+
     The scene supports serialization to/from dictionary format for easy saving
     and loading of scene configurations.
-    
+
     Attributes:
         models (Dict[str, Model]): Named collection of 3D models
         instances (Dict[str, Instance]): Named collection of model instances
         camera (Camera): Scene camera configuration
         directional_light (DirectionalLight): Main directional light source
     """
-    models: Dict[str, Model] = field(default_factory=dict)
-    instances: Dict[str, Instance] = field(default_factory=dict)
-    camera: Camera = field(default_factory=Camera)
-    directional_light: DirectionalLight = field(default_factory=lambda: DirectionalLight(direction=np.array([0, 0, -1], dtype=np.float32)))
+
+    _models: Dict[str, Model] = field(default_factory=dict)
+    _instances: Dict[str, Instance] = field(default_factory=dict)
+    _camera: Camera = field(default_factory=Camera)
+    _directional_light: DirectionalLight = field(
+        default_factory=lambda: DirectionalLight(
+            direction=np.array([0, 0, -1], dtype=np.float32)
+        )
+    )
 
     def add_model(self, name: str, model: Model) -> None:
         """Add a model to the scene.
-        
+
         Args:
             name (str): Unique identifier for the model
             model (Model): Model instance to add
         """
-        self.models[name] = model
+        self._models[name] = model
 
     def get_model(self, model_name: str) -> Optional[Model]:
         """Get a model by name.
-        
+
         Args:
             model_name (str): Name of the model to get
-        
+
         Returns:
             Model: Model instance if found, None otherwise
         """
-        return self.models.get(model_name)
+        return self._models.get(model_name)
 
     def add_instance(self, name: str, instance: Instance) -> None:
         """Add a model instance to the scene.
-        
+
         Args:
             name (str): Unique identifier for the instance
             instance (Instance): Instance to add
         """
-        self.instances[name] = instance
+        self._instances[name] = instance
 
     def get_instance(self, instance_name: str) -> Optional[Instance]:
         """Get an instance by name.
-        
+
         Args:
             instance_name (str): Name of the instance to get
-        
+
         Returns:
             Instance: Instance if found, None otherwise
         """
-        return self.instances.get(instance_name)
+        return self._instances.get(instance_name)
 
     def set_camera(self, camera: Camera) -> None:
         """Set the scene's camera.
-        
+
         Args:
             camera (Camera): Camera instance to set
         """
-        self.camera = camera
+        self._camera = camera
 
     def set_directional_light(self, light: DirectionalLight) -> None:
         """Set the scene's directional light.
-        
+
         Args:
             light (DirectionalLight): Light instance to set
         """
-        self.directional_light = light
+        self._directional_light = light
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Scene':
+    def from_dict(cls, data: dict) -> "Scene":
         """Create a Scene from a dictionary representation.
-        
+
         Args:
             data (dict): Dictionary containing scene data
-        
+
         Returns:
             Scene: New scene instance with the specified elements
         """
         scene = cls()
-        
+
         # Load camera
-        if 'camera' in data:
-            scene.camera = Camera.from_dict(data['camera'])
-        
+        if "camera" in data:
+            scene._camera = Camera.from_dict(data["camera"])
+
         # Load models
-        if 'models' in data:
-            for name, model_data in data['models'].items():
-                scene.models[name] = Model.from_dict(model_data)
-        
+        if "models" in data:
+            for name, model_data in data["models"].items():
+                scene._models[name] = Model.from_dict(model_data)
+
         # Load instances
-        if 'instances' in data:
-            for instance_data in data['instances']:
-                name = instance_data.get('name', f'instance_{len(scene.instances)}')
-                scene.instances[name] = Instance.from_dict(instance_data)
-        
+        if "instances" in data:
+            for instance_data in data["instances"]:
+                name = instance_data.get("name", f"instance_{len(scene._instances)}")
+                scene._instances[name] = Instance.from_dict(instance_data)
+
         # Load directional light
-        if 'lights' in data and 'directional' in data['lights']:
-            scene.directional_light = DirectionalLight.from_dict(data['lights']['directional'])
-        
+        if "lights" in data and "directional" in data["lights"]:
+            scene._directional_light = DirectionalLight.from_dict(
+                data["lights"]["directional"]
+            )
+
         return scene
 
     def to_dict(self) -> dict:
         """Convert the Scene to a dictionary representation.
-        
+
         Returns:
             dict: Dictionary containing scene data
         """
         return {
-            'camera': self.camera.to_dict(),
-            'models': {name: model.to_dict() for name, model in self.models.items()},
-            'instances': [instance.to_dict() for instance in self.instances.values()],
-            'directional_light': self.directional_light.to_dict()
+            "camera": self._camera.to_dict(),
+            "models": {name: model.to_dict() for name, model in self._models.items()},
+            "instances": [instance.to_dict() for instance in self._instances.values()],
+            "directional_light": self._directional_light.to_dict(),
         }
