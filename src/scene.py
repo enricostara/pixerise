@@ -462,8 +462,8 @@ class Camera:
 class DirectionalLight:
     """A directional light in the scene.
 
-    Directional lights simulate light sources that are infinitely far away,
-    producing parallel light rays. They are defined by a direction vector and
+    A directional light simulates a light source that is infinitely far away,
+    producing parallel light rays. It is defined by a direction vector and
     ambient light intensity.
 
     Attributes:
@@ -471,8 +471,43 @@ class DirectionalLight:
         ambient (float): Ambient light intensity in range [0, 1]
     """
 
-    direction: np.ndarray  # 3D vector
-    ambient: float = 0.1
+    _direction: np.ndarray  # 3D vector
+    _ambient: float = 0.1
+    @property
+    def direction(self) -> np.ndarray:
+        """3D vector specifying light direction
+
+        Returns:
+            np.ndarray: Light direction vector
+        """
+        return self._direction
+
+    @direction.setter
+    def direction(self, value: np.ndarray) -> None:
+        """Set the light's direction vector
+
+        Args:
+            value (np.ndarray): New light direction vector
+        """
+        self._direction = np.array(value, dtype=np.float32)
+
+    @property
+    def ambient(self) -> float:
+        """Ambient light intensity in range [0, 1]
+
+        Returns:
+            float: Ambient light intensity
+        """
+        return self._ambient
+
+    @ambient.setter
+    def ambient(self, value: float) -> None:
+        """Set the light's ambient intensity
+
+        Args:
+            value (float): New ambient light intensity
+        """
+        self._ambient = value
 
     @classmethod
     def from_dict(cls, data: dict) -> "DirectionalLight":
@@ -485,8 +520,8 @@ class DirectionalLight:
             DirectionalLight: New light instance with the specified properties
         """
         return cls(
-            direction=np.array(data["direction"], dtype=np.float32),
-            ambient=data.get("ambient", 0.1),
+            _direction=np.array(data["direction"], dtype=np.float32),
+            _ambient=data.get("ambient", 0.1),
         )
 
     def to_dict(self) -> dict:
@@ -524,7 +559,7 @@ class Scene:
     _camera: Camera = field(default_factory=Camera)
     _directional_light: DirectionalLight = field(
         default_factory=lambda: DirectionalLight(
-            direction=np.array([0, 0, -1], dtype=np.float32)
+            _direction=np.array([0, 0, -1], dtype=np.float32)
         )
     )
 
