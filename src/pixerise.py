@@ -297,7 +297,8 @@ class Renderer:
         1. Screen Space -> Viewport Space: Convert pixel coordinates to normalized viewport coordinates
         2. Create ray in camera space (origin at 0,0,0, direction through viewport point)
         3. For each instance:
-           - Transform triangle vertices to camera space using transform_vertex
+           - Transform vertices to camera space
+           - Check bounding sphere intersection for early culling
            - Test ray intersection with transformed triangles
            - Track closest intersection
         
@@ -337,13 +338,48 @@ class Renderer:
         
         # Test all instances in scene
         for instance_name, instance in scene.instances.items():
-            model = scene.models[instance.model]
+            model = scene.get_model(instance.model)
+            if model is None:
+                continue
             
-            # Test each group
+            # Process each group in the model
             for group_name, group in model.groups.items():
-                hit, t = check_ray_triangles_intersection(ray_origin, ray_dir, group.vertices, group.triangles,
-                             instance.translation, instance.rotation, instance.scale,
-                             scene.camera.translation, scene.camera.rotation)
+                vertices = group.vertices
+                vertex_normals = group.vertex_normals
+
+                # Transform group vertices to camera space
+                # Transform vertices and normals using the new JIT-compiled function
+                transformed_vertices, _ = transform_vertices_and_normals(
+                    vertices, vertex_normals, instance.translation, instance.rotation, instance.scale,
+                    scene.camera.translation, scene.camera.rotation, '', False
+                )                
+                # Calculate bounding sphere for the transformed group vertices
+                sphere_center, sphere_radius = calculate_bounding_sphere(transformed_vertices)
+                
+                # Check visibility against each frustum plane
+                fully_invisible = False
+                
+                for plane, plane_d in zip(self._viewport.frustum_planes[:, :3], self._viewport.frustum_planes[:, 3]):
+                    # Calculate signed distance from sphere center to plane
+                    center_distance = np.dot(plane, sphere_center) + plane_d
+                    
+                    # If center distance is less than -radius, sphere is completely behind plane
+                    if center_distance < -sphere_radius:
+                        fully_invisible = True
+                        break
+                
+                # Skip if group is completely invisible
+                if fully_invisible:
+                    continue
+                
+                # Check intersection with triangles in this group
+                hit, t = check_ray_triangles_intersection(
+                    ray_origin, ray_dir,
+                    group.vertices, group.triangles,
+                    instance.translation, instance.rotation, instance.scale,
+                    scene.camera.translation, scene.camera.rotation
+                )
+                
                 if hit and t < closest_t:
                     closest_hit = (instance_name, group_name)
                     closest_t = t
