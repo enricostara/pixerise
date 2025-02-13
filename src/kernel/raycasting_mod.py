@@ -5,7 +5,6 @@ Implements efficient ray-triangle intersection testing using the Möller–Trumb
 
 import numpy as np
 from numba import njit
-from kernel.transforming_mod import transform_vertex
 
 EPSILON = 1e-7
 
