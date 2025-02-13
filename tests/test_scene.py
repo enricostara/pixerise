@@ -151,22 +151,27 @@ def test_camera():
 
 
 def test_directional_light():
-    """Test DirectionalLight creation and manipulation."""
-    # Test creation
-    direction = np.array([-1, -1, -1], dtype=np.float32)
-    light = DirectionalLight(direction=direction, ambient=0.2)
-
-    assert np.array_equal(light.direction, direction)
+    """Test DirectionalLight initialization and serialization."""
+    # Test initialization
+    light = DirectionalLight(_direction=np.array([1, 0, 0], dtype=np.float32), _ambient=0.2)
+    assert np.array_equal(light.direction, np.array([1, 0, 0], dtype=np.float32))
     assert light.ambient == 0.2
 
-    # Test to_dict and from_dict
-    data = light.to_dict()
-    assert data["direction"] == direction.tolist()
-    assert data["ambient"] == 0.2
+    # Test property setters
+    light.direction = [0, 1, 0]
+    light.ambient = 0.3
+    assert np.array_equal(light.direction, np.array([0, 1, 0], dtype=np.float32))
+    assert light.ambient == 0.3
 
-    new_light = DirectionalLight.from_dict(data)
-    assert np.array_equal(new_light.direction, light.direction)
-    assert new_light.ambient == light.ambient
+    # Test serialization
+    light_data = light.to_dict()
+    assert np.array_equal(light_data["direction"], [0, 1, 0])
+    assert light_data["ambient"] == 0.3
+
+    # Test deserialization
+    new_light = DirectionalLight.from_dict(light_data)
+    assert np.array_equal(new_light.direction, np.array([0, 1, 0], dtype=np.float32))
+    assert new_light.ambient == 0.3
 
 
 def test_scene():
@@ -203,9 +208,7 @@ def test_scene():
     camera.set_translation(1, 2, 3)
     scene.set_camera(camera)
 
-    light = DirectionalLight(
-        direction=np.array([-1, -1, -1], dtype=np.float32), ambient=0.2
-    )
+    light = DirectionalLight(_direction=np.array([-1, -1, -1], dtype=np.float32), _ambient=0.2)
     scene.set_directional_light(light)
 
     assert scene._camera == camera
