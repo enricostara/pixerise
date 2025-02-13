@@ -347,6 +347,9 @@ class Renderer:
                 vertices = group.vertices
                 vertex_normals = group.vertex_normals
 
+                # Pad vertex normals with zeros if they are None
+                vertex_normals = np.zeros((0, 3), dtype=np.float32) if vertex_normals is None or len(vertex_normals) == 0 else vertex_normals
+
                 # Transform group vertices to camera space
                 # Transform vertices and normals using the new JIT-compiled function
                 transformed_vertices, _ = transform_vertices_and_normals(
@@ -375,9 +378,7 @@ class Renderer:
                 # Check intersection with triangles in this group
                 hit, t = check_ray_triangles_intersection(
                     ray_origin, ray_dir,
-                    group.vertices, group.triangles,
-                    instance.translation, instance.rotation, instance.scale,
-                    scene.camera.translation, scene.camera.rotation
+                    transformed_vertices, group.triangles
                 )
                 
                 if hit and t < closest_t:
