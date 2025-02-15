@@ -38,49 +38,55 @@ def test_model_inner_group():
 
 
 def test_model():
-    """Test Model creation and manipulation."""
+    """Test Model initialization and serialization."""
+    # Test initialization
     model = Model()
+    assert len(model.groups) == 0  # Use the property instead of _groups
 
-    # Test adding a group
+    # Test adding groups
     vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=np.float32)
     triangles = np.array([[0, 1, 2]], dtype=np.int32)
-    model.add_group("test_group", vertices, triangles)
+    vertex_normals = np.array([[0, 0, 1], [0, 0, 1], [0, 0, 1]], dtype=np.float32)
 
-    assert "test_group" in model.groups
-    assert np.array_equal(model.groups["test_group"].vertices, vertices)
-    assert np.array_equal(model.groups["test_group"].triangles, triangles)
+    model.add_group("test_group", vertices, triangles, vertex_normals)
+    groups = model.groups  # Get a copy through the property
+    assert "test_group" in groups
+    assert np.array_equal(groups["test_group"].vertices, vertices)
+    assert np.array_equal(groups["test_group"].triangles, triangles)
+    assert np.array_equal(groups["test_group"].vertex_normals, vertex_normals)
 
-    # Test to_dict with single default group
-    model = Model()
-    model.add_group("default", vertices, triangles)
-    data = model.to_dict()
-    assert "vertices" in data  # Flat structure for default group
-    assert "triangles" in data
+    # Test serialization
+    model_data = model.to_dict()
+    assert "groups" in model_data
+    assert "test_group" in model_data["groups"]
+    group_data = model_data["groups"]["test_group"]
+    assert np.array_equal(group_data["vertices"], vertices.tolist())
+    assert np.array_equal(group_data["triangles"], triangles.tolist())
+    assert np.array_equal(group_data["vertex_normals"], vertex_normals.tolist())
 
-    # Test to_dict with multiple groups
-    model = Model()
-    model.add_group("group1", vertices, triangles)
-    model.add_group("group2", vertices, triangles)
-    data = model.to_dict()
-    assert "groups" in data  # Grouped structure for multiple groups
-    assert "group1" in data["groups"]
-    assert "group2" in data["groups"]
+    # Test deserialization
+    new_model = Model.from_dict(model_data)
+    new_groups = new_model.groups  # Get a copy through the property
+    assert "test_group" in new_groups
+    new_group = new_groups["test_group"]
+    assert np.array_equal(new_group.vertices, vertices)
+    assert np.array_equal(new_group.triangles, triangles)
+    assert np.array_equal(new_group.vertex_normals, vertex_normals)
 
-    # Test from_dict with flat structure
-    flat_data = {"vertices": vertices.tolist(), "triangles": triangles.tolist()}
-    model = Model.from_dict(flat_data)
-    assert "default" in model.groups
+    # Test groups property is read-only (returns a copy)
+    original_groups = model.groups
+    group = original_groups["test_group"]
+    original_groups["new_group"] = group  # This shouldn't affect the model
+    assert "new_group" not in model.groups
 
-    # Test from_dict with groups structure
-    grouped_data = {
-        "groups": {
-            "group1": {"vertices": vertices.tolist(), "triangles": triangles.tolist()},
-            "group2": {"vertices": vertices.tolist(), "triangles": triangles.tolist()},
-        }
-    }
-    model = Model.from_dict(grouped_data)
-    assert "group1" in model.groups
-    assert "group2" in model.groups
+    # Test single default group serialization
+    default_model = Model()
+    default_model.add_group("default", vertices, triangles, vertex_normals)
+    default_data = default_model.to_dict()
+    # For single default group, expect flat structure
+    assert "vertices" in default_data
+    assert "triangles" in default_data
+    assert "vertex_normals" in default_data
 
 
 def test_instance():

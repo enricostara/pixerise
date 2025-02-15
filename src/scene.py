@@ -45,7 +45,7 @@ Example:
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, Optional
 import numpy as np
 
 
@@ -101,10 +101,15 @@ class Model:
     normals).
 
     Attributes:
-        groups (Dict[str, ModelInnerGroup]): Named groups containing geometry data
+        _groups (Dict[str, ModelInnerGroup]): Named groups containing geometry data
     """
 
-    groups: Dict[str, ModelInnerGroup] = field(default_factory=dict)
+    _groups: Dict[str, ModelInnerGroup] = field(default_factory=dict)
+
+    @property
+    def groups(self) -> Dict[str, ModelInnerGroup]:
+        """Get the model's groups (read-only)."""
+        return self._groups.copy()
 
     def add_group(
         self,
@@ -123,7 +128,7 @@ class Model:
             vertex_normals (Optional[np.ndarray]): Array of shape (N, 3) containing
                 vertex normals for smooth shading. If None, flat shading will be used
         """
-        self.groups[name] = ModelInnerGroup(
+        self._groups[name] = ModelInnerGroup(
             vertices=vertices.astype(np.float32),
             triangles=triangles.astype(np.int32),
             vertex_normals=vertex_normals.astype(np.float32)
@@ -159,7 +164,7 @@ class Model:
             }
 
         for name, group_data in groups.items():
-            model.groups[name] = ModelInnerGroup.from_dict(group_data)
+            model._groups[name] = ModelInnerGroup.from_dict(group_data)
 
         return model
 
@@ -171,9 +176,9 @@ class Model:
                 group, returns a flat structure. Otherwise, returns a nested structure
                 with named groups.
         """
-        if len(self.groups) == 1 and "default" in self.groups:
+        if len(self._groups) == 1 and "default" in self._groups:
             # If there's only a default group, use flat structure
-            group = self.groups["default"]
+            group = self._groups["default"]
             return {
                 "vertices": group.vertices.tolist(),
                 "triangles": group.triangles.tolist(),
@@ -192,7 +197,7 @@ class Model:
                         if group.vertex_normals is not None
                         else None,
                     }
-                    for name, group in self.groups.items()
+                    for name, group in self._groups.items()
                 }
             }
 
