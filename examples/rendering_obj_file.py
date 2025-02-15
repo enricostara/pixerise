@@ -198,20 +198,26 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                     instance_name, group_name = hit
                     print(f"Selected group: {group_name} in instance {instance_name}")
                     instance = scene._instances[instance_name]
-                    
+
                     # Toggle selection - if already selected, deselect it
                     if hit in selected_groups:
                         selected_groups.remove(hit)
-                        instance.set_group_color(group_name, None)  # Remove group-specific color
+                        instance.set_group_color(
+                            group_name, None
+                        )  # Remove group-specific color
                     else:
                         selected_groups.append(hit)
                         # Set color for the specific group
-                        instance.set_group_color(group_name, np.array([255, 0, 0], dtype=np.int32))
+                        instance.set_group_color(
+                            group_name, np.array([255, 0, 0], dtype=np.int32)
+                        )
                 else:
                     # Reset all selected groups' colors when clicking empty space
                     for inst_name, grp_name in selected_groups:
                         instance = scene._instances[inst_name]
-                        instance.set_group_color(grp_name, None)  # Remove group-specific color
+                        instance.set_group_color(
+                            grp_name, None
+                        )  # Remove group-specific color
                     selected_groups.clear()
 
                 movement_occurred = True
