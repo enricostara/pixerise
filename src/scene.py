@@ -207,14 +207,14 @@ class Instance:
     appears multiple times in the scene.
 
     Attributes:
-        model (str): Name of the model this instance references
+        _model (str): Name of the model this instance references
         _translation (np.ndarray): 3D vector specifying position
-        _rotation (np.ndarray): 3D vector specifying rotation in radians (X, Y, Z)
+        _rotation (np.ndarray): 3D vector specifying rotation in radians
         _scale (np.ndarray): 3D vector specifying scale in each axis
         _color (np.ndarray): RGB color values as integers in range [0, 255]
     """
 
-    model: str
+    _model: str
     _translation: np.ndarray = field(
         default_factory=lambda: np.zeros(3, dtype=np.float32)
     )
@@ -224,91 +224,56 @@ class Instance:
         default_factory=lambda: np.array([200, 200, 200], dtype=np.int32)
     )  # Default gray color
 
+    @property
+    def model(self) -> str:
+        """Get the model name this instance references."""
+        return self._model
+
+    @model.setter
+    def model(self, value: str) -> None:
+        """Set the model name this instance references."""
+        self._model = value
+
     # Properties
     @property
     def translation(self) -> np.ndarray:
-        """Get the instance's translation vector.
-
-        Returns:
-            np.ndarray: 3D translation vector [x, y, z]
-        """
+        """Get the instance's translation vector."""
         return self._translation
 
     @translation.setter
     def translation(self, value: np.ndarray) -> None:
-        """Set the instance's translation vector.
-
-        Args:
-            value (np.ndarray): 3D translation vector [x, y, z]
-        """
+        """Set the instance's translation vector."""
         self._translation = np.array(value, dtype=np.float32)
 
     @property
     def rotation(self) -> np.ndarray:
-        """Get the instance's rotation vector in radians.
-
-        Returns:
-            np.ndarray: 3D rotation vector [x, y, z] in radians
-        """
+        """Get the instance's rotation vector."""
         return self._rotation
 
     @rotation.setter
     def rotation(self, value: np.ndarray) -> None:
-        """Set the instance's rotation vector.
-
-        Args:
-            value (np.ndarray): 3D rotation vector [x, y, z] in radians
-        """
+        """Set the instance's rotation vector."""
         self._rotation = np.array(value, dtype=np.float32)
 
     @property
     def scale(self) -> np.ndarray:
-        """Get the instance's scale vector.
-
-        Returns:
-            np.ndarray: 3D scale vector [x, y, z]
-        """
+        """Get the instance's scale vector."""
         return self._scale
 
     @scale.setter
     def scale(self, value: np.ndarray) -> None:
-        """Set the instance's scale vector.
-
-        Args:
-            value (np.ndarray): 3D scale vector [x, y, z]
-        """
+        """Set the instance's scale vector."""
         self._scale = np.array(value, dtype=np.float32)
 
     @property
     def color(self) -> np.ndarray:
-        """Get the instance's color.
-
-        Returns:
-            np.ndarray: RGB color values as integers in range [0, 255]
-        """
+        """Get the instance's color values."""
         return self._color
 
     @color.setter
-    def color(self, value: Union[np.ndarray, Tuple[int, int, int], List[int]]) -> None:
-        """Set the instance's color.
-
-        Args:
-            value: RGB color values as integers in range [0, 255]. Can be numpy array, tuple, or list.
-        """
-        if isinstance(value, (tuple, list)):
-            self._color = np.array(value, dtype=np.int32)
-        else:
-            self._color = value.astype(np.int32)
-
-    def set_color(self, r: int, g: int, b: int) -> None:
-        """Set the color of this instance.
-
-        Args:
-            r (int): Red component in range [0, 255]
-            g (int): Green component in range [0, 255]
-            b (int): Blue component in range [0, 255]
-        """
-        self._color = np.array([r, g, b], dtype=np.int32)
+    def color(self, value: np.ndarray) -> None:
+        """Set the instance's color values."""
+        self._color = np.array(value, dtype=np.int32)
 
     def set_translation(self, x: float, y: float, z: float) -> None:
         """Set the translation of this instance.
@@ -326,7 +291,7 @@ class Instance:
         Args:
             x (float): Rotation around X-axis in radians
             y (float): Rotation around Y-axis in radians
-            z (float): Rotation around Z-axis in radians
+            z (float): Roll (rotation around Z-axis) in radians
         """
         self._rotation = np.array([x, y, z], dtype=np.float32)
 
@@ -351,7 +316,7 @@ class Instance:
         Returns:
             Instance: New instance with the specified properties
         """
-        instance = cls(model=data["model"])
+        instance = cls(_model=data["model"])
         if "transform" in data:
             transform = data["transform"]
             if "translation" in transform:
@@ -367,14 +332,14 @@ class Instance:
         return instance
 
     def to_dict(self) -> dict:
-        """Convert the Instance to a dictionary representation.
+        """Convert this instance to a dictionary representation.
 
         Returns:
             dict: Dictionary containing the instance's model reference,
                 transformation data, and color information
         """
         return {
-            "model": self.model,
+            "model": self._model,
             "transform": {
                 "translation": self._translation.tolist(),
                 "rotation": self._rotation.tolist(),
@@ -509,6 +474,7 @@ class DirectionalLight:
 
     _direction: np.ndarray  # 3D vector
     _ambient: float = 0.1
+
     @property
     def direction(self) -> np.ndarray:
         """3D vector specifying light direction

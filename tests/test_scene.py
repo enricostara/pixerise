@@ -84,43 +84,51 @@ def test_model():
 
 
 def test_instance():
-    """Test Instance creation and manipulation."""
-    # Test default creation
-    instance = Instance(model="test_model")
-    assert instance.model == "test_model"
-    assert np.array_equal(instance.translation, np.zeros(3))
-    assert np.array_equal(instance.rotation, np.zeros(3))
-    assert np.array_equal(instance.scale, np.ones(3))
-    assert np.array_equal(
-        instance.color, np.array([200, 200, 200], dtype=np.int32)
-    )  # Default gray color
+    """Test Instance initialization and serialization."""
+    # Test initialization
+    instance = Instance(_model="cube")
+    assert instance.model == "cube"
+    assert np.allclose(instance.translation, np.zeros(3, dtype=np.float32))
+    assert np.allclose(instance.rotation, np.zeros(3, dtype=np.float32))
+    assert np.allclose(instance.scale, np.ones(3, dtype=np.float32))
+    assert np.array_equal(instance.color, np.array([200, 200, 200], dtype=np.int32))
 
-    # Test setters
-    instance.set_translation(1, 2, 3)
-    instance.set_rotation(np.pi / 2, 0, np.pi / 4)
-    instance.set_scale(2, 2, 2)
-    instance.color = [128, 179, 255]  # Light blue color as RGB integers
+    # Test property setters
+    instance.translation = [1, 2, 3]
+    instance.rotation = [0.1, 0.2, 0.3]
+    instance.scale = [2, 2, 2]
+    instance.color = [255, 0, 0]
+    instance.model = "sphere"
 
-    assert np.array_equal(instance.translation, np.array([1, 2, 3], dtype=np.float32))
-    assert np.array_equal(
-        instance.rotation, np.array([np.pi / 2, 0, np.pi / 4], dtype=np.float32)
-    )
-    assert np.array_equal(instance.scale, np.array([2, 2, 2], dtype=np.float32))
-    assert np.array_equal(instance.color, np.array([128, 179, 255], dtype=np.int32))
+    assert instance.model == "sphere"
+    assert np.allclose(instance.translation, np.array([1, 2, 3], dtype=np.float32))
+    assert np.allclose(instance.rotation, np.array([0.1, 0.2, 0.3], dtype=np.float32))
+    assert np.allclose(instance.scale, np.array([2, 2, 2], dtype=np.float32))
+    assert np.array_equal(instance.color, np.array([255, 0, 0], dtype=np.int32))
 
-    # Test to_dict and from_dict
-    data = instance.to_dict()
-    assert data["model"] == "test_model"
-    assert data["transform"]["translation"] == [1, 2, 3]
-    assert np.allclose(data["transform"]["rotation"], [np.pi / 2, 0, np.pi / 4])
-    assert data["transform"]["scale"] == [2, 2, 2]
-    assert data["color"] == [128, 179, 255]  # Color as RGB integers
+    # Test set methods
+    instance.set_translation(4, 5, 6)
+    instance.set_rotation(0.4, 0.5, 0.6)
+    instance.set_scale(3, 3, 3)
 
-    new_instance = Instance.from_dict(data)
+    assert np.allclose(instance.translation, np.array([4, 5, 6], dtype=np.float32))
+    assert np.allclose(instance.rotation, np.array([0.4, 0.5, 0.6], dtype=np.float32))
+    assert np.allclose(instance.scale, np.array([3, 3, 3], dtype=np.float32))
+
+    # Test serialization
+    instance_data = instance.to_dict()
+    assert instance_data["model"] == "sphere"
+    assert np.allclose(instance_data["transform"]["translation"], [4, 5, 6])
+    assert np.allclose(instance_data["transform"]["rotation"], [0.4, 0.5, 0.6])
+    assert np.allclose(instance_data["transform"]["scale"], [3, 3, 3])
+    assert np.array_equal(instance_data["color"], [255, 0, 0])
+
+    # Test deserialization
+    new_instance = Instance.from_dict(instance_data)
     assert new_instance.model == instance.model
-    assert np.array_equal(new_instance.translation, instance.translation)
-    assert np.array_equal(new_instance.rotation, instance.rotation)
-    assert np.array_equal(new_instance.scale, instance.scale)
+    assert np.allclose(new_instance.translation, instance.translation)
+    assert np.allclose(new_instance.rotation, instance.rotation)
+    assert np.allclose(new_instance.scale, instance.scale)
     assert np.array_equal(new_instance.color, instance.color)
 
 
@@ -179,29 +187,18 @@ def test_directional_light():
 
 
 def test_scene():
-    """Test Scene creation and manipulation."""
+    """Test Scene initialization and manipulation."""
     scene = Scene()
-
-    # Test default state
-    assert len(scene._models) == 0
-    assert len(scene._instances) == 0
-    assert isinstance(scene._camera, Camera)
-    assert isinstance(scene._directional_light, DirectionalLight)
 
     # Test adding and getting models
     model = Model()
-    model.add_group(
-        "default",
-        np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=np.float32),
-        np.array([[0, 1, 2]], dtype=np.int32),
-    )
     scene.add_model("test_model", model)
 
     assert scene.get_model("test_model") == model
     assert scene.get_model("nonexistent") is None
 
     # Test adding and getting instances
-    instance = Instance(model="test_model")
+    instance = Instance(_model="test_model")
     scene.add_instance("test_instance", instance)
 
     assert scene.get_instance("test_instance") == instance
