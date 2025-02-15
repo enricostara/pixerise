@@ -23,15 +23,17 @@ class BoundingSphereBenchmark:
             for _ in range(CALLS_PER_LOOP):
                 calculate_bounding_sphere(vertices)
             end_time = time.perf_counter()
-            total_times.append((end_time - start_time) * 1000)  # Convert to milliseconds
-            
+            total_times.append(
+                (end_time - start_time) * 1000
+            )  # Convert to milliseconds
+
         return np.mean(total_times)  # Return average time for 1000 calls
 
 
 def run_benchmark(benchmark, vertices, name):
     """Run benchmark for bounding sphere calculation"""
     avg_time = benchmark.benchmark_calculation(vertices)
-    
+
     print(f"\n{name}")
     print(f"Number of vertices: {len(vertices)}")
     print(f"Average time for 1000 calls: {avg_time:.3f}ms")
@@ -42,26 +44,28 @@ def main():
     print("Each test runs 10 loops of 1000 calculations")
     print("Results show the average time taken for 1000 calculations")
     benchmark = BoundingSphereBenchmark()
-    
+
     # Test with single vertex
     vertices_single = np.array([[1.0, 2.0, 3.0]])
     run_benchmark(benchmark, vertices_single, "Single Vertex")
-    
+
     # Test with cube vertices (8 points)
-    vertices_cube = np.array([
-        [0.0, 0.0, 0.0],  # Origin
-        [1.0, 0.0, 0.0],  # Right
-        [0.0, 1.0, 0.0],  # Up
-        [0.0, 0.0, 1.0],  # Forward
-        [1.0, 1.0, 0.0],  # Right-Up
-        [1.0, 0.0, 1.0],  # Right-Forward
-        [0.0, 1.0, 1.0],  # Up-Forward
-        [1.0, 1.0, 1.0]   # Right-Up-Forward
-    ])
+    vertices_cube = np.array(
+        [
+            [0.0, 0.0, 0.0],  # Origin
+            [1.0, 0.0, 0.0],  # Right
+            [0.0, 1.0, 0.0],  # Up
+            [0.0, 0.0, 1.0],  # Forward
+            [1.0, 1.0, 0.0],  # Right-Up
+            [1.0, 0.0, 1.0],  # Right-Forward
+            [0.0, 1.0, 1.0],  # Up-Forward
+            [1.0, 1.0, 1.0],  # Right-Up-Forward
+        ]
+    )
     run_benchmark(benchmark, vertices_cube, "Cube (8 vertices)")
-    
+
     # Test with sphere approximation (100 points)
-    phi = np.linspace(0, 2*np.pi, 10)
+    phi = np.linspace(0, 2 * np.pi, 10)
     theta = np.linspace(0, np.pi, 10)
     vertices_sphere = []
     for p in phi:
@@ -72,11 +76,11 @@ def main():
             vertices_sphere.append([x, y, z])
     vertices_sphere = np.array(vertices_sphere)
     run_benchmark(benchmark, vertices_sphere, "Sphere Approximation (100 vertices)")
-    
+
     # Test with large mesh (1000 random points)
     vertices_large = np.random.rand(1000, 3) * 10 - 5  # Points between -5 and 5
     run_benchmark(benchmark, vertices_large, "Large Mesh (1000 vertices)")
-    
+
     # Test with very large mesh (10000 random points)
     vertices_very_large = np.random.rand(10000, 3) * 10 - 5  # Points between -5 and 5
     run_benchmark(benchmark, vertices_very_large, "Very Large Mesh (10000 vertices)")

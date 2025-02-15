@@ -2,9 +2,10 @@ import time
 import numpy as np
 from kernel.shading_mod import triangle_flat_shading
 
+
 class ShadingBenchmark:
     """Benchmark class for measuring performance of flat shading computations."""
-    
+
     def __init__(self):
         # Initialize with JIT warm-up using a simple case
         # This ensures subsequent benchmarks measure actual performance, not JIT compilation time
@@ -19,21 +20,21 @@ class ShadingBenchmark:
                 warm_up_normal,
                 warm_up_light_dir,
                 warm_up_material_color,
-                warm_up_ambient
+                warm_up_ambient,
             )
         print("Warm-up complete.\n")
 
     def benchmark_calculation(self, normal, light_dir, material_color, ambient):
         """Run performance benchmark on flat shading computation.
-        
+
         Performs 10 loops of 1000 shading operations each to get statistically significant timing data.
-        
+
         Args:
             normal: Normal vector for the triangle
             light_dir: Direction vector of the light source
             material_color: Color of the material (uint8 RGB values)
             ambient: Ambient light intensity
-            
+
         Returns:
             float: Average time in milliseconds for 1000 shading operations
         """
@@ -46,15 +47,21 @@ class ShadingBenchmark:
             for _ in range(CALLS_PER_LOOP):
                 triangle_flat_shading(normal, light_dir, material_color, ambient)
             end_time = time.perf_counter()
-            total_times.append((end_time - start_time) * 1000)  # Convert to milliseconds
-            
+            total_times.append(
+                (end_time - start_time) * 1000
+            )  # Convert to milliseconds
+
         return np.mean(total_times)  # Return average time for 1000 calls
+
 
 def run_benchmark(benchmark, normal, light_dir, material_color, ambient, name):
     """Run benchmark for flat shading computation"""
-    avg_time = benchmark.benchmark_calculation(normal, light_dir, material_color, ambient)
+    avg_time = benchmark.benchmark_calculation(
+        normal, light_dir, material_color, ambient
+    )
     print(f"\n{name}")
     print(f"Average time for 1000 shading operations: {avg_time:.2f} ms")
+
 
 def run_benchmarks():
     """Run a series of benchmark tests covering different flat shading scenarios."""
@@ -67,24 +74,36 @@ def run_benchmarks():
     ambient = 0.1
 
     run_benchmark(
-        benchmark, normal, light_dir, material_color, ambient,
-        "Triangle with Normal Pointing Up"
+        benchmark,
+        normal,
+        light_dir,
+        material_color,
+        ambient,
+        "Triangle with Normal Pointing Up",
     )
 
     # Test case 2: Single triangle with normal at 45 degrees
     normal = np.array([0.707, 0.0, 0.707], dtype=np.float32)  # 45 degrees to Z axis
-    
+
     run_benchmark(
-        benchmark, normal, light_dir, material_color, ambient,
-        "Triangle with Normal at 45 Degrees"
+        benchmark,
+        normal,
+        light_dir,
+        material_color,
+        ambient,
+        "Triangle with Normal at 45 Degrees",
     )
 
     # Test case 3: Single triangle with complex normal
     normal = np.array([0.577, 0.577, 0.577], dtype=np.float32)  # Equal components
-    
+
     run_benchmark(
-        benchmark, normal, light_dir, material_color, ambient,
-        "Triangle with Complex Normal"
+        benchmark,
+        normal,
+        light_dir,
+        material_color,
+        ambient,
+        "Triangle with Complex Normal",
     )
 
 

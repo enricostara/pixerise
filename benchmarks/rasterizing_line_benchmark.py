@@ -26,15 +26,17 @@ class LineBenchmark:
             for _ in range(CALLS_PER_LOOP):
                 self.renderer.draw_line(start, end, color)
             end_time = time.perf_counter()
-            total_times.append((end_time - start_time) * 1000)  # Convert to milliseconds
-            
+            total_times.append(
+                (end_time - start_time) * 1000
+            )  # Convert to milliseconds
+
         return np.mean(total_times)  # Return average time for 1000 calls
 
 
 def run_benchmark(benchmark, p1, p2, name):
     """Run benchmark for line drawing"""
     avg_time = benchmark.benchmark_line(p1, p2)
-    
+
     print(f"\n{name}")
     print(f"Average time for 1000 calls: {avg_time:.3f}ms")
 
@@ -44,31 +46,21 @@ def main():
     print("Each test runs 10 loops of 1000 line draws")
     print("Results show the average time taken for 1000 draws")
     benchmark = LineBenchmark()
-    
+
     # Test horizontal line
-    run_benchmark(benchmark, 
-                 (-200, 0, 0), (200, 0, 0),
-                 "Horizontal Line")
-    
+    run_benchmark(benchmark, (-200, 0, 0), (200, 0, 0), "Horizontal Line")
+
     # Test vertical line
-    run_benchmark(benchmark,
-                 (0, -200, 0), (0, 200, 0),
-                 "Vertical Line")
-    
+    run_benchmark(benchmark, (0, -200, 0), (0, 200, 0), "Vertical Line")
+
     # Test diagonal line
-    run_benchmark(benchmark,
-                 (-100, -100, 0), (100, 100, 0),
-                 "Diagonal Line")
-    
+    run_benchmark(benchmark, (-100, -100, 0), (100, 100, 0), "Diagonal Line")
+
     # Test short line
-    run_benchmark(benchmark,
-                 (0, 0, 0), (10, 10, 0),
-                 "Short Line")
-    
+    run_benchmark(benchmark, (0, 0, 0), (10, 10, 0), "Short Line")
+
     # Test long diagonal line
-    run_benchmark(benchmark,
-                 (-300, -300, 0), (300, 300, 0),
-                 "Long Diagonal Line")
+    run_benchmark(benchmark, (-300, -300, 0), (300, 300, 0), "Long Diagonal Line")
 
 
 if __name__ == "__main__":
