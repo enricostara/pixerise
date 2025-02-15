@@ -58,15 +58,30 @@ class ModelInnerGroup:
     different materials or may need to be manipulated independently.
 
     Attributes:
-        vertices (np.ndarray): Array of shape (N, 3) containing vertex positions
-        triangles (np.ndarray): Array of shape (M, 3) containing vertex indices
-        vertex_normals (Optional[np.ndarray]): Array of shape (N, 3) containing vertex normals
+        _vertices (np.ndarray): Array of shape (N, 3) containing vertex positions
+        _triangles (np.ndarray): Array of shape (M, 3) containing vertex indices
+        _vertex_normals (Optional[np.ndarray]): Array of shape (N, 3) containing vertex normals
             If None, flat shading will be used for this group
     """
 
-    vertices: np.ndarray
-    triangles: np.ndarray
-    vertex_normals: Optional[np.ndarray] = None
+    _vertices: np.ndarray
+    _triangles: np.ndarray
+    _vertex_normals: Optional[np.ndarray] = None
+
+    @property
+    def vertices(self) -> np.ndarray:
+        """Get the vertex positions (read-only)."""
+        return self._vertices.copy()
+
+    @property
+    def triangles(self) -> np.ndarray:
+        """Get the triangle indices (read-only)."""
+        return self._triangles.copy()
+
+    @property
+    def vertex_normals(self) -> Optional[np.ndarray]:
+        """Get the vertex normals if they exist (read-only)."""
+        return self._vertex_normals.copy() if self._vertex_normals is not None else None
 
     @classmethod
     def from_dict(cls, data: dict) -> "ModelInnerGroup":
@@ -80,9 +95,9 @@ class ModelInnerGroup:
             ModelInnerGroup: New instance with the specified geometry data
         """
         return cls(
-            vertices=np.array(data.get("vertices", []), dtype=np.float32),
-            triangles=np.array(data.get("triangles", []), dtype=np.int32),
-            vertex_normals=np.array(data.get("vertex_normals", []), dtype=np.float32)
+            _vertices=np.array(data.get("vertices", []), dtype=np.float32),
+            _triangles=np.array(data.get("triangles", []), dtype=np.int32),
+            _vertex_normals=np.array(data.get("vertex_normals", []), dtype=np.float32)
             if "vertex_normals" in data
             else None,
         )
@@ -129,9 +144,9 @@ class Model:
                 vertex normals for smooth shading. If None, flat shading will be used
         """
         self._groups[name] = ModelInnerGroup(
-            vertices=vertices.astype(np.float32),
-            triangles=triangles.astype(np.int32),
-            vertex_normals=vertex_normals.astype(np.float32)
+            _vertices=vertices.astype(np.float32),
+            _triangles=triangles.astype(np.int32),
+            _vertex_normals=vertex_normals.astype(np.float32)
             if vertex_normals is not None
             else None,
         )

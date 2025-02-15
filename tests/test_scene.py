@@ -8,33 +8,53 @@ from scene import Scene, Model, Instance, Camera, DirectionalLight, ModelInnerGr
 
 
 def test_model_inner_group():
-    """Test ModelInnerGroup creation and dictionary conversion."""
-    # Test creation with vertices and triangles
+    """Test ModelInnerGroup initialization and serialization."""
+    # Test initialization
     vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=np.float32)
     triangles = np.array([[0, 1, 2]], dtype=np.int32)
-    group = ModelInnerGroup(vertices=vertices, triangles=triangles)
+    vertex_normals = np.array([[0, 0, 1], [0, 0, 1], [0, 0, 1]], dtype=np.float32)
 
+    group = ModelInnerGroup(
+        _vertices=vertices,
+        _triangles=triangles,
+        _vertex_normals=vertex_normals
+    )
+
+    # Test read-only properties
     assert np.array_equal(group.vertices, vertices)
     assert np.array_equal(group.triangles, triangles)
-    assert group.vertex_normals is None
+    assert np.array_equal(group.vertex_normals, vertex_normals)
 
-    # Test creation with vertex normals
-    normals = np.array([[0, 0, 1], [0, 0, 1], [0, 0, 1]], dtype=np.float32)
-    group_with_normals = ModelInnerGroup(
-        vertices=vertices, triangles=triangles, vertex_normals=normals
-    )
-    assert np.array_equal(group_with_normals.vertex_normals, normals)
+    # Test properties return copies
+    vertices_copy = group.vertices
+    triangles_copy = group.triangles
+    vertex_normals_copy = group.vertex_normals
 
-    # Test from_dict
-    data = {
-        "vertices": vertices.tolist(),
-        "triangles": triangles.tolist(),
-        "vertex_normals": normals.tolist(),
-    }
-    group_from_dict = ModelInnerGroup.from_dict(data)
-    assert np.array_equal(group_from_dict.vertices, vertices)
-    assert np.array_equal(group_from_dict.triangles, triangles)
-    assert np.array_equal(group_from_dict.vertex_normals, normals)
+    # Modifying copies shouldn't affect original
+    vertices_copy[0, 0] = 999
+    triangles_copy[0, 0] = 999
+    vertex_normals_copy[0, 0] = 999
+
+    assert not np.array_equal(vertices_copy, group.vertices)
+    assert not np.array_equal(triangles_copy, group.triangles)
+    assert not np.array_equal(vertex_normals_copy, group.vertex_normals)
+
+    # Test without vertex normals
+    group_no_normals = ModelInnerGroup(_vertices=vertices, _triangles=triangles)
+    assert group_no_normals.vertex_normals is None
+
+    # Test serialization through Model
+    model = Model()
+    model.add_group("test", vertices, triangles, vertex_normals)
+    model_data = model.to_dict()
+
+    # Test deserialization
+    new_model = Model.from_dict(model_data)
+    new_group = new_model.groups["test"]
+
+    assert np.array_equal(new_group.vertices, vertices)
+    assert np.array_equal(new_group.triangles, triangles)
+    assert np.array_equal(new_group.vertex_normals, vertex_normals)
 
 
 def test_model():
