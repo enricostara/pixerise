@@ -269,14 +269,18 @@ class Instance:
         color = self._group_colors.get(group_name)
         return color.copy() if color is not None else None
 
-    def set_group_color(self, group_name: str, color: np.ndarray) -> None:
+    def set_group_color(self, group_name: str, color: Optional[np.ndarray]) -> None:
         """Set the color for a specific group.
 
         Args:
             group_name (str): Name of the group
-            color (np.ndarray): RGB color values as integers in range [0, 255]
+            color (Optional[np.ndarray]): RGB color values as integers in range [0, 255],
+                or None to remove the group-specific color
         """
-        self._group_colors[group_name] = np.array(color, dtype=np.int32)
+        if color is None:
+            self._group_colors.pop(group_name, None)  # Remove color if it exists
+        else:
+            self._group_colors[group_name] = np.array(color, dtype=np.int32)
 
     # Properties
     @property

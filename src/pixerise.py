@@ -545,13 +545,18 @@ class Renderer:
                 continue
 
             # Transform vertices for each model group
-            for group in model.groups.values():
+            for group_name, group in model.groups.items():
                 vertices = group.vertices
                 triangles = group.triangles
                 vertex_normals = group.vertex_normals
                 has_vertex_normals = vertex_normals is not None and len(
                     vertex_normals
                 ) == len(vertices)
+
+                # Get group-specific color if set, otherwise use instance color
+                color = instance.get_group_color(group_name)
+                if color is None:
+                    color = instance.color
 
                 # Pad vertex normals with zeros if they are None
                 vertex_normals = (
@@ -630,7 +635,7 @@ class Renderer:
                     self._canvas.depth_buffer,
                     self._canvas._center[0],
                     self._canvas._center[1],
-                    instance.color,
+                    color,  # Use group-specific color if available
                     light_dir,
                     scene._directional_light.ambient,
                 )

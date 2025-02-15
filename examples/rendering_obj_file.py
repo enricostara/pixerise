@@ -139,8 +139,8 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
     ]
     current_mode_index = 0
 
-    # Track selected group
-    selected_group = None
+    # Track selected groups
+    selected_groups = []
 
     def update_display():
         renderer.render(scene, shading_mode=shading_modes[current_mode_index])
@@ -193,24 +193,27 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                 # Cast ray and get hit
                 hit = renderer.cast_ray(mouse_pos[0], mouse_pos[1], scene)
 
-                # Update new selection
+                # Update selection based on hit
                 if hit:
                     instance_name, group_name = hit
                     print(f"Selected group: {group_name} in instance {instance_name}")
                     instance = scene._instances[instance_name]
-                    instance.color = [255, 0, 0]  # Red color as integer RGB values
-                    selected_group = (instance_name, group_name)
+                    
+                    # Toggle selection - if already selected, deselect it
+                    if hit in selected_groups:
+                        selected_groups.remove(hit)
+                        instance.set_group_color(group_name, None)  # Remove group-specific color
+                    else:
+                        selected_groups.append(hit)
+                        # Set color for the specific group
+                        instance.set_group_color(group_name, np.array([255, 0, 0], dtype=np.int32))
                 else:
-                    # Reset previous selection's color when clicking empty space
-                    if selected_group:
-                        instance_name, _ = selected_group
-                        instance = scene._instances[instance_name]
-                        instance.color = [
-                            200,
-                            200,
-                            200,
-                        ]  # Reset to gray color as integer RGB values
-                    selected_group = None
+                    # Reset all selected groups' colors when clicking empty space
+                    for inst_name, grp_name in selected_groups:
+                        instance = scene._instances[inst_name]
+                        instance.set_group_color(grp_name, None)  # Remove group-specific color
+                    selected_groups.clear()
+
                 movement_occurred = True
 
             # Only handle mouse movement when locked
