@@ -232,6 +232,7 @@ class Instance:
         _rotation (np.ndarray): 3D vector specifying rotation in radians
         _scale (np.ndarray): 3D vector specifying scale in each axis
         _color (np.ndarray): RGB color values as integers in range [0, 255]
+        _group_colors (Dict[str, np.ndarray]): Group-specific colors as RGB integers
     """
 
     _model: str
@@ -243,6 +244,7 @@ class Instance:
     _color: np.ndarray = field(
         default_factory=lambda: np.array([200, 200, 200], dtype=np.int32)
     )  # Default gray color
+    _group_colors: Dict[str, np.ndarray] = field(default_factory=dict)
 
     @property
     def model(self) -> str:
@@ -253,6 +255,28 @@ class Instance:
     def model(self, value: str) -> None:
         """Set the model name this instance references."""
         self._model = value
+
+    def get_group_color(self, group_name: str) -> Optional[np.ndarray]:
+        """Get the color for a specific group.
+
+        Args:
+            group_name (str): Name of the group
+
+        Returns:
+            Optional[np.ndarray]: RGB color values as integers in range [0, 255],
+                or None if no specific color is set for this group
+        """
+        color = self._group_colors.get(group_name)
+        return color.copy() if color is not None else None
+
+    def set_group_color(self, group_name: str, color: np.ndarray) -> None:
+        """Set the color for a specific group.
+
+        Args:
+            group_name (str): Name of the group
+            color (np.ndarray): RGB color values as integers in range [0, 255]
+        """
+        self._group_colors[group_name] = np.array(color, dtype=np.int32)
 
     # Properties
     @property
@@ -349,6 +373,9 @@ class Instance:
                 instance._scale = np.array(transform["scale"], dtype=np.float32)
         if "color" in data:
             instance._color = np.array(data["color"], dtype=np.int32)
+        if "group_colors" in data:
+            for group_name, color in data["group_colors"].items():
+                instance._group_colors[group_name] = np.array(color, dtype=np.int32)
         return instance
 
     def to_dict(self) -> dict:
@@ -356,9 +383,9 @@ class Instance:
 
         Returns:
             dict: Dictionary containing the instance's model reference,
-                transformation data, and color information
+                transformation data, color information, and group colors
         """
-        return {
+        data = {
             "model": self._model,
             "transform": {
                 "translation": self._translation.tolist(),
@@ -367,6 +394,11 @@ class Instance:
             },
             "color": self._color.tolist(),
         }
+        if self._group_colors:
+            data["group_colors"] = {
+                name: color.tolist() for name, color in self._group_colors.items()
+            }
+        return data
 
 
 @dataclass(slots=True)

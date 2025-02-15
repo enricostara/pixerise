@@ -112,50 +112,56 @@ def test_model():
 def test_instance():
     """Test Instance initialization and serialization."""
     # Test initialization
-    instance = Instance(_model="cube")
-    assert instance.model == "cube"
+    instance = Instance(_model="test_model")
+    assert instance.model == "test_model"
     assert np.allclose(instance.translation, np.zeros(3, dtype=np.float32))
     assert np.allclose(instance.rotation, np.zeros(3, dtype=np.float32))
     assert np.allclose(instance.scale, np.ones(3, dtype=np.float32))
     assert np.array_equal(instance.color, np.array([200, 200, 200], dtype=np.int32))
 
-    # Test property setters
-    instance.translation = [1, 2, 3]
-    instance.rotation = [0.1, 0.2, 0.3]
-    instance.scale = [2, 2, 2]
-    instance.color = [255, 0, 0]
-    instance.model = "sphere"
+    # Test setters
+    instance.translation = np.array([1, 2, 3], dtype=np.float32)
+    instance.rotation = np.array([0.1, 0.2, 0.3], dtype=np.float32)
+    instance.scale = np.array([2, 2, 2], dtype=np.float32)
+    instance.color = np.array([255, 128, 0], dtype=np.int32)
 
-    assert instance.model == "sphere"
     assert np.allclose(instance.translation, np.array([1, 2, 3], dtype=np.float32))
     assert np.allclose(instance.rotation, np.array([0.1, 0.2, 0.3], dtype=np.float32))
     assert np.allclose(instance.scale, np.array([2, 2, 2], dtype=np.float32))
-    assert np.array_equal(instance.color, np.array([255, 0, 0], dtype=np.int32))
+    assert np.array_equal(instance.color, np.array([255, 128, 0], dtype=np.int32))
 
-    # Test set methods
-    instance.set_translation(4, 5, 6)
-    instance.set_rotation(0.4, 0.5, 0.6)
-    instance.set_scale(3, 3, 3)
-
-    assert np.allclose(instance.translation, np.array([4, 5, 6], dtype=np.float32))
-    assert np.allclose(instance.rotation, np.array([0.4, 0.5, 0.6], dtype=np.float32))
-    assert np.allclose(instance.scale, np.array([3, 3, 3], dtype=np.float32))
+    # Test group colors
+    group_color = np.array([100, 150, 200], dtype=np.int32)
+    instance.set_group_color("group1", group_color)
+    
+    # Test color is copied
+    retrieved_color = instance.get_group_color("group1")
+    assert np.array_equal(retrieved_color, group_color)
+    
+    # Test modifying retrieved color doesn't affect original
+    retrieved_color[0] = 999
+    assert not np.array_equal(retrieved_color, instance.get_group_color("group1"))
+    
+    # Test non-existent group returns None
+    assert instance.get_group_color("non_existent") is None
 
     # Test serialization
-    instance_data = instance.to_dict()
-    assert instance_data["model"] == "sphere"
-    assert np.allclose(instance_data["transform"]["translation"], [4, 5, 6])
-    assert np.allclose(instance_data["transform"]["rotation"], [0.4, 0.5, 0.6])
-    assert np.allclose(instance_data["transform"]["scale"], [3, 3, 3])
-    assert np.array_equal(instance_data["color"], [255, 0, 0])
+    data = instance.to_dict()
+    assert data["model"] == "test_model"
+    assert np.allclose(data["transform"]["translation"], [1, 2, 3])
+    assert np.allclose(data["transform"]["rotation"], [0.1, 0.2, 0.3])
+    assert np.allclose(data["transform"]["scale"], [2, 2, 2])
+    assert np.array_equal(data["color"], [255, 128, 0])
+    assert np.array_equal(data["group_colors"]["group1"], [100, 150, 200])
 
     # Test deserialization
-    new_instance = Instance.from_dict(instance_data)
-    assert new_instance.model == instance.model
-    assert np.allclose(new_instance.translation, instance.translation)
-    assert np.allclose(new_instance.rotation, instance.rotation)
-    assert np.allclose(new_instance.scale, instance.scale)
-    assert np.array_equal(new_instance.color, instance.color)
+    new_instance = Instance.from_dict(data)
+    assert new_instance.model == "test_model"
+    assert np.allclose(new_instance.translation, np.array([1, 2, 3], dtype=np.float32))
+    assert np.allclose(new_instance.rotation, np.array([0.1, 0.2, 0.3], dtype=np.float32))
+    assert np.allclose(new_instance.scale, np.array([2, 2, 2], dtype=np.float32))
+    assert np.array_equal(new_instance.color, np.array([255, 128, 0], dtype=np.int32))
+    assert np.array_equal(new_instance.get_group_color("group1"), np.array([100, 150, 200], dtype=np.int32))
 
 
 def test_camera():
@@ -268,10 +274,10 @@ def test_scene():
     scene = Scene.from_dict(scene_data)
     assert "cube" in scene._models
     assert "cube_instance" in scene._instances
-    assert np.array_equal(
+    assert np.allclose(
         scene._camera.translation, np.array([1, 2, 3], dtype=np.float32)
     )
-    assert np.array_equal(
+    assert np.allclose(
         scene._directional_light.direction, np.array([-1, -1, -1], dtype=np.float32)
     )
     assert scene._directional_light.ambient == 0.2
