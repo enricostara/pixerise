@@ -15,9 +15,7 @@ def test_model_inner_group():
     vertex_normals = np.array([[0, 0, 1], [0, 0, 1], [0, 0, 1]], dtype=np.float32)
 
     group = ModelInnerGroup(
-        _vertices=vertices,
-        _triangles=triangles,
-        _vertex_normals=vertex_normals
+        _vertices=vertices, _triangles=triangles, _vertex_normals=vertex_normals
     )
 
     # Test read-only properties
@@ -133,12 +131,12 @@ def test_instance():
     # Test group colors and visibility
     group_color = np.array([100, 150, 200], dtype=np.int32)
     instance.set_group_color("group1", group_color)
-    
+
     # Test color is returned as is (no copy)
     retrieved_color = instance.get_group_color("group1")
-    assert retrieved_color is instance._group_states["group1"][0]
+    assert retrieved_color is instance._groups["group1"].color
     assert np.array_equal(retrieved_color, group_color)
-    
+
     # Test non-existent group returns None for color and True for visibility
     assert instance.get_group_color("non_existent") is None
     assert instance.get_group_visibility("non_existent") is True
@@ -157,6 +155,21 @@ def test_instance():
     assert instance.get_group_color("group3") is None
     assert instance.get_group_visibility("group3") is False
 
+    # Test GroupState class directly
+    state = instance.GroupState(color=group_color, visible=False)
+    assert np.array_equal(state.color, group_color)
+    assert state.visible is False
+
+    # Test GroupState serialization
+    state_dict = state.to_dict()
+    assert np.array_equal(state_dict["color"], group_color.tolist())
+    assert state_dict["visible"] is False
+
+    # Test GroupState deserialization
+    new_state = instance.GroupState.from_dict(state_dict)
+    assert np.array_equal(new_state.color, group_color)
+    assert new_state.visible is False
+
     # Test serialization
     data = instance.to_dict()
     assert data["model"] == "test_model"
@@ -164,22 +177,27 @@ def test_instance():
     assert np.allclose(data["transform"]["rotation"], [0.1, 0.2, 0.3])
     assert np.allclose(data["transform"]["scale"], [2, 2, 2])
     assert np.array_equal(data["color"], [255, 128, 0])
-    assert "group_states" in data
-    assert np.array_equal(data["group_states"]["group1"]["color"], [100, 150, 200])
-    assert data["group_states"]["group1"]["visible"] is True
-    assert data["group_states"]["group2"]["color"] is None
-    assert data["group_states"]["group2"]["visible"] is False
-    assert data["group_states"]["group3"]["color"] is None
-    assert data["group_states"]["group3"]["visible"] is False
+    assert "groups" in data
+    assert np.array_equal(data["groups"]["group1"]["color"], [100, 150, 200])
+    assert data["groups"]["group1"]["visible"] is True
+    assert data["groups"]["group2"]["color"] is None
+    assert data["groups"]["group2"]["visible"] is False
+    assert data["groups"]["group3"]["color"] is None
+    assert data["groups"]["group3"]["visible"] is False
 
     # Test deserialization
     new_instance = Instance.from_dict(data)
     assert new_instance.model == "test_model"
     assert np.allclose(new_instance.translation, np.array([1, 2, 3], dtype=np.float32))
-    assert np.allclose(new_instance.rotation, np.array([0.1, 0.2, 0.3], dtype=np.float32))
+    assert np.allclose(
+        new_instance.rotation, np.array([0.1, 0.2, 0.3], dtype=np.float32)
+    )
     assert np.allclose(new_instance.scale, np.array([2, 2, 2], dtype=np.float32))
     assert np.array_equal(new_instance.color, np.array([255, 128, 0], dtype=np.int32))
-    assert np.array_equal(new_instance.get_group_color("group1"), np.array([100, 150, 200], dtype=np.int32))
+    assert np.array_equal(
+        new_instance.get_group_color("group1"),
+        np.array([100, 150, 200], dtype=np.int32),
+    )
     assert new_instance.get_group_visibility("group1") is True
     assert new_instance.get_group_color("group2") is None
     assert new_instance.get_group_visibility("group2") is False
@@ -220,7 +238,9 @@ def test_camera():
 def test_directional_light():
     """Test DirectionalLight initialization and serialization."""
     # Test initialization
-    light = DirectionalLight(_direction=np.array([1, 0, 0], dtype=np.float32), _ambient=0.2)
+    light = DirectionalLight(
+        _direction=np.array([1, 0, 0], dtype=np.float32), _ambient=0.2
+    )
     assert np.array_equal(light.direction, np.array([1, 0, 0], dtype=np.float32))
     assert light.ambient == 0.2
 
@@ -264,7 +284,9 @@ def test_scene():
     camera.set_translation(1, 2, 3)
     scene.set_camera(camera)
 
-    light = DirectionalLight(_direction=np.array([-1, -1, -1], dtype=np.float32), _ambient=0.2)
+    light = DirectionalLight(
+        _direction=np.array([-1, -1, -1], dtype=np.float32), _ambient=0.2
+    )
     scene.set_directional_light(light)
 
     assert scene._camera == camera
@@ -289,6 +311,16 @@ def test_scene():
                     "scale": [1, 1, 1],
                 },
                 "color": [255, 0, 0],  # Color as RGB integers
+                "groups": {
+                    "group1": {
+                        "color": [100, 150, 200],
+                        "visible": True,
+                    },
+                    "group2": {
+                        "color": None,
+                        "visible": False,
+                    },
+                },
             }
         ],
         "lights": {"directional": {"direction": [-1, -1, -1], "ambient": 0.2}},
@@ -297,9 +329,18 @@ def test_scene():
     scene = Scene.from_dict(scene_data)
     assert "cube" in scene._models
     assert "cube_instance" in scene._instances
-    assert np.allclose(
-        scene._camera.translation, np.array([1, 2, 3], dtype=np.float32)
+
+    # Verify instance groups after deserialization
+    deserialized_instance = scene.get_instance("cube_instance")
+    assert np.array_equal(
+        deserialized_instance.get_group_color("group1"),
+        np.array([100, 150, 200], dtype=np.int32),
     )
+    assert deserialized_instance.get_group_visibility("group1") is True
+    assert deserialized_instance.get_group_color("group2") is None
+    assert deserialized_instance.get_group_visibility("group2") is False
+
+    assert np.allclose(scene._camera.translation, np.array([1, 2, 3], dtype=np.float32))
     assert np.allclose(
         scene._directional_light.direction, np.array([-1, -1, -1], dtype=np.float32)
     )
