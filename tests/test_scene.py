@@ -130,20 +130,32 @@ def test_instance():
     assert np.allclose(instance.scale, np.array([2, 2, 2], dtype=np.float32))
     assert np.array_equal(instance.color, np.array([255, 128, 0], dtype=np.int32))
 
-    # Test group colors
+    # Test group colors and visibility
     group_color = np.array([100, 150, 200], dtype=np.int32)
     instance.set_group_color("group1", group_color)
     
-    # Test color is copied
+    # Test color is returned as is (no copy)
     retrieved_color = instance.get_group_color("group1")
+    assert retrieved_color is instance._group_states["group1"][0]
     assert np.array_equal(retrieved_color, group_color)
     
-    # Test modifying retrieved color doesn't affect original
-    retrieved_color[0] = 999
-    assert not np.array_equal(retrieved_color, instance.get_group_color("group1"))
-    
-    # Test non-existent group returns None
+    # Test non-existent group returns None for color and True for visibility
     assert instance.get_group_color("non_existent") is None
+    assert instance.get_group_visibility("non_existent") is True
+
+    # Test setting visibility without color
+    instance.set_group_visibility("group2", False)
+    assert instance.get_group_color("group2") is None
+    assert instance.get_group_visibility("group2") is False
+
+    # Test setting color to None preserves visibility
+    instance.set_group_visibility("group3", False)
+    instance.set_group_color("group3", group_color)
+    assert np.array_equal(instance.get_group_color("group3"), group_color)
+    assert instance.get_group_visibility("group3") is False
+    instance.set_group_color("group3", None)
+    assert instance.get_group_color("group3") is None
+    assert instance.get_group_visibility("group3") is False
 
     # Test serialization
     data = instance.to_dict()
@@ -152,7 +164,13 @@ def test_instance():
     assert np.allclose(data["transform"]["rotation"], [0.1, 0.2, 0.3])
     assert np.allclose(data["transform"]["scale"], [2, 2, 2])
     assert np.array_equal(data["color"], [255, 128, 0])
-    assert np.array_equal(data["group_colors"]["group1"], [100, 150, 200])
+    assert "group_states" in data
+    assert np.array_equal(data["group_states"]["group1"]["color"], [100, 150, 200])
+    assert data["group_states"]["group1"]["visible"] is True
+    assert data["group_states"]["group2"]["color"] is None
+    assert data["group_states"]["group2"]["visible"] is False
+    assert data["group_states"]["group3"]["color"] is None
+    assert data["group_states"]["group3"]["visible"] is False
 
     # Test deserialization
     new_instance = Instance.from_dict(data)
@@ -162,6 +180,11 @@ def test_instance():
     assert np.allclose(new_instance.scale, np.array([2, 2, 2], dtype=np.float32))
     assert np.array_equal(new_instance.color, np.array([255, 128, 0], dtype=np.int32))
     assert np.array_equal(new_instance.get_group_color("group1"), np.array([100, 150, 200], dtype=np.int32))
+    assert new_instance.get_group_visibility("group1") is True
+    assert new_instance.get_group_color("group2") is None
+    assert new_instance.get_group_visibility("group2") is False
+    assert new_instance.get_group_color("group3") is None
+    assert new_instance.get_group_visibility("group3") is False
 
 
 def test_camera():

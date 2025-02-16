@@ -45,7 +45,7 @@ Example:
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 import numpy as np
 
 
@@ -232,7 +232,8 @@ class Instance:
         _rotation (np.ndarray): 3D vector specifying rotation in radians
         _scale (np.ndarray): 3D vector specifying scale in each axis
         _color (np.ndarray): RGB color values as integers in range [0, 255]
-        _group_colors (Dict[str, np.ndarray]): Group-specific colors as RGB integers
+        _group_states (Dict[str, Tuple[Optional[np.ndarray], bool]]): Group-specific states containing
+            (color, visibility) tuples. Color is RGB values as integers in range [0, 255]
     """
 
     _model: str
@@ -243,8 +244,8 @@ class Instance:
     _scale: np.ndarray = field(default_factory=lambda: np.ones(3, dtype=np.float32))
     _color: np.ndarray = field(
         default_factory=lambda: np.array([200, 200, 200], dtype=np.int32)
-    )  # Default gray color
-    _group_colors: Dict[str, np.ndarray] = field(default_factory=dict)
+    )
+    _group_states: Dict[str, Tuple[Optional[np.ndarray], bool]] = field(default_factory=dict)
 
     @property
     def model(self) -> str:
@@ -266,8 +267,8 @@ class Instance:
             Optional[np.ndarray]: RGB color values as integers in range [0, 255],
                 or None if no specific color is set for this group
         """
-        color = self._group_colors.get(group_name)
-        return color.copy() if color is not None else None
+        state = self._group_states.get(group_name)
+        return state[0] if state is not None and state[0] is not None else None
 
     def set_group_color(self, group_name: str, color: Optional[np.ndarray]) -> None:
         """Set the color for a specific group.
@@ -277,10 +278,44 @@ class Instance:
             color (Optional[np.ndarray]): RGB color values as integers in range [0, 255],
                 or None to remove the group-specific color
         """
-        if color is None:
-            self._group_colors.pop(group_name, None)  # Remove color if it exists
+        current_state = self._group_states.get(group_name)
+        if color is None and current_state is None:
+            return  # Nothing to do
+        elif color is None and current_state is not None:
+            # Keep visibility but remove color
+            self._group_states[group_name] = (None, current_state[1])
         else:
-            self._group_colors[group_name] = np.array(color, dtype=np.int32)
+            # Set or update color while preserving visibility
+            visibility = current_state[1] if current_state is not None else True
+            self._group_states[group_name] = (np.array(color, dtype=np.int32), visibility)
+
+    def get_group_visibility(self, group_name: str) -> bool:
+        """Get the visibility state for a specific group.
+
+        Args:
+            group_name (str): Name of the group
+
+        Returns:
+            bool: True if the group is visible, False otherwise.
+                If no state is set, returns True as default.
+        """
+        state = self._group_states.get(group_name)
+        return state[1] if state is not None else True
+
+    def set_group_visibility(self, group_name: str, visible: bool) -> None:
+        """Set the visibility state for a specific group.
+
+        Args:
+            group_name (str): Name of the group
+            visible (bool): True to make the group visible, False to hide it
+        """
+        current_state = self._group_states.get(group_name)
+        if current_state is not None:
+            # Preserve existing color
+            self._group_states[group_name] = (current_state[0], visible)
+        else:
+            # Create new state with no color
+            self._group_states[group_name] = (None, visible)
 
     # Properties
     @property
@@ -365,21 +400,22 @@ class Instance:
             Instance: New instance with the specified properties
         """
         instance = cls(_model=data["model"])
+
         if "transform" in data:
             transform = data["transform"]
-            if "translation" in transform:
-                instance._translation = np.array(
-                    transform["translation"], dtype=np.float32
-                )
-            if "rotation" in transform:
-                instance._rotation = np.array(transform["rotation"], dtype=np.float32)
-            if "scale" in transform:
-                instance._scale = np.array(transform["scale"], dtype=np.float32)
+            instance._translation = np.array(transform["translation"], dtype=np.float32)
+            instance._rotation = np.array(transform["rotation"], dtype=np.float32)
+            instance._scale = np.array(transform["scale"], dtype=np.float32)
+
         if "color" in data:
             instance._color = np.array(data["color"], dtype=np.int32)
-        if "group_colors" in data:
-            for group_name, color in data["group_colors"].items():
-                instance._group_colors[group_name] = np.array(color, dtype=np.int32)
+
+        if "group_states" in data:
+            for name, state in data["group_states"].items():
+                color = state.get("color")
+                color_array = np.array(color, dtype=np.int32) if color is not None else None
+                instance._group_states[name] = (color_array, state["visible"])
+
         return instance
 
     def to_dict(self) -> dict:
@@ -387,7 +423,7 @@ class Instance:
 
         Returns:
             dict: Dictionary containing the instance's model reference,
-                transformation data, color information, and group colors
+                transformation data, color information, and group states
         """
         data = {
             "model": self._model,
@@ -398,9 +434,13 @@ class Instance:
             },
             "color": self._color.tolist(),
         }
-        if self._group_colors:
-            data["group_colors"] = {
-                name: color.tolist() for name, color in self._group_colors.items()
+        if self._group_states:
+            data["group_states"] = {
+                name: {
+                    "color": state[0].tolist() if state[0] is not None else None,
+                    "visible": state[1]
+                }
+                for name, state in self._group_states.items()
             }
         return data
 

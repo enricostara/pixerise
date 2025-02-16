@@ -546,6 +546,10 @@ class Renderer:
 
             # Transform vertices for each model group
             for group_name, group in model.groups.items():
+                # Skip invisible groups
+                if not instance.get_group_visibility(group_name):
+                    continue
+
                 vertices = group.vertices
                 triangles = group.triangles
                 vertex_normals = group.vertex_normals
