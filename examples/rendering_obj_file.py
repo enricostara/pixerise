@@ -184,43 +184,47 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                 pygame.event.set_grab(mouse_locked)
 
             # Handle mouse clicks when not locked
-            elif (
-                event.type == pygame.MOUSEBUTTONDOWN
-                and event.button == 1
-                and not mouse_locked
-            ):  # Left click
-                # Get mouse position
-                mouse_pos = pygame.mouse.get_pos()
+            elif event.type == pygame.MOUSEBUTTONDOWN and not mouse_locked:
+                # Left click (button 1) toggles color
+                # Right click (button 3) toggles visibility
+                hit = renderer.cast_ray(event.pos[0], event.pos[1], scene)
 
-                # Cast ray and get hit
-                hit = renderer.cast_ray(mouse_pos[0], mouse_pos[1], scene)
-
-                # Update selection based on hit
-                if hit:
+                if hit is not None:
                     instance_name, group_name = hit
                     print(f"Selected group: {group_name} in instance {instance_name}")
                     instance = scene._instances[instance_name]
 
-                    # Toggle selection - if already selected, deselect it
-                    if hit in selected_groups:
-                        selected_groups.remove(hit)
-                        instance.set_group_color(
-                            group_name, None
-                        )  # Remove group-specific color
-                    else:
-                        selected_groups.append(hit)
-                        # Set color for the specific group
-                        instance.set_group_color(
-                            group_name, np.array([255, 0, 0], dtype=np.int32)
-                        )
+                    if event.button == 1:  # Left click
+                        # Toggle selection - if already selected, deselect it
+                        if hit in selected_groups:
+                            selected_groups.remove(hit)
+                            instance.set_group_color(
+                                group_name, None
+                            )  # Remove group-specific color
+                        else:
+                            selected_groups.append(hit)
+                            # Set color for the specific group
+                            instance.set_group_color(
+                                group_name, np.array([255, 0, 0], dtype=np.int32)
+                            )
+                    elif event.button == 3:  # Right click
+                        # Toggle visibility for the clicked group
+                        current_visibility = instance.get_group_visibility(group_name)
+                        instance.set_group_visibility(group_name, not current_visibility)
                 else:
-                    # Reset all selected groups' colors when clicking empty space
-                    for inst_name, grp_name in selected_groups:
-                        instance = scene._instances[inst_name]
-                        instance.set_group_color(
-                            grp_name, None
-                        )  # Remove group-specific color
-                    selected_groups.clear()
+                    if event.button == 1:  # Left click on empty space
+                        # Reset all selected groups' colors
+                        for inst_name, grp_name in selected_groups:
+                            instance = scene._instances[inst_name]
+                            instance.set_group_color(
+                                grp_name, None
+                            )  # Remove group-specific color
+                        selected_groups.clear()
+                    elif event.button == 3:  # Right click on empty space
+                        # Re-enable visibility for all groups in all instances
+                        for instance in scene._instances.values():
+                            for group_name in scene._models[instance.model]._groups.keys():
+                                instance.set_group_visibility(group_name, True)
 
                 movement_occurred = True
 
