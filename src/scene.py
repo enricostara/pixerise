@@ -51,60 +51,6 @@ from collections import defaultdict
 
 
 @dataclass(slots=True)
-class ModelInnerGroup:
-    """A group within a model containing geometry data.
-
-    Groups allow models to be organized into logical components, each with its own
-    geometry data. This is useful for complex models where different parts may need
-    different materials or may need to be manipulated independently.
-
-    Attributes:
-        _vertices (np.ndarray): Array of shape (N, 3) containing vertex positions
-        _triangles (np.ndarray): Array of shape (M, 3) containing vertex indices
-        _vertex_normals (Optional[np.ndarray]): Array of shape (N, 3) containing vertex normals
-            If None, flat shading will be used for this group
-    """
-
-    _vertices: np.ndarray
-    _triangles: np.ndarray
-    _vertex_normals: Optional[np.ndarray] = None
-
-    @property
-    def vertices(self) -> np.ndarray:
-        """Get the vertex positions (read-only)."""
-        return self._vertices.copy()
-
-    @property
-    def triangles(self) -> np.ndarray:
-        """Get the triangle indices (read-only)."""
-        return self._triangles.copy()
-
-    @property
-    def vertex_normals(self) -> Optional[np.ndarray]:
-        """Get the vertex normals if they exist (read-only)."""
-        return self._vertex_normals.copy() if self._vertex_normals is not None else None
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "ModelInnerGroup":
-        """Create a ModelGroup from a dictionary representation.
-
-        Args:
-            data (dict): Dictionary containing 'vertices', 'triangles', and optionally
-                'vertex_normals' arrays
-
-        Returns:
-            ModelInnerGroup: New instance with the specified geometry data
-        """
-        return cls(
-            _vertices=np.array(data.get("vertices", []), dtype=np.float32),
-            _triangles=np.array(data.get("triangles", []), dtype=np.int32),
-            _vertex_normals=np.array(data.get("vertex_normals", []), dtype=np.float32)
-            if "vertex_normals" in data
-            else None,
-        )
-
-
-@dataclass(slots=True)
 class Model:
     """A 3D model containing one or more groups of geometry.
 
@@ -117,13 +63,72 @@ class Model:
     normals).
 
     Attributes:
-        _groups (Dict[str, ModelInnerGroup]): Named groups containing geometry data
+        _groups (Dict[str, Group]): Named groups containing geometry data
     """
 
-    _groups: Dict[str, ModelInnerGroup] = field(default_factory=dict)
+    @dataclass(slots=True)
+    class Group:
+        """A group within a model containing geometry data.
+
+        Groups allow models to be organized into logical components, each with its own
+        geometry data. This is useful for complex models where different parts may need
+        different materials or may need to be manipulated independently.
+
+        Attributes:
+            _vertices (np.ndarray): Array of shape (N, 3) containing vertex positions
+            _triangles (np.ndarray): Array of shape (M, 3) containing vertex indices
+            _vertex_normals (Optional[np.ndarray]): Array of shape (N, 3) containing vertex normals
+                If None, flat shading will be used for this group
+        """
+
+        _vertices: np.ndarray
+        _triangles: np.ndarray
+        _vertex_normals: Optional[np.ndarray] = None
+
+        @property
+        def vertices(self) -> np.ndarray:
+            """Get the vertex positions (read-only)."""
+            return self._vertices.copy()
+
+        @property
+        def triangles(self) -> np.ndarray:
+            """Get the triangle indices (read-only)."""
+            return self._triangles.copy()
+
+        @property
+        def vertex_normals(self) -> Optional[np.ndarray]:
+            """Get the vertex normals if they exist (read-only)."""
+            return (
+                self._vertex_normals.copy()
+                if self._vertex_normals is not None
+                else None
+            )
+
+        @classmethod
+        def from_dict(cls, data: dict) -> "Model.Group":
+            """Create a ModelGroup from a dictionary representation.
+
+            Args:
+                data (dict): Dictionary containing 'vertices', 'triangles', and optionally
+                    'vertex_normals' arrays
+
+            Returns:
+                Model.Group: New instance with the specified geometry data
+            """
+            return cls(
+                _vertices=np.array(data.get("vertices", []), dtype=np.float32),
+                _triangles=np.array(data.get("triangles", []), dtype=np.int32),
+                _vertex_normals=np.array(
+                    data.get("vertex_normals", []), dtype=np.float32
+                )
+                if "vertex_normals" in data
+                else None,
+            )
+
+    _groups: Dict[str, Group] = field(default_factory=dict)
 
     @property
-    def groups(self) -> Dict[str, ModelInnerGroup]:
+    def groups(self) -> Dict[str, Group]:
         """Get the model's groups (read-only)."""
         return self._groups.copy()
 
@@ -144,7 +149,7 @@ class Model:
             vertex_normals (Optional[np.ndarray]): Array of shape (N, 3) containing
                 vertex normals for smooth shading. If None, flat shading will be used
         """
-        self._groups[name] = ModelInnerGroup(
+        self._groups[name] = Model.Group(
             _vertices=vertices.astype(np.float32),
             _triangles=triangles.astype(np.int32),
             _vertex_normals=vertex_normals.astype(np.float32)
@@ -180,7 +185,7 @@ class Model:
             }
 
         for name, group_data in groups.items():
-            model._groups[name] = ModelInnerGroup.from_dict(group_data)
+            model._groups[name] = Model.Group.from_dict(group_data)
 
         return model
 
@@ -233,12 +238,12 @@ class Instance:
         _rotation (np.ndarray): 3D vector specifying rotation in radians
         _scale (np.ndarray): 3D vector specifying scale in each axis
         _color (np.ndarray): RGB color values as integers in range [0, 255]
-        _groups (defaultdict[str, GroupState]): Group-specific states containing
+        _groups (defaultdict[str, Group]): Group-specific states containing
             color and visibility information
     """
 
     @dataclass(slots=True)
-    class GroupState:
+    class Group:
         """State information for a model group within an instance.
 
         Contains color and visibility information for a specific group.
@@ -265,14 +270,14 @@ class Instance:
             }
 
         @classmethod
-        def from_dict(cls, data: dict) -> "Instance.GroupState":
+        def from_dict(cls, data: dict) -> "Instance.Group":
             """Create from dictionary representation.
 
             Args:
                 data (dict): Dictionary with color and visibility information
 
             Returns:
-                Instance.GroupState: New state with the specified properties
+                Instance.Group: New state with the specified properties
             """
             color = data.get("color")
             return cls(
@@ -289,11 +294,11 @@ class Instance:
     _color: np.ndarray = field(
         default_factory=lambda: np.array([200, 200, 200], dtype=np.int32)
     )
-    _groups: defaultdict[str, "Instance.GroupState"] = field(default_factory=dict)
+    _groups: defaultdict[str, "Instance.Group"] = field(default_factory=dict)
 
     def __post_init__(self):
         """Initialize defaultdict after instance creation."""
-        self._groups = defaultdict(self.GroupState)
+        self._groups = defaultdict(self.Group)
 
     @property
     def model(self) -> str:
@@ -445,7 +450,7 @@ class Instance:
 
         if "groups" in data:
             for name, state in data["groups"].items():
-                instance._groups[name] = Instance.GroupState.from_dict(state)
+                instance._groups[name] = Instance.Group.from_dict(state)
 
         return instance
 
