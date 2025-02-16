@@ -110,12 +110,14 @@ def load_obj_file(file_path):
                 )
 
                 model.add_group(
-                    group_name,
-                    centered_vertices,
-                    np.array(group_data["triangles"], dtype=np.int32),
-                    -np.array(group_data["vertex_normals"], dtype=np.float32)
+                    vertices=centered_vertices,
+                    triangles=np.array(group_data["triangles"], dtype=np.int32),
+                    vertex_normals=-np.array(
+                        group_data["vertex_normals"], dtype=np.float32
+                    )
                     if group_data["vertex_normals"]
                     else None,
+                    name=group_name,
                 )
 
     return model

@@ -46,7 +46,7 @@ def create_cube_model() -> Model:
     )
 
     model = Model()
-    model.add_group("cube", vertices, triangles)
+    model.add_group(vertices=vertices, triangles=triangles, name="cube")
     return model
 
 
@@ -132,10 +132,9 @@ def main():
             x = (i - grid_size / 2 + 0.5) * spacing / 1.4
             z = (j - grid_size / 2 + 0.5) * spacing
 
-            instance = Instance(model="cube")
+            instance = Instance(_model="cube")
             instance.set_translation(x, 0, z)
             instance.set_scale(1, 1, 1)
-            # instance.set_scale(0.8, 0.8, 0.8)
             instance.set_color(255, 255, 255)
 
             scene.add_instance(f"cube_{i}_{j}", instance)

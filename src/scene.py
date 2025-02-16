@@ -28,7 +28,6 @@ Example:
     # Add a model with vertices and triangles
     model = Model()
     model.add_group(
-        "default",
         vertices=np.array([[0,0,0], [1,0,0], [0,1,0]], dtype=np.float32),
         triangles=np.array([[0,1,2]], dtype=np.int32)
     )
@@ -45,7 +44,7 @@ Example:
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 import numpy as np
 from collections import defaultdict
 
@@ -134,20 +133,20 @@ class Model:
 
     def add_group(
         self,
-        name: str,
         vertices: np.ndarray,
         triangles: np.ndarray,
         vertex_normals: Optional[np.ndarray] = None,
+        name: str = "default",
     ) -> None:
         """Add a new geometry group to the model.
 
         Args:
-            name (str): Unique identifier for the group
             vertices (np.ndarray): Array of shape (N, 3) containing vertex positions
             triangles (np.ndarray): Array of shape (M, 3) containing vertex indices
                 forming triangles
             vertex_normals (Optional[np.ndarray]): Array of shape (N, 3) containing
                 vertex normals for smooth shading. If None, flat shading will be used
+            name (str): Unique identifier for the group (default: 'default')
         """
         self._groups[name] = Model.Group(
             _vertices=vertices.astype(np.float32),
@@ -425,6 +424,16 @@ class Instance:
             z (float): Scale factor along Z-axis
         """
         self._scale = np.array([x, y, z], dtype=np.float32)
+
+    def set_color(self, r: int, g: int, b: int) -> None:
+        """Set the color of this instance.
+
+        Args:
+            r (int): Red component (0-255)
+            g (int): Green component (0-255)
+            b (int): Blue component (0-255)
+        """
+        self._color = np.array([r, g, b], dtype=np.int32)
 
     @classmethod
     def from_dict(cls, data: dict) -> "Instance":
