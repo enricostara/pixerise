@@ -86,17 +86,30 @@ class Model:
 
         @property
         def vertices(self) -> np.ndarray:
-            """Get the vertex positions (read-only)."""
+            """Get the vertex positions (read-only).
+
+            Returns:
+                np.ndarray: Array of shape (N, 3) containing vertex positions
+            """
             return self._vertices.copy()
 
         @property
         def triangles(self) -> np.ndarray:
-            """Get the triangle indices (read-only)."""
+            """Get the triangle indices (read-only).
+
+            Returns:
+                np.ndarray: Array of shape (M, 3) containing vertex indices
+            """
             return self._triangles.copy()
 
         @property
         def vertex_normals(self) -> Optional[np.ndarray]:
-            """Get the vertex normals if they exist (read-only)."""
+            """Get the vertex normals if they exist (read-only).
+
+            Returns:
+                Optional[np.ndarray]: Array of shape (N, 3) containing vertex normals
+                    If None, flat shading will be used for this group
+            """
             return (
                 self._vertex_normals.copy()
                 if self._vertex_normals is not None
@@ -105,7 +118,7 @@ class Model:
 
         @classmethod
         def from_dict(cls, data: dict) -> "Model.Group":
-            """Create a ModelGroup from a dictionary representation.
+            """Create a Model.Group from a dictionary representation.
 
             Args:
                 data (dict): Dictionary containing 'vertices', 'triangles', and optionally
@@ -128,7 +141,11 @@ class Model:
 
     @property
     def groups(self) -> Dict[str, Group]:
-        """Get the model's groups (read-only)."""
+        """Get the model's groups (read-only).
+
+        Returns:
+            Dict[str, Group]: Dictionary of named groups containing geometry data
+        """
         return self._groups.copy()
 
     def add_group(
@@ -245,8 +262,9 @@ class Instance:
     class Group:
         """State information for a model group within an instance.
 
-        Contains color and visibility information for a specific group.
-        Color can be None to use the instance's default color.
+        Groups allow instances to override properties of specific model groups,
+        such as color and visibility. This enables fine-grained control over
+        how different parts of a model are rendered in each instance.
 
         Attributes:
             color (Optional[np.ndarray]): RGB color values as integers in range [0, 255],
@@ -301,12 +319,20 @@ class Instance:
 
     @property
     def model(self) -> str:
-        """Get the model name this instance references."""
+        """Get the model name this instance references.
+
+        Returns:
+            str: Name of the model
+        """
         return self._model
 
     @model.setter
     def model(self, value: str) -> None:
-        """Set the model name this instance references."""
+        """Set the model name this instance references.
+
+        Args:
+            value (str): New model name
+        """
         self._model = value
 
     def get_group_color(self, group_name: str) -> Optional[np.ndarray]:
@@ -357,42 +383,74 @@ class Instance:
     # Properties
     @property
     def translation(self) -> np.ndarray:
-        """Get the instance's translation vector."""
+        """Get the instance's translation vector.
+
+        Returns:
+            np.ndarray: 3D vector specifying position
+        """
         return self._translation
 
     @translation.setter
     def translation(self, value: np.ndarray) -> None:
-        """Set the instance's translation vector."""
+        """Set the instance's translation vector.
+
+        Args:
+            value (np.ndarray): New 3D vector specifying position
+        """
         self._translation = np.array(value, dtype=np.float32)
 
     @property
     def rotation(self) -> np.ndarray:
-        """Get the instance's rotation vector."""
+        """Get the instance's rotation vector.
+
+        Returns:
+            np.ndarray: 3D vector specifying rotation in radians
+        """
         return self._rotation
 
     @rotation.setter
     def rotation(self, value: np.ndarray) -> None:
-        """Set the instance's rotation vector."""
+        """Set the instance's rotation vector.
+
+        Args:
+            value (np.ndarray): New 3D vector specifying rotation in radians
+        """
         self._rotation = np.array(value, dtype=np.float32)
 
     @property
     def scale(self) -> np.ndarray:
-        """Get the instance's scale vector."""
+        """Get the instance's scale vector.
+
+        Returns:
+            np.ndarray: 3D vector specifying scale in each axis
+        """
         return self._scale
 
     @scale.setter
     def scale(self, value: np.ndarray) -> None:
-        """Set the instance's scale vector."""
+        """Set the instance's scale vector.
+
+        Args:
+            value (np.ndarray): New 3D vector specifying scale in each axis
+        """
         self._scale = np.array(value, dtype=np.float32)
 
     @property
     def color(self) -> np.ndarray:
-        """Get the instance's color values."""
+        """Get the instance's color values.
+
+        Returns:
+            np.ndarray: RGB color values as integers in range [0, 255]
+        """
         return self._color
 
     @color.setter
     def color(self, value: np.ndarray) -> None:
-        """Set the instance's color values."""
+        """Set the instance's color values.
+
+        Args:
+            value (np.ndarray): New RGB color values as integers in range [0, 255]
+        """
         self._color = np.array(value, dtype=np.int32)
 
     def set_translation(self, x: float, y: float, z: float) -> None:
@@ -614,37 +672,53 @@ class DirectionalLight:
 
     @property
     def direction(self) -> np.ndarray:
-        """3D vector specifying light direction
+        """Get the light's direction vector.
+
+        The direction vector points from the light source towards the scene.
+        For example, [0, 0, -1] represents a light shining straight down
+        along the negative Z-axis.
 
         Returns:
-            np.ndarray: Light direction vector
+            np.ndarray: Light direction vector (normalized)
         """
-        return self._direction
+        return self._direction.copy()
 
     @direction.setter
     def direction(self, value: np.ndarray) -> None:
-        """Set the light's direction vector
+        """Set the light's direction vector.
+
+        The direction vector should point from the light source towards the scene.
+        For example, [0, 0, -1] represents a light shining straight down
+        along the negative Z-axis.
 
         Args:
-            value (np.ndarray): New light direction vector
+            value (np.ndarray): New light direction vector (will be normalized)
         """
-        self._direction = np.array(value, dtype=np.float32)
+        self._direction = value.astype(np.float32)
 
     @property
     def ambient(self) -> float:
-        """Ambient light intensity in range [0, 1]
+        """Get the light's ambient intensity.
+
+        The ambient intensity determines how much light is present in areas
+        not directly lit by the directional light. A value of 0 means complete
+        darkness in shadows, while 1 means no shadows at all.
 
         Returns:
-            float: Ambient light intensity
+            float: Ambient light intensity in range [0, 1]
         """
         return self._ambient
 
     @ambient.setter
     def ambient(self, value: float) -> None:
-        """Set the light's ambient intensity
+        """Set the light's ambient intensity.
+
+        The ambient intensity determines how much light is present in areas
+        not directly lit by the directional light. A value of 0 means complete
+        darkness in shadows, while 1 means no shadows at all.
 
         Args:
-            value (float): New ambient light intensity
+            value (float): New ambient light intensity in range [0, 1]
         """
         self._ambient = value
 
