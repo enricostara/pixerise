@@ -210,7 +210,9 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                     elif event.button == 3:  # Right click
                         # Toggle visibility for the clicked group
                         current_visibility = instance.get_group_visibility(group_name)
-                        instance.set_group_visibility(group_name, not current_visibility)
+                        instance.set_group_visibility(
+                            group_name, not current_visibility
+                        )
                 else:
                     if event.button == 1:  # Left click on empty space
                         # Reset all selected groups' colors
@@ -223,7 +225,9 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                     elif event.button == 3:  # Right click on empty space
                         # Re-enable visibility for all groups in all instances
                         for instance in scene._instances.values():
-                            for group_name in scene._models[instance.model]._groups.keys():
+                            for group_name in scene._models[
+                                instance.model
+                            ]._groups.keys():
                                 instance.set_group_visibility(group_name, True)
 
                 movement_occurred = True

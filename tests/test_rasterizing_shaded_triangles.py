@@ -21,9 +21,13 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         """Test drawing a simple shaded triangle in the center of the canvas."""
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_shaded_triangle(
-            (0, 20, 0.5), (-20, -20, 0.5), (20, -20, 0.5),  # All at same depth
+            (0, 20, 0.5),
+            (-20, -20, 0.5),
+            (20, -20, 0.5),  # All at same depth
             self.color,
-            1.0, 0.5, 0.0  # Varying intensities
+            1.0,
+            0.5,
+            0.0,  # Varying intensities
         )
         # Check if pixels are set in the expected triangle area
         self.assertTrue(np.any(self.canvas.color_buffer != 0))
@@ -36,9 +40,13 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         """Test triangle with uniform intensity across all vertices."""
         self.canvas.color_buffer.fill(0)
         self.renderer.draw_shaded_triangle(
-            (0, 20, 0.5), (-20, -20, 0.5), (20, -20, 0.5),
+            (0, 20, 0.5),
+            (-20, -20, 0.5),
+            (20, -20, 0.5),
             self.color,
-            0.5, 0.5, 0.5  # Uniform intensity
+            0.5,
+            0.5,
+            0.5,  # Uniform intensity
         )
         # Check if all non-zero pixels have the same value
         red_channel = self.canvas.color_buffer[..., 0]
@@ -50,9 +58,7 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         """Test triangle with zero intensity at all vertices."""
         self.canvas.color_buffer.fill(0)
         self.renderer.draw_shaded_triangle(
-            (0, 20, 0.5), (-20, -20, 0.5), (20, -20, 0.5),
-            self.color,
-            0.0, 0.0, 0.0
+            (0, 20, 0.5), (-20, -20, 0.5), (20, -20, 0.5), self.color, 0.0, 0.0, 0.0
         )
         # Should not modify any pixels
         self.assertTrue(np.all(self.canvas.color_buffer == 0))
@@ -64,9 +70,7 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         the line drawing functions instead."""
         self.canvas.color_buffer.fill(0)
         self.renderer.draw_shaded_triangle(
-            (0, 0, 0.5), (10, 10, 0.5), (20, 20, 0.5),
-            self.color,
-            1.0, 0.5, 0.0
+            (0, 0, 0.5), (10, 10, 0.5), (20, 20, 0.5), self.color, 1.0, 0.5, 0.0
         )
         # For a scanline rasterizer, it's acceptable not to draw anything for degenerate cases
         pass
@@ -80,9 +84,7 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         point = (0, 0, 0.5)
         intensity = 0.5
         self.renderer.draw_shaded_triangle(
-            point, point, point,
-            self.color,
-            intensity, intensity, intensity
+            point, point, point, self.color, intensity, intensity, intensity
         )
         # For a scanline rasterizer, it's acceptable not to draw anything for degenerate cases
         pass
@@ -91,9 +93,13 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         """Test triangle completely outside the canvas bounds."""
         self.canvas.color_buffer.fill(0)
         self.renderer.draw_shaded_triangle(
-            (self.width + 10, 10, 0.5), (self.width + 20, 20, 0.5), (self.width + 30, 30, 0.5),
+            (self.width + 10, 10, 0.5),
+            (self.width + 20, 20, 0.5),
+            (self.width + 30, 30, 0.5),
             self.color,
-            1.0, 0.5, 0.0
+            1.0,
+            0.5,
+            0.0,
         )
         # Should not modify any pixels
         self.assertTrue(np.all(self.canvas.color_buffer == 0))
@@ -102,9 +108,13 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         """Test shaded triangle that is partially outside the canvas bounds."""
         self.canvas.color_buffer.fill(0)  # Set background to black
         self.renderer.draw_shaded_triangle(
-            (0, 0, 0.5), (self.width + 10, 10, 0.5), (10, self.height + 10, 0.5),
+            (0, 0, 0.5),
+            (self.width + 10, 10, 0.5),
+            (10, self.height + 10, 0.5),
             self.color,
-            1.0, 0.5, 0.0
+            1.0,
+            0.5,
+            0.0,
         )
         # Should draw the visible portion
         self.assertTrue(np.any(self.canvas.color_buffer != 0))
@@ -118,20 +128,24 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         self.canvas.color_buffer.fill(0)
         # Draw triangle with intensity gradient from top to bottom
         self.renderer.draw_shaded_triangle(
-            (0, 20, 0.5), (-20, -20, 0.5), (20, -20, 0.5),
+            (0, 20, 0.5),
+            (-20, -20, 0.5),
+            (20, -20, 0.5),
             self.color,
-            1.0, 0.0, 0.0  # Full intensity at top, zero at bottom corners
+            1.0,
+            0.0,
+            0.0,  # Full intensity at top, zero at bottom corners
         )
         red_channel = self.canvas.color_buffer[..., 0]
         nonzero_pixels = red_channel[red_channel != 0]
-        
+
         # Should have multiple intensity levels
         unique_intensities = np.unique(nonzero_pixels)
         self.assertTrue(len(unique_intensities) > 10)
-        
+
         # Should include both high and low intensity values
         self.assertTrue(np.max(nonzero_pixels) > 200)  # High intensity near 1.0
-        self.assertTrue(np.min(nonzero_pixels) < 50)   # Low intensity near 0.0
+        self.assertTrue(np.min(nonzero_pixels) < 50)  # Low intensity near 0.0
 
     def test_shaded_triangle_z_buffering(self):
         """Test z-buffering behavior with overlapping shaded triangles."""
@@ -140,21 +154,29 @@ class TestShadedTriangleDrawing(unittest.TestCase):
 
         # Draw a shaded triangle in the back with a higher z value
         self.renderer.draw_shaded_triangle(
-            (-20, -20, 0.8), (20, -20, 0.8), (0, 20, 0.8),  # Back triangle
+            (-20, -20, 0.8),
+            (20, -20, 0.8),
+            (0, 20, 0.8),  # Back triangle
             self.color,  # Red
-            1.0, 1.0, 1.0  # Full intensity for clear visibility
+            1.0,
+            1.0,
+            1.0,  # Full intensity for clear visibility
         )
 
         # Draw a shaded triangle in front with a lower z value
         self.renderer.draw_shaded_triangle(
-            (-10, -10, 0.2), (10, -10, 0.2), (0, 10, 0.2),  # Front triangle
+            (-10, -10, 0.2),
+            (10, -10, 0.2),
+            (0, 10, 0.2),  # Front triangle
             (0, 255, 0),  # Green
-            1.0, 1.0, 1.0  # Full intensity for clear visibility
+            1.0,
+            1.0,
+            1.0,  # Full intensity for clear visibility
         )
 
         # Get center pixel color where triangles overlap
-        center_color = self.canvas.color_buffer[self.height//2, self.width//2]
-        
+        center_color = self.canvas.color_buffer[self.height // 2, self.width // 2]
+
         # Center should be green (front triangle) not red (back triangle)
         self.assertEqual(tuple(center_color), (0, 255, 0))
 
@@ -165,17 +187,21 @@ class TestShadedTriangleDrawing(unittest.TestCase):
 
         # Draw a triangle with varying z values
         self.renderer.draw_shaded_triangle(
-            (0, 20, 0.2),     # Front vertex
+            (0, 20, 0.2),  # Front vertex
             (-20, -20, 0.5),  # Middle vertex
-            (20, -20, 0.8),   # Back vertex
+            (20, -20, 0.8),  # Back vertex
             self.color,
-            1.0, 0.5, 0.0
+            1.0,
+            0.5,
+            0.0,
         )
 
         # Check that depth buffer has been updated with varying values
-        depth_values = np.unique(self.canvas.depth_buffer[self.canvas.depth_buffer < 1.0])
+        depth_values = np.unique(
+            self.canvas.depth_buffer[self.canvas.depth_buffer < 1.0]
+        )
         self.assertTrue(len(depth_values) > 1)  # Should have multiple depth values
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

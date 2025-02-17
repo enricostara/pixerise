@@ -8,7 +8,6 @@ from numba import njit
 from typing import Tuple
 
 
-
 @njit(cache=True)
 def transform_vertex(
     vertex: np.ndarray,

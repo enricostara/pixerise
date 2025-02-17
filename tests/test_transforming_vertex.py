@@ -18,44 +18,52 @@ class TestTransformVertex:
         canvas, viewport, renderer = setup
         vertex = np.array([1.0, 2.0, 3.0])
         transform = {}  # Empty transform should act as identity
-        
-        result = transform_vertex(vertex, 
-                                transform.get('translation', np.zeros(3)),
-                                transform.get('rotation', np.zeros(3)),
-                                transform.get('scale', np.ones(3)),
-                                np.zeros(3), np.zeros(3), False)
+
+        result = transform_vertex(
+            vertex,
+            transform.get("translation", np.zeros(3)),
+            transform.get("rotation", np.zeros(3)),
+            transform.get("scale", np.ones(3)),
+            np.zeros(3),
+            np.zeros(3),
+            False,
+        )
         np.testing.assert_array_almost_equal(result, vertex)
 
     def test_translation(self, setup):
         """Test translation transformation"""
         canvas, viewport, renderer = setup
         vertex = np.array([1.0, 2.0, 3.0])
-        transform = {
-            'translation': np.array([10.0, 20.0, 30.0])
-        }
+        transform = {"translation": np.array([10.0, 20.0, 30.0])}
 
         expected = np.array([11.0, 22.0, 33.0])
-        result = transform_vertex(vertex, 
-                                transform.get('translation', np.zeros(3)),
-                                transform.get('rotation', np.zeros(3)),
-                                transform.get('scale', np.ones(3)),
-                                np.zeros(3), np.zeros(3), False)
+        result = transform_vertex(
+            vertex,
+            transform.get("translation", np.zeros(3)),
+            transform.get("rotation", np.zeros(3)),
+            transform.get("scale", np.ones(3)),
+            np.zeros(3),
+            np.zeros(3),
+            False,
+        )
         np.testing.assert_array_almost_equal(result, expected)
 
     def test_scale(self, setup):
         """Test scale transformation"""
         canvas, viewport, renderer = setup
         vertex = np.array([1.0, 2.0, 3.0])
-        transform = {
-            'scale': np.array([2.0, 3.0, 4.0])
-        }
+        transform = {"scale": np.array([2.0, 3.0, 4.0])}
 
         expected = np.array([2.0, 6.0, 12.0])
-        result = transform_vertex(vertex, 
-                                transform.get('translation', np.zeros(3)),
-                                transform.get('rotation', np.zeros(3)),
-                                transform.get('scale', np.array([2.0, 3.0, 4.0])),
-                                np.zeros(3), np.zeros(3), False)
+        result = transform_vertex(
+            vertex,
+            transform.get("translation", np.zeros(3)),
+            transform.get("rotation", np.zeros(3)),
+            transform.get("scale", np.array([2.0, 3.0, 4.0])),
+            np.zeros(3),
+            np.zeros(3),
+            False,
+        )
         np.testing.assert_array_almost_equal(result, expected)
 
     def test_rotation_x(self, setup):
@@ -63,16 +71,20 @@ class TestTransformVertex:
         canvas, viewport, renderer = setup
         vertex = np.array([1.0, 1.0, 0.0])
         transform = {
-            'rotation': np.array([np.pi/2, 0.0, 0.0])  # 90 degrees around X
+            "rotation": np.array([np.pi / 2, 0.0, 0.0])  # 90 degrees around X
         }
 
         # After 90-degree rotation around X, y should become z and z should become -y
         expected = np.array([1.0, 0.0, 1.0])
-        result = transform_vertex(vertex, 
-                                transform.get('translation', np.zeros(3)),
-                                transform.get('rotation', np.array([np.pi/2, 0.0, 0.0])),
-                                transform.get('scale', np.ones(3)),
-                                np.zeros(3), np.zeros(3), False)
+        result = transform_vertex(
+            vertex,
+            transform.get("translation", np.zeros(3)),
+            transform.get("rotation", np.array([np.pi / 2, 0.0, 0.0])),
+            transform.get("scale", np.ones(3)),
+            np.zeros(3),
+            np.zeros(3),
+            False,
+        )
         np.testing.assert_array_almost_equal(result, expected, decimal=5)
 
     def test_rotation_y(self, setup):
@@ -80,16 +92,20 @@ class TestTransformVertex:
         canvas, viewport, renderer = setup
         vertex = np.array([1.0, 1.0, 0.0])
         transform = {
-            'rotation': np.array([0.0, np.pi/2, 0.0])  # 90 degrees around Y
+            "rotation": np.array([0.0, np.pi / 2, 0.0])  # 90 degrees around Y
         }
 
         # After 90-degree rotation around Y, x should become -z and z should become x
         expected = np.array([0.0, 1.0, -1.0])
-        result = transform_vertex(vertex, 
-                                transform.get('translation', np.zeros(3)),
-                                transform.get('rotation', np.array([0.0, np.pi/2, 0.0])),
-                                transform.get('scale', np.ones(3)),
-                                np.zeros(3), np.zeros(3), False)
+        result = transform_vertex(
+            vertex,
+            transform.get("translation", np.zeros(3)),
+            transform.get("rotation", np.array([0.0, np.pi / 2, 0.0])),
+            transform.get("scale", np.ones(3)),
+            np.zeros(3),
+            np.zeros(3),
+            False,
+        )
         np.testing.assert_array_almost_equal(result, expected, decimal=5)
 
     def test_rotation_z(self, setup):
@@ -97,16 +113,20 @@ class TestTransformVertex:
         canvas, viewport, renderer = setup
         vertex = np.array([1.0, 0.0, 1.0])
         transform = {
-            'rotation': np.array([0.0, 0.0, np.pi/2])  # 90 degrees around Z
+            "rotation": np.array([0.0, 0.0, np.pi / 2])  # 90 degrees around Z
         }
 
         # After 90-degree rotation around Z, x should become -y and y should become x
         expected = np.array([0.0, 1.0, 1.0])
-        result = transform_vertex(vertex, 
-                                transform.get('translation', np.zeros(3)),
-                                transform.get('rotation', np.array([0.0, 0.0, np.pi/2])),
-                                transform.get('scale', np.ones(3)),
-                                np.zeros(3), np.zeros(3), False)
+        result = transform_vertex(
+            vertex,
+            transform.get("translation", np.zeros(3)),
+            transform.get("rotation", np.array([0.0, 0.0, np.pi / 2])),
+            transform.get("scale", np.ones(3)),
+            np.zeros(3),
+            np.zeros(3),
+            False,
+        )
         np.testing.assert_array_almost_equal(result, expected, decimal=5)
 
     def test_combined_transform(self, setup):
@@ -114,39 +134,45 @@ class TestTransformVertex:
         canvas, viewport, renderer = setup
         vertex = np.array([1.0, 0.0, 0.0])
         transform = {
-            'translation': np.array([1.0, 1.0, 1.0]),
-            'rotation': np.array([0.0, 0.0, np.pi/2]),  # 90 degrees around Z
-            'scale': np.array([2.0, 2.0, 2.0])
+            "translation": np.array([1.0, 1.0, 1.0]),
+            "rotation": np.array([0.0, 0.0, np.pi / 2]),  # 90 degrees around Z
+            "scale": np.array([2.0, 2.0, 2.0]),
         }
 
         # Scale by 2, rotate 90° around Z (x becomes -y, y becomes x), then translate by 1
         expected = np.array([1.0, 3.0, 1.0])
-        result = transform_vertex(vertex, 
-                                transform.get('translation', np.zeros(3)),
-                                transform.get('rotation', np.array([0.0, 0.0, np.pi/2])),
-                                transform.get('scale', np.array([2.0, 2.0, 2.0])),
-                                np.zeros(3), np.zeros(3), False)
+        result = transform_vertex(
+            vertex,
+            transform.get("translation", np.zeros(3)),
+            transform.get("rotation", np.array([0.0, 0.0, np.pi / 2])),
+            transform.get("scale", np.array([2.0, 2.0, 2.0])),
+            np.zeros(3),
+            np.zeros(3),
+            False,
+        )
         np.testing.assert_array_almost_equal(result, expected, decimal=5)
 
     def test_camera_transform(self, setup):
         """Test transformation with camera"""
         canvas, viewport, renderer = setup
         vertex = np.array([0.0, 0.0, 1.0])
-        transform = {'translation': np.array([1.0, 0.0, 0.0])}
+        transform = {"translation": np.array([1.0, 0.0, 0.0])}
 
         # Add camera looking down -Z axis from 10 units away
         camera_transform = {
-            'translation': np.array([0.0, 0.0, -10.0]),
-            'rotation': np.array([0.0, 0.0, 0.0])
+            "translation": np.array([0.0, 0.0, -10.0]),
+            "rotation": np.array([0.0, 0.0, 0.0]),
         }
 
         # Vertex should be transformed relative to camera
-        result = transform_vertex(vertex, 
-                                transform.get('translation', np.zeros(3)),
-                                transform.get('rotation', np.zeros(3)),
-                                transform.get('scale', np.ones(3)),
-                                camera_transform['translation'],
-                                camera_transform['rotation'],
-                                True)
+        result = transform_vertex(
+            vertex,
+            transform.get("translation", np.zeros(3)),
+            transform.get("rotation", np.zeros(3)),
+            transform.get("scale", np.ones(3)),
+            camera_transform["translation"],
+            camera_transform["rotation"],
+            True,
+        )
         expected = np.array([1.0, 0.0, 11.0])  # Vertex is now 11 units away from camera
         np.testing.assert_array_almost_equal(result, expected)
