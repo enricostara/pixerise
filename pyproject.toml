@@ -22,13 +22,12 @@ build-backend = "pdm.backend"
 distribution = true
 
 [dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "ruff>=0.9.6",
+    "pydoc-markdown>=4.8.2",
+    "rust-just>=1.39.0",
+]
 examples = [
     "pygame>=2.6.1",
-]
-test = [
-    "pytest>=7.4.0",
-    "pytest-cov>=4.1.0",
-]
-lint = [
-    "ruff>=0.9.6"
 ]
