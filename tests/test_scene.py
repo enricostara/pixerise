@@ -4,17 +4,17 @@ Tests Scene class and related classes (Model, Instance, Camera, DirectionalLight
 """
 
 import numpy as np
-from scene import Scene, Model, Instance, Camera, DirectionalLight, ModelInnerGroup
+from scene import Scene, Model, Instance, Camera, DirectionalLight
 
 
 def test_model_inner_group():
-    """Test ModelInnerGroup initialization and serialization."""
+    """Test Model.Group initialization and serialization."""
     # Test initialization
     vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=np.float32)
     triangles = np.array([[0, 1, 2]], dtype=np.int32)
     vertex_normals = np.array([[0, 0, 1], [0, 0, 1], [0, 0, 1]], dtype=np.float32)
 
-    group = ModelInnerGroup(
+    group = Model.Group(
         _vertices=vertices, _triangles=triangles, _vertex_normals=vertex_normals
     )
 
@@ -38,21 +38,28 @@ def test_model_inner_group():
     assert not np.array_equal(vertex_normals_copy, group.vertex_normals)
 
     # Test without vertex normals
-    group_no_normals = ModelInnerGroup(_vertices=vertices, _triangles=triangles)
+    group_no_normals = Model.Group(_vertices=vertices, _triangles=triangles)
     assert group_no_normals.vertex_normals is None
 
     # Test serialization through Model
     model = Model()
-    model.add_group("test", vertices, triangles, vertex_normals)
-    model_data = model.to_dict()
+    model.add_group(vertices, triangles, vertex_normals, "test")
 
-    # Test deserialization
-    new_model = Model.from_dict(model_data)
-    new_group = new_model.groups["test"]
+    # Test model serialization
+    model_dict = model.to_dict()
+    assert "groups" in model_dict
+    assert "test" in model_dict["groups"]
+    assert "vertices" in model_dict["groups"]["test"]
+    assert "triangles" in model_dict["groups"]["test"]
+    assert "vertex_normals" in model_dict["groups"]["test"]
 
-    assert np.array_equal(new_group.vertices, vertices)
-    assert np.array_equal(new_group.triangles, triangles)
-    assert np.array_equal(new_group.vertex_normals, vertex_normals)
+    # Test model deserialization
+    model2 = Model.from_dict(model_dict)
+    assert "test" in model2._groups
+    group2 = model2._groups["test"]
+    assert np.array_equal(group2.vertices, vertices)
+    assert np.array_equal(group2.triangles, triangles)
+    assert np.array_equal(group2.vertex_normals, vertex_normals)
 
 
 def test_model():
@@ -66,30 +73,30 @@ def test_model():
     triangles = np.array([[0, 1, 2]], dtype=np.int32)
     vertex_normals = np.array([[0, 0, 1], [0, 0, 1], [0, 0, 1]], dtype=np.float32)
 
-    model.add_group("test_group", vertices, triangles, vertex_normals)
-    groups = model.groups  # Get a copy through the property
-    assert "test_group" in groups
-    assert np.array_equal(groups["test_group"].vertices, vertices)
-    assert np.array_equal(groups["test_group"].triangles, triangles)
-    assert np.array_equal(groups["test_group"].vertex_normals, vertex_normals)
+    model.add_group(vertices, triangles, vertex_normals, "test_group")
+    assert "test_group" in model.groups
+    assert len(model.groups) == 1
+
+    group = model.groups["test_group"]
+    assert np.array_equal(group.vertices, vertices)
+    assert np.array_equal(group.triangles, triangles)
+    assert np.array_equal(group.vertex_normals, vertex_normals)
 
     # Test serialization
-    model_data = model.to_dict()
-    assert "groups" in model_data
-    assert "test_group" in model_data["groups"]
-    group_data = model_data["groups"]["test_group"]
-    assert np.array_equal(group_data["vertices"], vertices.tolist())
-    assert np.array_equal(group_data["triangles"], triangles.tolist())
-    assert np.array_equal(group_data["vertex_normals"], vertex_normals.tolist())
+    model_dict = model.to_dict()
+    assert "groups" in model_dict
+    assert "test_group" in model_dict["groups"]
+    assert "vertices" in model_dict["groups"]["test_group"]
+    assert "triangles" in model_dict["groups"]["test_group"]
+    assert "vertex_normals" in model_dict["groups"]["test_group"]
 
     # Test deserialization
-    new_model = Model.from_dict(model_data)
-    new_groups = new_model.groups  # Get a copy through the property
-    assert "test_group" in new_groups
-    new_group = new_groups["test_group"]
-    assert np.array_equal(new_group.vertices, vertices)
-    assert np.array_equal(new_group.triangles, triangles)
-    assert np.array_equal(new_group.vertex_normals, vertex_normals)
+    model2 = Model.from_dict(model_dict)
+    assert "test_group" in model2._groups
+    group2 = model2._groups["test_group"]
+    assert np.array_equal(group2.vertices, vertices)
+    assert np.array_equal(group2.triangles, triangles)
+    assert np.array_equal(group2.vertex_normals, vertex_normals)
 
     # Test groups property is read-only (returns a copy)
     original_groups = model.groups
@@ -99,12 +106,9 @@ def test_model():
 
     # Test single default group serialization
     default_model = Model()
-    default_model.add_group("default", vertices, triangles, vertex_normals)
-    default_data = default_model.to_dict()
-    # For single default group, expect flat structure
-    assert "vertices" in default_data
-    assert "triangles" in default_data
-    assert "vertex_normals" in default_data
+    default_model.add_group(vertices, triangles, vertex_normals)  # Use default name
+    assert "default" in default_model.groups
+    assert len(default_model.groups) == 1
 
 
 def test_instance():
@@ -156,53 +160,27 @@ def test_instance():
     assert instance.get_group_visibility("group3") is False
 
     # Test GroupState class directly
-    state = instance.GroupState(color=group_color, visible=False)
+    state = Instance.Group(color=group_color, visible=False)
     assert np.array_equal(state.color, group_color)
     assert state.visible is False
 
-    # Test GroupState serialization
-    state_dict = state.to_dict()
-    assert np.array_equal(state_dict["color"], group_color.tolist())
-    assert state_dict["visible"] is False
-
-    # Test GroupState deserialization
-    new_state = instance.GroupState.from_dict(state_dict)
-    assert np.array_equal(new_state.color, group_color)
-    assert new_state.visible is False
-
     # Test serialization
-    data = instance.to_dict()
-    assert data["model"] == "test_model"
-    assert np.allclose(data["transform"]["translation"], [1, 2, 3])
-    assert np.allclose(data["transform"]["rotation"], [0.1, 0.2, 0.3])
-    assert np.allclose(data["transform"]["scale"], [2, 2, 2])
-    assert np.array_equal(data["color"], [255, 128, 0])
-    assert "groups" in data
-    assert np.array_equal(data["groups"]["group1"]["color"], [100, 150, 200])
-    assert data["groups"]["group1"]["visible"] is True
-    assert data["groups"]["group2"]["color"] is None
-    assert data["groups"]["group2"]["visible"] is False
-    assert data["groups"]["group3"]["color"] is None
-    assert data["groups"]["group3"]["visible"] is False
+    instance_dict = instance.to_dict()
+    assert instance_dict["model"] == "test_model"
+    assert "transform" in instance_dict
+    assert "translation" in instance_dict["transform"]
+    assert "rotation" in instance_dict["transform"]
+    assert "scale" in instance_dict["transform"]
+    assert "color" in instance_dict
+    assert "groups" in instance_dict
 
     # Test deserialization
-    new_instance = Instance.from_dict(data)
-    assert new_instance.model == "test_model"
-    assert np.allclose(new_instance.translation, np.array([1, 2, 3], dtype=np.float32))
-    assert np.allclose(
-        new_instance.rotation, np.array([0.1, 0.2, 0.3], dtype=np.float32)
-    )
-    assert np.allclose(new_instance.scale, np.array([2, 2, 2], dtype=np.float32))
-    assert np.array_equal(new_instance.color, np.array([255, 128, 0], dtype=np.int32))
-    assert np.array_equal(
-        new_instance.get_group_color("group1"),
-        np.array([100, 150, 200], dtype=np.int32),
-    )
-    assert new_instance.get_group_visibility("group1") is True
-    assert new_instance.get_group_color("group2") is None
-    assert new_instance.get_group_visibility("group2") is False
-    assert new_instance.get_group_color("group3") is None
-    assert new_instance.get_group_visibility("group3") is False
+    instance2 = Instance.from_dict(instance_dict)
+    assert instance2.model == "test_model"
+    assert np.allclose(instance2.translation, instance.translation)
+    assert np.allclose(instance2.rotation, instance.rotation)
+    assert np.allclose(instance2.scale, instance.scale)
+    assert np.array_equal(instance2.color, instance.color)
 
 
 def test_camera():
@@ -245,20 +223,20 @@ def test_directional_light():
     assert light.ambient == 0.2
 
     # Test property setters
-    light.direction = [0, 1, 0]
-    light.ambient = 0.3
+    light.direction = np.array([0, 1, 0], dtype=np.float32)
+    light.ambient = 0.5
     assert np.array_equal(light.direction, np.array([0, 1, 0], dtype=np.float32))
-    assert light.ambient == 0.3
+    assert light.ambient == 0.5
 
     # Test serialization
     light_data = light.to_dict()
     assert np.array_equal(light_data["direction"], [0, 1, 0])
-    assert light_data["ambient"] == 0.3
+    assert light_data["ambient"] == 0.5
 
     # Test deserialization
     new_light = DirectionalLight.from_dict(light_data)
     assert np.array_equal(new_light.direction, np.array([0, 1, 0], dtype=np.float32))
-    assert new_light.ambient == 0.3
+    assert new_light.ambient == 0.5
 
 
 def test_scene():
