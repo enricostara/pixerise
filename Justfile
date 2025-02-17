@@ -9,8 +9,8 @@ dev-sync:
 prod-sync:
 	pdm sync --clean --prod
 
-install-hooks:
-	uv run pre-commit install
+install-pre-commit:
+	pdm run pre-commit install
 
 format:
 	pdm run ruff format

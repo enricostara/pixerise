@@ -27,6 +27,7 @@ dev = [
     "ruff>=0.9.6",
     "pydoc-markdown>=4.8.2",
     "rust-just>=1.39.0",
+    "pre-commit>=4.1.0",
 ]
 examples = [
     "pygame>=2.6.1",

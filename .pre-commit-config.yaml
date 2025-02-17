@@ -1,0 +1,11 @@
+default_language_version:
+  python: python3.12
+repos:
+  - repo: local
+    hooks:
+      - id: format
+        name: format
+        entry: pdm run ruff format
+        require_serial: true
+        language: system
+        pass_filenames: false
