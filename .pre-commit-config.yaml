@@ -5,7 +5,7 @@ repos:
     hooks:
       - id: format
         name: format
-        entry: pdm run ruff format
+        entry: pdm run just format
         require_serial: true
         language: system
         pass_filenames: false
