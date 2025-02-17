@@ -21,4 +21,7 @@ lint:
 test:
 	pdm run pytest --verbose --color=yes tests
 
+doc:
+	pydoc-markdown --render-toc -I src > src/README.md
+
 validate: format lint test
