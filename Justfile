@@ -24,4 +24,7 @@ test:
 doc:
 	pydoc-markdown --render-toc -I src > src/README.md
 
+example:
+	pdm run python examples/rendering_obj_file.py
+
 validate: format lint test
