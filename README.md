@@ -146,6 +146,8 @@ pygame.quit()
 
 ```
 
+For detailed API documentation, see [src/README.md](src/README.md).
+
 ## Examples
 
 The `examples` directory contains several demonstrations:
@@ -260,12 +262,3 @@ Special thanks to:
 - [Gabriel Gambetta](https://github.com/ggambetta) and his amazing book [Computer Graphics from Scratch](https://gabrielgambetta.com/computer-graphics-from-scratch), which inspired many of the rendering techniques used in this project
 - [Windsurf](https://codeium.com/windsurf), the excellent agentic IDE that made this project feasible in a few months by working after dinner
 - The NumPy and Numba teams for their awesome libraries
-
-
-## What's Next?
-
-Future enhancements may include:
-- [ ] More shading models
-- [ ] Texturing support
-- [ ] Scene serialization
-- [ ] Additional example scenes
