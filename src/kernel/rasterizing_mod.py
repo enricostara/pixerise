@@ -295,16 +295,17 @@ def draw_flat_triangle(
         color_r, color_g, color_b: RGB color components (0-255)
         canvas_width, canvas_height: Dimensions of the canvas
     """
-    # Transform from world space to screen space coordinates:
-    # - Add center_x to shift from [-width/2, width/2] to [0, width]
-    # - Subtract from center_y to flip Y axis (screen Y grows downward)
+    # Calculate 1/Z for each vertex
+    inv_z0 = 1.0 / z0 if z0 != 0.0 else float("inf")
+    inv_z1 = 1.0 / z1 if z1 != 0.0 else float("inf")
+    inv_z2 = 1.0 / z2 if z2 != 0.0 else float("inf")
+
+    # Transform to screen coordinates
     sx0, sy0 = center_x + x0, center_y - y0
     sx1, sy1 = center_x + x1, center_y - y1
     sx2, sy2 = center_x + x2, center_y - y2
 
-    # Compute triangle bounds for canvas clipping:
-    # - If triangle is completely outside canvas bounds, we can skip it entirely
-    # - This is a conservative test (bounding box may be larger than actual triangle)
+    # Compute triangle bounds for canvas clipping
     min_x = min(sx0, sx1, sx2)
     max_x = max(sx0, sx1, sx2)
     min_y = min(sy0, sy1, sy2)
@@ -313,56 +314,52 @@ def draw_flat_triangle(
     if max_x < 0 or min_x >= canvas_width or max_y < 0 or min_y >= canvas_height:
         return
 
-    # Sort vertices by Y coordinate, keeping depth values aligned
+    # Sort vertices by Y coordinate
     if y1 < y0:
         x0, x1 = x1, x0
         y0, y1 = y1, y0
-        z0, z1 = z1, z0
+        inv_z0, inv_z1 = inv_z1, inv_z0
     if y2 < y0:
         x0, x2 = x2, x0
         y0, y2 = y2, y0
-        z0, z2 = z2, z0
+        inv_z0, inv_z2 = inv_z2, inv_z0
     if y2 < y1:
         x1, x2 = x2, x1
         y1, y2 = y2, y1
-        z1, z2 = z2, z1
+        inv_z1, inv_z2 = inv_z2, inv_z1
 
-    # Initialize edge traversal with depth values
+    # Initialize edge traversal with 1/Z values
     dx1 = x1 - x0
     dy1 = y1 - y0
-    dz1 = z1 - z0
+    d_inv_z1 = inv_z1 - inv_z0
     x_left = x0 << 16
     step_left = (dx1 << 16) // max(1, dy1)
-    z_left = z0
-    z_step_left = dz1 / max(1, dy1) if dy1 > 0 else 0.0
+    inv_z_left = inv_z0
+    inv_z_step_left = d_inv_z1 / max(1, dy1) if dy1 > 0 else 0.0
 
     dx2 = x2 - x0
     dy2 = y2 - y0
-    dz2 = z2 - z0
+    d_inv_z2 = inv_z2 - inv_z0
     x_right = x0 << 16
     step_right = (dx2 << 16) // max(1, dy2)
-    z_right = z0
-    z_step_right = dz2 / max(1, dy2) if dy2 > 0 else 0.0
+    inv_z_right = inv_z0
+    inv_z_step_right = d_inv_z2 / max(1, dy2) if dy2 > 0 else 0.0
 
-    # Fill the upper triangle section
-    for y in range(y0, y1):  # Changed to be top-inclusive, bottom-exclusive
-        start_x = x_left >> 16
-        end_x = x_right >> 16
+    # Fill upper triangle section
+    for y in range(y0, y1):
+        start_x = np.int32(x_left) >> 16
+        end_x = np.int32(x_right) >> 16
 
         if start_x > end_x:
             start_x, end_x = end_x, start_x
-            z_scan = z_right
-            z_step = (z_left - z_right) / max(
-                1, end_x - start_x
-            )  # Removed +1 to make right-exclusive
+            inv_z_scan = inv_z_right
+            inv_z_step = (inv_z_left - inv_z_right) / max(1, end_x - start_x)
         else:
-            z_scan = z_left
-            z_step = (z_right - z_left) / max(
-                1, end_x - start_x
-            )  # Removed +1 to make right-exclusive
+            inv_z_scan = inv_z_left
+            inv_z_step = (inv_z_right - inv_z_left) / max(1, end_x - start_x)
 
-        # Changed to be left-inclusive, right-exclusive
         for x in range(start_x, end_x):
+            z_scan = 1.0 / inv_z_scan if inv_z_scan != 0.0 else float("inf")
             draw_pixel(
                 canvas_grid,
                 depth_buffer,
@@ -377,42 +374,38 @@ def draw_flat_triangle(
                 canvas_width,
                 canvas_height,
             )
-            z_scan += z_step
+            inv_z_scan += inv_z_step
 
         if y1 > y0:
             x_left += step_left
             x_right += step_right
-            z_left += z_step_left
-            z_right += z_step_right
+            inv_z_left += inv_z_step_left
+            inv_z_right += inv_z_step_right
 
     # Initialize edge traversal for lower triangle
     dx3 = x2 - x1
     dy3 = y2 - y1
-    dz3 = z2 - z1
+    d_inv_z3 = inv_z2 - inv_z1
     x_left = x1 << 16
-    step_left = (dx3 << 16) // max(1, dy3)
-    z_left = z1
-    z_step_left = dz3 / max(1, dy3) if dy3 > 0 else 0.0
+    step_left = (dx3 << 16) / max(1, dy3)
+    inv_z_left = inv_z1
+    inv_z_step_left = d_inv_z3 / max(1, dy3) if dy3 > 0 else 0.0
 
-    # Fill the lower triangle section
-    for y in range(y1, y2):  # Changed to be top-inclusive, bottom-exclusive
-        start_x = x_left >> 16
-        end_x = x_right >> 16
+    # Fill lower triangle section
+    for y in range(y1, y2):
+        start_x = np.int32(x_left) >> 16
+        end_x = np.int32(x_right) >> 16
 
         if start_x > end_x:
             start_x, end_x = end_x, start_x
-            z_scan = z_right
-            z_step = (z_left - z_right) / max(
-                1, end_x - start_x
-            )  # Removed +1 to make right-exclusive
+            inv_z_scan = inv_z_right
+            inv_z_step = (inv_z_left - inv_z_right) / max(1, end_x - start_x)
         else:
-            z_scan = z_left
-            z_step = (z_right - z_left) / max(
-                1, end_x - start_x
-            )  # Removed +1 to make right-exclusive
+            inv_z_scan = inv_z_left
+            inv_z_step = (inv_z_right - inv_z_left) / max(1, end_x - start_x)
 
-        # Changed to be left-inclusive, right-exclusive
         for x in range(start_x, end_x):
+            z_scan = 1.0 / inv_z_scan if inv_z_scan != 0.0 else float("inf")
             draw_pixel(
                 canvas_grid,
                 depth_buffer,
@@ -427,13 +420,13 @@ def draw_flat_triangle(
                 canvas_width,
                 canvas_height,
             )
-            z_scan += z_step
+            inv_z_scan += inv_z_step
 
         if y2 > y1:
             x_left += step_left
             x_right += step_right
-            z_left += z_step_left
-            z_right += z_step_right
+            inv_z_left += inv_z_step_left
+            inv_z_right += inv_z_step_right
 
 
 @njit(cache=True)
@@ -569,8 +562,8 @@ def draw_shaded_triangle(
     # - This handles degenerate cases where vertices have same y-coordinate
     for y in range(y0, y1):  # Changed to be top-inclusive, bottom-exclusive
         # Convert fixed-point x-coordinates back to integers for this scanline
-        start_x = x_left >> 16
-        end_x = x_right >> 16
+        start_x = np.int32(x_left) >> 16
+        end_x = np.int32(x_right) >> 16
 
         # Ensure correct left-to-right drawing order:
         # - Swap x-coordinates and intensities if right edge is actually on the left
@@ -642,8 +635,8 @@ def draw_shaded_triangle(
     # - Implementation mirrors the upper triangle section
     # - Always draw at least one scanline for zero-height sections
     for y in range(y1, y2):  # Changed to be top-inclusive, bottom-exclusive
-        start_x = x_left >> 16
-        end_x = x_right >> 16
+        start_x = np.int32(x_left) >> 16
+        end_x = np.int32(x_right) >> 16
 
         if start_x > end_x:
             start_x, end_x = end_x, start_x
