@@ -327,22 +327,29 @@ def draw_flat_triangle(
         y1, y2 = y2, y1
         z1, z2 = z2, z1
 
-    # Initialize edge traversal with depth values
+    # Convert z values to 1/z for linear interpolation
+    # Add small epsilon to avoid division by zero
+    eps = 1e-6
+    inv_z0 = 1.0 / (z0 + eps)
+    inv_z1 = 1.0 / (z1 + eps)
+    inv_z2 = 1.0 / (z2 + eps)
+
+    # Initialize edge traversal with reciprocal depth values
     dx1 = x1 - x0
     dy1 = y1 - y0
-    dz1 = z1 - z0
+    dinv_z1 = inv_z1 - inv_z0
     x_left = x0 << 16
     step_left = (dx1 << 16) // max(1, dy1)
-    z_left = z0
-    z_step_left = dz1 / max(1, dy1) if dy1 > 0 else 0.0
+    inv_z_left = inv_z0
+    inv_z_step_left = dinv_z1 / max(1, dy1) if dy1 > 0 else 0.0
 
     dx2 = x2 - x0
     dy2 = y2 - y0
-    dz2 = z2 - z0
+    dinv_z2 = inv_z2 - inv_z0
     x_right = x0 << 16
     step_right = (dx2 << 16) // max(1, dy2)
-    z_right = z0
-    z_step_right = dz2 / max(1, dy2) if dy2 > 0 else 0.0
+    inv_z_right = inv_z0
+    inv_z_step_right = dinv_z2 / max(1, dy2) if dy2 > 0 else 0.0
 
     # Fill the upper triangle section
     for y in range(y0, y1):  # Changed to be top-inclusive, bottom-exclusive
@@ -351,18 +358,16 @@ def draw_flat_triangle(
 
         if start_x > end_x:
             start_x, end_x = end_x, start_x
-            z_scan = z_right
-            z_step = (z_left - z_right) / max(
-                1, end_x - start_x
-            )  # Removed +1 to make right-exclusive
+            inv_z_scan = inv_z_right
+            inv_z_step = (inv_z_left - inv_z_right) / max(1, end_x - start_x)
         else:
-            z_scan = z_left
-            z_step = (z_right - z_left) / max(
-                1, end_x - start_x
-            )  # Removed +1 to make right-exclusive
+            inv_z_scan = inv_z_left
+            inv_z_step = (inv_z_right - inv_z_left) / max(1, end_x - start_x)
 
         # Changed to be left-inclusive, right-exclusive
         for x in range(start_x, end_x):
+            # Convert back to z for depth testing
+            z_scan = 1.0 / (inv_z_scan + eps)
             draw_pixel(
                 canvas_grid,
                 depth_buffer,
@@ -377,22 +382,22 @@ def draw_flat_triangle(
                 canvas_width,
                 canvas_height,
             )
-            z_scan += z_step
+            inv_z_scan += inv_z_step
 
         if y1 > y0:
             x_left += step_left
             x_right += step_right
-            z_left += z_step_left
-            z_right += z_step_right
+            inv_z_left += inv_z_step_left
+            inv_z_right += inv_z_step_right
 
-    # Initialize edge traversal for lower triangle
+    # Initialize edge traversal for lower triangle with reciprocal depth
     dx3 = x2 - x1
     dy3 = y2 - y1
-    dz3 = z2 - z1
+    dinv_z3 = inv_z2 - inv_z1
     x_left = x1 << 16
     step_left = (dx3 << 16) // max(1, dy3)
-    z_left = z1
-    z_step_left = dz3 / max(1, dy3) if dy3 > 0 else 0.0
+    inv_z_left = inv_z1
+    inv_z_step_left = dinv_z3 / max(1, dy3) if dy3 > 0 else 0.0
 
     # Fill the lower triangle section
     for y in range(y1, y2):  # Changed to be top-inclusive, bottom-exclusive
@@ -401,18 +406,16 @@ def draw_flat_triangle(
 
         if start_x > end_x:
             start_x, end_x = end_x, start_x
-            z_scan = z_right
-            z_step = (z_left - z_right) / max(
-                1, end_x - start_x
-            )  # Removed +1 to make right-exclusive
+            inv_z_scan = inv_z_right
+            inv_z_step = (inv_z_left - inv_z_right) / max(1, end_x - start_x)
         else:
-            z_scan = z_left
-            z_step = (z_right - z_left) / max(
-                1, end_x - start_x
-            )  # Removed +1 to make right-exclusive
+            inv_z_scan = inv_z_left
+            inv_z_step = (inv_z_right - inv_z_left) / max(1, end_x - start_x)
 
         # Changed to be left-inclusive, right-exclusive
         for x in range(start_x, end_x):
+            # Convert back to z for depth testing
+            z_scan = 1.0 / (inv_z_scan + eps)
             draw_pixel(
                 canvas_grid,
                 depth_buffer,
@@ -427,13 +430,13 @@ def draw_flat_triangle(
                 canvas_width,
                 canvas_height,
             )
-            z_scan += z_step
+            inv_z_scan += inv_z_step
 
         if y2 > y1:
             x_left += step_left
             x_right += step_right
-            z_left += z_step_left
-            z_right += z_step_right
+            inv_z_left += inv_z_step_left
+            inv_z_right += inv_z_step_right
 
 
 @njit(cache=True)
