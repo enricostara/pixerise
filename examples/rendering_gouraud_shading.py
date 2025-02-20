@@ -152,8 +152,8 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
         if movement_occurred:
             update_display()
 
-        clock.tick(60)
-        pygame.display.set_caption(str(clock.get_fps())[0:2])
+        clock.tick(120)
+        pygame.display.set_caption(str(clock.get_fps())[0:3])
 
 
 def main():

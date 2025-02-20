@@ -322,9 +322,9 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
             update_display()
             movement_occurred = False
 
-        clock.tick(60)
+        clock.tick(120)
         pygame.display.set_caption(
-            f"{shading_modes[current_mode_index].value} - {str(clock.get_fps())[0:2]} fps - press SPACE to toggle shading mode"
+            f"{shading_modes[current_mode_index].value} - {str(clock.get_fps())[0:3]} fps - press SPACE to toggle shading mode"
         )
 
 

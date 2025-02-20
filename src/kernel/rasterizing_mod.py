@@ -13,7 +13,7 @@ def draw_pixel(
     depth_buffer: np.ndarray,
     x: int,
     y: int,
-    z: float,
+    inv_z: float,
     center_x: int,
     center_y: int,
     color_r: int,
@@ -22,22 +22,26 @@ def draw_pixel(
     width: int,
     height: int,
 ) -> None:
-    """JIT-compiled pixel drawing function with depth testing.
+    """JIT-compiled pixel drawing function with depth testing using 1/z values.
 
     Args:
         color_buffer: RGB color buffer array of shape (width, height, 3)
         depth_buffer: Depth buffer array of shape (width, height)
         x, y: Pixel coordinates relative to canvas center
-        z: Depth value of the pixel
+        inv_z: 1/z depth value of the pixel (larger values are closer)
         center_x, center_y: Canvas center coordinates
         color_r, color_g, color_b: RGB color components (0-255)
         width, height: Canvas dimensions
+
+    Note:
+        The depth buffer stores 1/z values instead of z values.
+        Larger 1/z values mean the pixel is closer to the camera.
     """
     px = center_x + x
     py = center_y - y  # Flip y coordinate
     if 0 <= px < width and 0 <= py < height:
-        if z < depth_buffer[px, py]:  # Only draw if closer than existing depth
-            depth_buffer[px, py] = z  # Update depth buffer
+        if inv_z > depth_buffer[px, py]:  # Larger 1/z means closer to camera
+            depth_buffer[px, py] = inv_z  # Update depth buffer
             color_buffer[px, py, 0] = (
                 color_r  # Back to column-major order for pygame compatibility
             )
@@ -124,6 +128,9 @@ def draw_line(
     for i, x in enumerate(range(x0, x1 + 1)):
         # Interpolate z-value based on current position
         z = z0 + z_step * i
+        # Convert to 1/z for depth testing
+        eps = 1e-6  # Small epsilon to avoid division by zero
+        inv_z = 1.0 / (z + eps)
 
         # If steep (y is primary), swap back coordinates for pixel drawing
         if steep:
@@ -132,7 +139,7 @@ def draw_line(
                 depth_buffer,
                 y,
                 x,
-                z,
+                inv_z,
                 center_x,
                 center_y,
                 color_r,
@@ -147,7 +154,7 @@ def draw_line(
                 depth_buffer,
                 x,
                 y,
-                z,
+                inv_z,
                 center_x,
                 center_y,
                 color_r,
@@ -294,6 +301,14 @@ def draw_flat_triangle(
         center_x, center_y: Canvas center coordinates for coordinate system transformation
         color_r, color_g, color_b: RGB color components (0-255)
         canvas_width, canvas_height: Dimensions of the canvas
+
+    Implementation Notes:
+        - Uses 16.16 fixed-point arithmetic for edge traversal to avoid floating-point errors
+        - Handles edge cases like zero-height triangles and ensures non-zero denominators
+        - Implements linear interpolation for smooth intensity gradients
+        - Clips triangles to canvas bounds for efficiency
+        - Automatically sorts vertices for consistent edge traversal
+        - Includes early rejection tests for improved performance
     """
     # Transform from world space to screen space coordinates:
     # - Add center_x to shift from [-width/2, width/2] to [0, width]
@@ -367,13 +382,12 @@ def draw_flat_triangle(
         # Changed to be left-inclusive, right-exclusive
         for x in range(start_x, end_x):
             # Convert back to z for depth testing
-            z_scan = 1.0 / (inv_z_scan + eps)
             draw_pixel(
                 canvas_grid,
                 depth_buffer,
                 x,
                 y,
-                z_scan,
+                inv_z_scan,
                 center_x,
                 center_y,
                 color_r,
@@ -415,13 +429,12 @@ def draw_flat_triangle(
         # Changed to be left-inclusive, right-exclusive
         for x in range(start_x, end_x):
             # Convert back to z for depth testing
-            z_scan = 1.0 / (inv_z_scan + eps)
             draw_pixel(
                 canvas_grid,
                 depth_buffer,
                 x,
                 y,
-                z_scan,
+                inv_z_scan,
                 center_x,
                 center_y,
                 color_r,
@@ -609,13 +622,12 @@ def draw_shaded_triangle(
                 g = int(color_g * i_curr)
                 b = int(color_b * i_curr)
                 # Convert back to z for depth testing
-                z_scan = 1.0 / (inv_z_scan + eps)
                 draw_pixel(
                     canvas_grid,
                     depth_buffer,
                     x,
                     y,
-                    z_scan,
+                    inv_z_scan,
                     center_x,
                     center_y,
                     r,
@@ -675,13 +687,12 @@ def draw_shaded_triangle(
                 g = int(color_g * i_curr)
                 b = int(color_b * i_curr)
                 # Convert back to z for depth testing
-                z_scan = 1.0 / (inv_z_scan + eps)
                 draw_pixel(
                     canvas_grid,
                     depth_buffer,
                     x,
                     y,
-                    z_scan,
+                    inv_z_scan,
                     center_x,
                     center_y,
                     r,

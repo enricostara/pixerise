@@ -149,41 +149,45 @@ class TestShadedTriangleDrawing(unittest.TestCase):
 
     def test_shaded_triangle_z_buffering(self):
         """Test z-buffering behavior with overlapping shaded triangles."""
-        self.canvas.color_buffer.fill(0)  # Set background to black
-        self.canvas.depth_buffer.fill(1.0)  # Reset depth buffer
+        self.canvas.color_buffer.fill(0)
+        self.canvas.depth_buffer.fill(
+            0
+        )  # Initialize with 0 (1/∞) for 1/z depth testing
 
-        # Draw a shaded triangle in the back with a higher z value
+        # Draw a red triangle in front
         self.renderer.draw_shaded_triangle(
+            (0, 20, 0.5),
+            (-20, -20, 0.5),
+            (20, -20, 0.5),
+            (255, 0, 0),
+            1.0,
+            1.0,
+            1.0,
+        )
+
+        # Draw a green triangle behind
+        self.renderer.draw_shaded_triangle(
+            (0, 20, 0.8),
             (-20, -20, 0.8),
             (20, -20, 0.8),
-            (0, 20, 0.8),  # Back triangle
-            self.color,  # Red
+            (0, 255, 0),
             1.0,
             1.0,
-            1.0,  # Full intensity for clear visibility
+            1.0,
         )
 
-        # Draw a shaded triangle in front with a lower z value
-        self.renderer.draw_shaded_triangle(
-            (-10, -10, 0.2),
-            (10, -10, 0.2),
-            (0, 10, 0.2),  # Front triangle
-            (0, 255, 0),  # Green
-            1.0,
-            1.0,
-            1.0,  # Full intensity for clear visibility
-        )
-
-        # Get center pixel color where triangles overlap
-        center_color = self.canvas.color_buffer[self.height // 2, self.width // 2]
-
-        # Center should be green (front triangle) not red (back triangle)
-        self.assertEqual(tuple(center_color), (0, 255, 0))
+        # Check center pixel - should be red
+        center_x = self.canvas.width // 2
+        center_y = self.canvas.height // 2
+        center_color = self.canvas.color_buffer[center_x, center_y]
+        self.assertEqual(tuple(center_color), (255, 0, 0))
 
     def test_varying_depth_triangle(self):
         """Test triangle with varying depth values."""
         self.canvas.color_buffer.fill(0)
-        self.canvas.depth_buffer.fill(1.0)
+        self.canvas.depth_buffer.fill(
+            0
+        )  # Initialize with 0 (1/∞) for 1/z depth testing
 
         # Draw a triangle with varying z values
         self.renderer.draw_shaded_triangle(
@@ -197,9 +201,8 @@ class TestShadedTriangleDrawing(unittest.TestCase):
         )
 
         # Check that depth buffer has been updated with varying values
-        depth_values = np.unique(
-            self.canvas.depth_buffer[self.canvas.depth_buffer < 1.0]
-        )
+        # For 1/z values, larger values mean closer to camera
+        depth_values = np.unique(self.canvas.depth_buffer[self.canvas.depth_buffer > 0])
         self.assertTrue(len(depth_values) > 1)  # Should have multiple depth values
 
 

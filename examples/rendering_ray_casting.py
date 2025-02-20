@@ -105,7 +105,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
 
         # Update display
         update_display()
-        clock.tick(60)
+        clock.tick(120)
 
 
 def main():

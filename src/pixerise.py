@@ -65,16 +65,16 @@ class Canvas:
         self.size = size
         self.width = size[0]
         self.height = size[1]
-        # Initialize color buffer with dark gray background (column-major order)
-        self.color_buffer = np.ones((self.width, self.height, 3), dtype=np.uint8) * 32
-        # Initialize z-buffer with infinity for depth testing
-        self.depth_buffer = np.full((self.width, self.height), np.inf, dtype=np.float32)
+        # Initialize buffers
+        self.color_buffer = np.zeros((self.width, self.height, 3), dtype=np.uint8)
+        # Initialize depth buffer with 0 (1/∞) for 1/z depth testing
+        self.depth_buffer = np.zeros((self.width, self.height), dtype=np.float32)
         # Calculate center-based coordinates
         self.half_width = self.width // 2
         self.half_height = self.height // 2
         self._center = (self.half_width, self.half_height)
 
-    def clear(self, color: Tuple[int, int, int] = (32, 32, 32)):
+    def clear(self, color: Tuple[int, int, int]):
         """Clear the canvas and reset the z-buffer.
 
         Resets both the color buffer to the specified color and the depth-buffer
@@ -83,11 +83,9 @@ class Canvas:
         Args:
             color (Tuple[int, int, int], optional): RGB color to fill the canvas.
                 Each component should be in range [0, 255].
-                Defaults to dark gray (32, 32, 32).
         """
-        self.color_buffer.fill(0)
+        self.depth_buffer.fill(0)  # Reset depth buffer to 0 (1/∞) for 1/z depth testing
         self.color_buffer[:, :] = color
-        self.depth_buffer.fill(np.inf)  # Reset z-buffer for new frame
 
 
 class ViewPort:
@@ -236,7 +234,7 @@ class Renderer:
     """
 
     def __init__(
-        self, canvas: Canvas, viewport: ViewPort, background_color=(32, 32, 32)
+        self, canvas: Canvas, viewport: ViewPort, background_color=(24, 24, 24)
     ):
         self._canvas = canvas
         self._viewport = viewport
