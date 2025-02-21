@@ -205,7 +205,7 @@ def display(canvas: Canvas, scene: Scene, renderer: Renderer):
                             selected_groups.append(hit)
                             # Set color for the specific group
                             instance.set_group_color(
-                                group_name, np.array([255, 0, 0], dtype=np.int32)
+                                group_name, np.array([180, 150, 0], dtype=np.int32)
                             )
                     elif event.button == 3:  # Right click
                         # Toggle visibility for the clicked group
