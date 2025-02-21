@@ -16,6 +16,7 @@ Pixerise is a Python 3D rendering engine that focuses on CPU-based rendering, ma
 - Backface culling for performance optimization
 - Directional lighting with ambient and diffuse components
 - Efficient batch processing of vertices and normals
+- Ray casting for precise 3D object selection
 
 ### Performance
 - NumPy-accelerated array operations for fast geometry processing
@@ -152,10 +153,14 @@ For detailed API documentation, see [src/README.md](src/README.md).
 
 The `examples` directory contains several demonstrations:
 
+![Ray Casting Selection Demo](media/ray-casting.gif)
+
 - `rendering_wireframe.py`: Basic wireframe rendering with interactive camera
 - `rendering_flat_shading.py`: Flat shading with directional lighting
 - `rendering_gouraud_shading.py`: Smooth shading using vertex normals
 - `rendering_obj_file.py`: Loading and rendering 3D models from an OBJ file with interactive controls
+  - Left click: Select and highlight objects using ray casting
+  - Right click: Toggle group visibility
 
 Run the tank example using:
 ```bash
