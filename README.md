@@ -159,7 +159,7 @@ The `examples` directory contains several demonstrations:
 
 Run the tank example using:
 ```bash
-just example
+pdm run python examples/rendering_obj_file.py
 ```
 
 Each example demonstrates different features of the engine and includes interactive controls:
@@ -237,7 +237,7 @@ graph TD
 
 ### Running Tests
 ```bash
-just test
+pdm run pytest
 ```
 
 ### Contributing
