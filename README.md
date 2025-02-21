@@ -2,7 +2,7 @@
 
 A high-performance 3D software renderer implemented in Python, optimized with NumPy and Numba JIT compilation.
 
-![Tank Model Rendering Demo]([tank.mp4](https://raw.githack.com/enricostara/pixerise/main/tank.mp4))
+![Tank Model Rendering Demo](https://github.com/user-attachments/assets/66095f29-8d1a-40e2-9e7e-33f5a4605701)
 
 ## Overview
 
