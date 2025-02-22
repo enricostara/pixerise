@@ -1,6 +1,6 @@
 [project]
 name = "pixerise"
-version = "0.12.0"
+version = "0.12.1"
 description = "A high-performance 3D software renderer implemented in Python, optimized with NumPy and Numba JIT compilation."
 authors = [
     { name = "Enrico Stara", email = "enrico.stara@gmail.com" },
@@ -20,6 +20,9 @@ build-backend = "pdm.backend"
 
 [tool.pdm]
 distribution = true
+
+[tool.pdm.build]
+includes = ["src/"]
 
 [dependency-groups]
 dev = [
