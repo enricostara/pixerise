@@ -173,7 +173,8 @@ Each example demonstrates different features of the engine and includes interact
 - Mouse wheel: Move forward/backward
 - Q/E: Move up/down
 - Space: Toggle between shading modes (where available)
-- Esc: Exit
+- Backspace: Toggle mouse grab mode (to click and highlight objects using ray casting)
+- Esc: Quit the example
 
 ## Who Should Use Pixerise?
 
