@@ -1,7 +1,7 @@
 import time
 import numpy as np
-from pixerise import Canvas, ViewPort, Renderer
-from kernel.transforming_mod import transform_vertex_normal
+from pixerise.pixerise import Canvas, ViewPort, Renderer
+from pixerise.kernel.transforming_mod import transform_vertex_normal
 
 
 class TransformNormalBenchmark:

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from src.kernel.transforming_mod import transform_vertex_normal
+from pixerise.kernel.transforming_mod import transform_vertex_normal
 
 
 class TestTransformVertexNormal:

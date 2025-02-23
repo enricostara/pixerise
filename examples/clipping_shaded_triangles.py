@@ -1,8 +1,8 @@
 import pygame
 import numpy as np
 
-from pixerise import Canvas, ViewPort, Renderer
-from kernel.clipping_mod import clip_triangle
+from pixerise.pixerise import Canvas, ViewPort, Renderer
+from pixerise.kernel.clipping_mod import clip_triangle
 
 
 def display(image: Canvas):

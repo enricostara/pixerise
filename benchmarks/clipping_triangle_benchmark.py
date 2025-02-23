@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from kernel.clipping_mod import clip_triangle, clip_triangle_and_normals
+from pixerise.kernel.clipping_mod import clip_triangle, clip_triangle_and_normals
 
 
 class ClipTriangleBenchmark:

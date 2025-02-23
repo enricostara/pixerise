@@ -4,7 +4,7 @@ Tests Scene class and related classes (Model, Instance, Camera, DirectionalLight
 """
 
 import numpy as np
-from scene import Scene, Model, Instance, Camera, DirectionalLight
+from pixerise.scene import Scene, Model, Instance, Camera, DirectionalLight
 
 
 def test_model_inner_group():

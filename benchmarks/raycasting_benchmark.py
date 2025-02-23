@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from kernel.raycasting_mod import check_ray_triangle_intersection
+from pixerise.kernel.raycasting_mod import check_ray_triangle_intersection
 
 
 class RayTriangleIntersectionBenchmark:

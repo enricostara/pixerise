@@ -4,7 +4,7 @@ Tests the ray-triangle intersection algorithm for various scenarios.
 """
 
 import numpy as np
-from src.kernel.raycasting_mod import check_ray_triangle_intersection, EPSILON
+from pixerise.kernel.raycasting_mod import check_ray_triangle_intersection, EPSILON
 
 
 def test_direct_hit():

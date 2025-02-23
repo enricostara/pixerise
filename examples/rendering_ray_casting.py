@@ -1,8 +1,8 @@
 import pygame
 import numpy as np
 
-from pixerise import Canvas, ViewPort, Renderer, ShadingMode
-from scene import Scene, Model, Instance
+from pixerise.pixerise import ShadingMode, Canvas, ViewPort, Renderer
+from pixerise.scene import Scene, Model, Instance
 
 
 def create_cube_model() -> Model:

@@ -1,5 +1,5 @@
 import numpy as np
-from kernel.shading_mod import triangle_flat_shading
+from pixerise.kernel.shading_mod import triangle_flat_shading
 
 
 class TestTriangleFlatShading:

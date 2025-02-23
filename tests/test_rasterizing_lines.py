@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from pixerise import Canvas, ViewPort, Renderer
+from pixerise.pixerise import Canvas, ViewPort, Renderer
 
 
 class TestLineDrawing:

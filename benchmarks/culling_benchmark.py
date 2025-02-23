@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from kernel.culling_mod import cull_back_faces
+from pixerise.kernel.culling_mod import cull_back_faces
 
 
 class CullBackFacesBenchmark:

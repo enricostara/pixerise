@@ -1,7 +1,7 @@
 import pygame
 import numpy as np
 
-from pixerise import ShadingMode, Canvas, ViewPort, Renderer, Scene
+from pixerise.pixerise import ShadingMode, Canvas, ViewPort, Renderer, Scene
 
 
 def display(canvas: Canvas, scene: Scene, renderer: Renderer):

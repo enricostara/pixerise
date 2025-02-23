@@ -1,5 +1,5 @@
 import numpy as np
-from kernel.shading_mod import triangle_gouraud_shading
+from pixerise.kernel.shading_mod import triangle_gouraud_shading
 
 
 class TestTriangleGouraudShading:

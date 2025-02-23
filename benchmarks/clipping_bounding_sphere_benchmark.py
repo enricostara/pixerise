@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from kernel.clipping_mod import calculate_bounding_sphere
+from pixerise.kernel.clipping_mod import calculate_bounding_sphere
 
 
 class BoundingSphereBenchmark:

@@ -3,6 +3,9 @@
 # comment to not use powershell (for Linux, MacOS, and the BSDs)
 # set shell := ["powershell.exe", "-c"]
 
+@default: 
+	just --list --unsorted
+
 dev-sync:
     pdm sync --clean --dev
 
@@ -28,3 +31,6 @@ example:
 	pdm run python examples/rendering_obj_file.py
 
 validate: format lint test
+
+bench:
+  for file in `ls ./benchmarks`; do pdm run python benchmarks/$file; done

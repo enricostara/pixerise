@@ -1,7 +1,7 @@
 import pygame
 import numpy as np
 
-from pixerise import Canvas, ViewPort, Renderer
+from pixerise.pixerise import Canvas, ViewPort, Renderer
 
 
 def display(image: Canvas):

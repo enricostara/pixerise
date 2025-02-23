@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from pixerise import Canvas, ViewPort, Renderer
-from kernel.transforming_mod import transform_vertex
+from pixerise.pixerise import Canvas, ViewPort, Renderer
+from pixerise.kernel.transforming_mod import transform_vertex
 
 
 class TestTransformVertex:

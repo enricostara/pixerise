@@ -5,22 +5,22 @@ This module contains the main classes for rendering: Canvas, ViewPort, and Rende
 
 from typing import Tuple, Optional
 import numpy as np
-from kernel.rasterizing_mod import (
+from pixerise.kernel.rasterizing_mod import (
     draw_line,
     draw_flat_triangle,
     draw_shaded_triangle,
     draw_triangle,
 )
-from kernel.transforming_mod import (
+from pixerise.kernel.transforming_mod import (
     transform_vertex_normal,
     transform_vertices_and_normals,
 )
-from kernel.clipping_mod import calculate_bounding_sphere
-from kernel.culling_mod import cull_back_faces
-from kernel.rendering_mod import process_and_draw_triangles
+from pixerise.kernel.clipping_mod import calculate_bounding_sphere
+from pixerise.kernel.culling_mod import cull_back_faces
+from pixerise.kernel.rendering_mod import process_and_draw_triangles
 from enum import Enum
-from scene import Scene
-from kernel.raycasting_mod import check_ray_triangles_intersection
+from pixerise.scene import Scene
+from pixerise.kernel.raycasting_mod import check_ray_triangles_intersection
 
 
 class ShadingMode(Enum):

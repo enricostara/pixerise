@@ -2,8 +2,8 @@ import pygame
 import numpy as np
 from pathlib import Path
 
-from pixerise import ShadingMode, Canvas, ViewPort, Renderer
-from scene import Scene, Model
+from pixerise.pixerise import ShadingMode, Canvas, ViewPort, Renderer
+from pixerise.scene import Scene, Model
 
 
 def load_obj_file(file_path):
