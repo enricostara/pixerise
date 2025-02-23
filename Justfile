@@ -1,7 +1,7 @@
 # https://github.com/casey/just
 
 # comment to not use powershell (for Linux, MacOS, and the BSDs)
-set shell := ["powershell.exe", "-c"]
+# set shell := ["powershell.exe", "-c"]
 
 dev-sync:
     pdm sync --clean --dev
