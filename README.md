@@ -82,8 +82,8 @@ pdm install
 
 ```python
 import pygame
-from pixerise import Canvas, ViewPort, Renderer
-from scene import Scene
+from pixerise.pixerise import Canvas, ViewPort, Renderer
+from pixerise.scene import Scene
 
 # Initialize Pygame
 pygame.init()
