@@ -1,6 +1,6 @@
 [project]
 name = "pixerise"
-version = "0.12.1"
+version = "0.12.2"
 description = "A high-performance 3D software renderer implemented in Python, optimized with NumPy and Numba JIT compilation."
 authors = [
     { name = "Enrico Stara", email = "enrico.stara@gmail.com" },
